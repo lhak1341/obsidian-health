@@ -9,8 +9,10 @@ import {
 	findVisit,
 	groupMarkersByPanel,
 	pairMarkerNotes,
+	parseAllergies,
 	unitOptions,
 	validateDate,
+	validateProfileInput,
 } from "./entry";
 import type { MarkerNote, VisitNote } from "./types";
 
@@ -194,6 +196,34 @@ describe("buildPreSaveSummary", () => {
 		]);
 
 		expect(summary).toEqual([{ markerId: "alt", label: "ALT", raw: "20", canonical: 20, unit: "U/L", softWarn: false }]);
+	});
+});
+
+describe("validateProfileInput", () => {
+	it("hard-blocks a missing person id", () => {
+		expect(validateProfileInput("", "m")).toBeDefined();
+	});
+
+	it("hard-blocks a sex outside m/f", () => {
+		expect(validateProfileInput("self", "other")).toBeDefined();
+	});
+
+	it("accepts a well-formed profile", () => {
+		expect(validateProfileInput("self", "m")).toBeUndefined();
+	});
+});
+
+describe("parseAllergies", () => {
+	it("splits and trims a comma-separated list", () => {
+		expect(parseAllergies("penicillin, shellfish ,  dust")).toEqual(["penicillin", "shellfish", "dust"]);
+	});
+
+	it("drops empty entries from stray commas", () => {
+		expect(parseAllergies("penicillin,, shellfish,")).toEqual(["penicillin", "shellfish"]);
+	});
+
+	it("returns an empty array for a blank string", () => {
+		expect(parseAllergies("")).toEqual([]);
 	});
 });
 

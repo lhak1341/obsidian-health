@@ -1,21 +1,19 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { computeDashboardModel } from "./core/dashboard";
-import type { DashboardSettings } from "./core/model";
 import type HealthPlugin from "./main";
 import { renderDashboard } from "./render/dashboard-view";
 
 export const HEALTH_VIEW_TYPE = "health-dashboard";
 
-const DEFAULT_SETTINGS: DashboardSettings = { deadbandPct: 0.03 };
-
 export class HealthView extends ItemView {
-	private showAll = false;
+	private showAll: boolean;
 
 	constructor(
 		leaf: WorkspaceLeaf,
 		private readonly plugin: HealthPlugin,
 	) {
 		super(leaf);
+		this.showAll = plugin.settings.showAllDefault;
 	}
 
 	getViewType(): string {
@@ -40,7 +38,8 @@ export class HealthView extends ItemView {
 
 	async refresh(): Promise<void> {
 		const snapshot = await this.plugin.scanVault();
-		const profile = snapshot.profiles[0];
+		const defaultPerson = this.plugin.settings.defaultProfile;
+		const profile = (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
 
 		this.contentEl.empty();
 		this.contentEl.addClass("health-dashboard-outer");
@@ -50,7 +49,7 @@ export class HealthView extends ItemView {
 			return;
 		}
 
-		const model = computeDashboardModel(snapshot.markers, snapshot.visits, profile, DEFAULT_SETTINGS);
+		const model = computeDashboardModel(snapshot.markers, snapshot.visits, profile, { deadbandPct: this.plugin.settings.deadbandPct });
 		renderDashboard(this.contentEl, model, {
 			showAll: this.showAll,
 			onToggleShowAll: () => {

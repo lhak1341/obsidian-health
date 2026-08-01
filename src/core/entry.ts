@@ -169,3 +169,18 @@ export function resolveBandForEntry(marker: MarkerNote, profile: ProfileNote, da
 	if (marker.type !== "numeric") return {};
 	return resolve(marker, profile, date);
 }
+
+/** Hard-blocks a profile missing its load-bearing facts for range resolution: person id and sex. */
+export function validateProfileInput(person: string, sex: string): string | undefined {
+	if (!person.trim()) return "Person is required.";
+	if (sex !== "m" && sex !== "f") return "Sex must be m or f.";
+	return undefined;
+}
+
+/** Splits a free-text comma-separated allergy list into trimmed, non-empty entries. */
+export function parseAllergies(raw: string): string[] {
+	return raw
+		.split(",")
+		.map((entry) => entry.trim())
+		.filter((entry) => entry.length > 0);
+}
