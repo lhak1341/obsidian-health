@@ -1,0 +1,9 @@
+{
+	"id": "health",
+	"name": "Health",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.0",
+	"description": "Frontmatter-first Health Dashboard: derives flags, trend arrows, and history charts from per-visit lab notes.",
+	"author": "lhak",
+	"isDesktopOnly": false
+}

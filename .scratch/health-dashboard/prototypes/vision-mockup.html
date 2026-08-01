@@ -1,0 +1,393 @@
+<style>
+  :root{
+    --c-red-l:#fc0135;--c-orange-l:#ff7d00;--c-yellow-l:#ffae00;--c-green-l:#28a948;
+    --c-cyan-l:#00ac96;--c-blue-l:#006bff;--c-purple-l:#a100f8;--c-pink-l:#f22782;
+    --c-red-d:#ff3448;--c-orange-d:#fa7500;--c-yellow-d:#ffae00;--c-green-d:#3ad25e;
+    --c-cyan-d:#29ccc1;--c-blue-d:#4191ff;--c-purple-d:#c472fb;--c-pink-d:#e7006d;
+    --font-head:'Space Grotesk','SF Pro Display',system-ui,-apple-system,sans-serif;
+    --font-body:'Iosevka Charon',Georgia,'Times New Roman',serif;
+    --font-mono:'Maple Mono','SF Mono',Menlo,Consolas,monospace;
+    --dot-size:14px;--r-sm:4px;--r-md:8px;
+  }
+  :root{
+    --bg-primary:#fff;--bg-secondary:#f6f6f6;--bg-tertiary:#ececec;
+    --fg-1:#1f1f1f;--fg-2:#4a4a4a;--fg-3:#8a8a8a;--fg-4:#c6c6c6;
+    --border:rgba(0,0,0,.08);--dot-color:rgba(0,0,0,.07);
+    --color-red:var(--c-red-l);--color-orange:var(--c-orange-l);--color-yellow:var(--c-yellow-l);
+    --color-green:var(--c-green-l);--color-cyan:var(--c-cyan-l);--color-blue:var(--c-blue-l);
+    --color-purple:var(--c-purple-l);--color-pink:var(--c-pink-l);--accent:hsl(144 50% 42%);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg-primary:#1c1c1c;--bg-secondary:#181818;--bg-tertiary:#242424;
+    --fg-1:#d8d8d8;--fg-2:#a0a0a0;--fg-3:#6e6e6e;--fg-4:#3c3c3c;
+    --border:rgba(255,255,255,.08);--dot-color:rgba(255,255,255,.05);
+    --color-red:var(--c-red-d);--color-orange:var(--c-orange-d);--color-yellow:var(--c-yellow-d);
+    --color-green:var(--c-green-d);--color-cyan:var(--c-cyan-d);--color-blue:var(--c-blue-d);
+    --color-purple:var(--c-purple-d);--color-pink:var(--c-pink-d);--accent:hsl(144 50% 44%);
+  }}
+  :root[data-theme="light"]{
+    --bg-primary:#fff;--bg-secondary:#f6f6f6;--bg-tertiary:#ececec;
+    --fg-1:#1f1f1f;--fg-2:#4a4a4a;--fg-3:#8a8a8a;--fg-4:#c6c6c6;
+    --border:rgba(0,0,0,.08);--dot-color:rgba(0,0,0,.07);
+    --color-red:var(--c-red-l);--color-orange:var(--c-orange-l);--color-yellow:var(--c-yellow-l);
+    --color-green:var(--c-green-l);--color-cyan:var(--c-cyan-l);--color-blue:var(--c-blue-l);
+    --color-purple:var(--c-purple-l);--color-pink:var(--c-pink-l);--accent:hsl(144 50% 42%);
+  }
+  :root[data-theme="dark"]{
+    --bg-primary:#1c1c1c;--bg-secondary:#181818;--bg-tertiary:#242424;
+    --fg-1:#d8d8d8;--fg-2:#a0a0a0;--fg-3:#6e6e6e;--fg-4:#3c3c3c;
+    --border:rgba(255,255,255,.08);--dot-color:rgba(255,255,255,.05);
+    --color-red:var(--c-red-d);--color-orange:var(--c-orange-d);--color-yellow:var(--c-yellow-d);
+    --color-green:var(--c-green-d);--color-cyan:var(--c-cyan-d);--color-blue:var(--c-blue-d);
+    --color-purple:var(--c-purple-d);--color-pink:var(--c-pink-d);--accent:hsl(144 50% 44%);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;} body{margin:0;}
+  .khoa{height:100vh;display:flex;flex-direction:column;overflow:hidden;
+    font-family:var(--font-body);color:var(--fg-1);background:var(--bg-primary);
+    background-image:radial-gradient(var(--dot-color) 1px,transparent 1px);background-size:var(--dot-size) var(--dot-size);
+    padding:26px 42px 20px;}
+  .lbl{font-family:var(--font-head);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-3);}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+  svg.ic{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block;}
+
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:14px;}
+  .topL{display:flex;align-items:center;gap:15px;flex-wrap:wrap;}
+  .top .wm{display:flex;align-items:center;gap:11px;}
+  .top .wm .hic{color:var(--color-red);font-size:26px;}
+  .top h1{font-family:var(--font-head);font-weight:700;font-size:37px;letter-spacing:-.02em;line-height:1;margin:0;}
+  .top .date{font-family:var(--font-head);font-size:16px;color:var(--fg-2);margin-top:8px;}
+  .top .date .mut{color:var(--fg-3);}
+  .hero-sub{font-family:var(--font-head);font-size:15px;color:var(--fg-3);display:flex;align-items:center;gap:7px;margin-bottom:4px;}
+  .hero-sub .hic{color:var(--color-red);font-size:15px;}
+  .hero-line{font-family:var(--font-head);font-size:20px;font-weight:500;color:var(--fg-2);display:flex;align-items:baseline;gap:11px;letter-spacing:-.01em;}
+  .hero-num{font-weight:700;font-size:46px;line-height:.85;font-variant-numeric:tabular-nums;}
+  .profile{font-family:var(--font-mono);font-size:11px;color:var(--fg-3);display:flex;align-items:center;gap:6px;}
+  .profile svg.ic{font-size:12px;color:var(--color-red);}
+  .ppl{display:flex;gap:6px;}
+  .pill{font-family:var(--font-head);font-size:12px;font-weight:600;color:var(--fg-3);padding:4px 12px;border-radius:999px;border:1px solid var(--border);cursor:pointer;background:transparent;}
+  .pill:hover{background:var(--bg-secondary);color:var(--fg-1);}
+  .pill.active{background:var(--accent);color:#fff;border-color:transparent;}
+  .theme-btn{display:flex;align-items:center;gap:6px;font-family:var(--font-head);font-weight:600;font-size:14px;color:var(--fg-2);background:transparent;border:1px solid var(--border);border-radius:var(--r-md);padding:7px 12px;cursor:pointer;}
+  .theme-btn:hover{background:var(--bg-secondary);color:var(--fg-1);}
+  .theme-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .theme-btn.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));}
+
+  .attn{display:flex;flex-direction:column;align-items:stretch;gap:11px;padding:14px 4px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .attn-lead{display:flex;align-items:center;gap:9px;}
+  .attn .cnt{font-family:var(--font-mono);font-size:11px;color:var(--fg-3);}
+  .attn .items{display:flex;gap:24px;flex-wrap:wrap;}
+  .attn-item{display:inline-flex;align-items:center;gap:9px;cursor:pointer;padding:4px 5px;border-radius:var(--r-sm);transition:background .12s;}
+  .attn-item:hover{background:var(--bg-secondary);}
+  .attn-item .an{font-family:var(--font-body);font-size:15px;color:var(--fg-1);}
+  .attn-item .av{font-family:var(--font-head);font-weight:700;font-size:21px;font-variant-numeric:tabular-nums;line-height:1;}
+  .attn-item .aw{font-size:12px;}
+  .attn-item .why{font-family:var(--font-mono);font-size:10px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.05em;}
+  .attn-empty{font-family:var(--font-body);font-size:14px;color:var(--color-green);display:flex;align-items:center;gap:8px;}
+
+  .grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:4px;}
+  .col{min-height:0;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;}
+  .col+.col{border-left:1px solid var(--border);}
+  .col::-webkit-scrollbar{width:6px;} .col::-webkit-scrollbar-thumb{background:var(--fg-4);border-radius:3px;}
+
+  .grp{margin-bottom:22px;}
+  .grp-head{display:flex;align-items:center;gap:8px;margin:-2px -4px 6px;padding:3px 4px;border-radius:var(--r-sm);cursor:pointer;}
+  .grp-head:hover{background:var(--bg-secondary);}
+  .grp-head .gic{color:var(--fg-3);font-size:14px;}
+  .grp-head:hover .lbl{color:var(--fg-1);}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none;}
+  .grp-head .go{display:flex;align-items:center;gap:3px;font-family:var(--font-mono);font-size:9.5px;color:var(--color-cyan);opacity:0;transition:opacity .12s;}
+  .grp-head:hover .go{opacity:1;}
+  .grp-head .tag{font-family:var(--font-mono);font-size:10px;color:var(--fg-4);margin-left:auto;}
+
+  .mk{display:grid;grid-template-columns:15px 1fr auto auto;align-items:center;gap:10px;padding:8px 2px;border-top:1px solid var(--border);cursor:pointer;}
+  .mk:hover{background:var(--bg-secondary);}
+  .mk.hidden-mk{display:none;}
+  .mk .chev{color:var(--fg-4);font-size:13px;transition:transform .15s ease;display:flex;}
+  .mk.open .chev{transform:rotate(90deg);color:var(--fg-2);}
+  .mk .nm{position:relative;min-width:0;}
+  .mk .nm .t{font-family:var(--font-body);font-size:14.5px;color:var(--fg-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+  .tip{position:absolute;bottom:145%;left:0;width:230px;background:var(--fg-1);color:var(--bg-primary);font-family:var(--font-body);font-size:12.5px;line-height:1.5;padding:10px 12px;border-radius:var(--r-md);opacity:0;pointer-events:none;transition:opacity .14s;z-index:40;box-shadow:0 12px 40px rgba(0,0,0,.22);}
+  .tip .rng{display:block;margin-top:6px;font-family:var(--font-mono);font-size:11px;opacity:.82;}
+  .mk .nm:hover .tip{opacity:1;}
+  .mk .spk{width:62px;height:20px;flex:none;}
+  .mk .rt{display:flex;align-items:baseline;gap:6px;justify-content:flex-end;white-space:nowrap;}
+  .mk .val{font-family:var(--font-head);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;color:var(--fg-1);}
+  .mk .val.qual{font-size:12px;font-weight:600;letter-spacing:.02em;}
+  .mk .unit{font-family:var(--font-mono);font-size:11px;color:var(--fg-4);}
+  .mk .arw{font-size:12px;width:14px;text-align:center;display:flex;justify-content:center;}
+
+  .detail{overflow:hidden;max-height:0;transition:max-height .26s ease;}
+  .detail.open{max-height:280px;border-top:1px dashed var(--border);}
+  .detail-in{padding:14px 4px 16px;}
+  .detail .cap{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .detail .cap .m{font-family:var(--font-body);font-size:12px;color:var(--fg-2);line-height:1.45;max-width:78%;}
+  .detail .cap .now{font-family:var(--font-head);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;}
+  .detail svg.big{width:100%;height:120px;display:block;}
+  .qhist{display:flex;gap:14px;font-family:var(--font-mono);font-size:12px;color:var(--fg-2);padding:10px 0;}
+  .qhist span b{color:var(--fg-4);font-weight:400;margin-right:5px;}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);background:var(--fg-1);color:var(--bg-primary);font-family:var(--font-mono);font-size:12px;padding:9px 14px;border-radius:var(--r-md);box-shadow:0 12px 40px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:70;display:flex;align-items:center;gap:7px;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .wgt-block{margin-top:10px;}
+  .widget{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-top:8px;background:var(--bg-primary);}
+  .widget .wh{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);}
+  .widget .wh .hic{color:var(--color-red);font-size:15px;}
+  .widget .wh .wt{font-family:var(--font-head);font-weight:700;font-size:13px;}
+  .widget .wh .wc{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--color-red);}
+  .widget .wi{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:13px;}
+  .widget .wi .wn{flex:1;font-family:var(--font-body);color:var(--fg-1);}
+  .widget .wi .wv{font-family:var(--font-head);font-weight:700;font-variant-numeric:tabular-nums;}
+  .widget .wf{border-top:1px solid var(--border);padding:9px 12px;font-family:var(--font-head);font-size:12px;font-weight:600;color:var(--color-green);cursor:pointer;display:flex;align-items:center;gap:5px;}
+
+  .proto{position:fixed;right:14px;bottom:12px;z-index:60;}
+  .proto summary{font-family:var(--font-head);font-weight:600;font-size:11px;color:var(--fg-3);cursor:pointer;text-align:right;list-style:none;}
+  .proto[open] .pbody{background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.2);width:270px;margin-top:6px;color:var(--fg-2);line-height:1.5;font-family:var(--font-body);font-size:12px;}
+
+  @media (max-width:820px){.grid{grid-template-columns:1fr 1fr;}.col:nth-child(3){grid-column:1/-1;border-left:none;border-top:1px solid var(--border);}}
+  @media (max-width:560px){.grid{grid-template-columns:1fr;overflow-y:auto;}.col{overflow:visible;border-left:none;}.col+.col{border-top:1px solid var(--border);}.khoa{height:auto;min-height:100vh;overflow:auto;}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+
+<div class="khoa" id="app">
+  <div class="top">
+    <div class="topL">
+      <div class="ppl" id="ppl"></div>
+      <div class="profile"><span id="hDrop"></span><span id="profileTxt">A, Rh+ · No known allergies · Last record: 2025, Jul 23rd</span></div>
+    </div>
+    <button class="theme-btn" id="allBtn" type="button"><span id="hEye"></span><span id="allTxt">Show all</span></button>
+  </div>
+
+  <div class="attn">
+    <div class="attn-lead"><span class="lbl">Needs attention</span><span class="cnt" id="attnCnt"></span></div>
+    <div class="items" id="attnItems"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="proto"><details>
+  <summary>prototype · notes</summary>
+  <div class="pbody">Flat-editorial, one screen. Curated set by default (settings-editable) · <b>Show all</b> reveals the full panel incl. qualitative results · hover a name for meaning · click a row to expand its chart (one at a time) · click a <b>concern header</b> to open its Base view · Vitals mocked.</div>
+</details></div>
+
+<script>
+const ICONS={
+ heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+ activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+ droplet:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+ droplets:'<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 4.8 7 3.5c-.29 1.3-1.15 2.63-2.29 3.56S3 11.09 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A11 11 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a7 7 0 0 1-11.91 4.97"/>',
+ shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+ flask:'<path d="M14.5 2v6l5.5 9.5A2 2 0 0 1 18.3 21H5.7a2 2 0 0 1-1.7-3.5L9.5 8V2"/><path d="M8.5 2h7"/><path d="M6.5 15h11"/>',
+ pulse:'<path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
+ chevron:'<path d="m9 18 6-6-6-6"/>',
+ moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+ arrow:'<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+ eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+ layers:'<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>'
+};
+const ic=(n,cls="ic")=>`<svg class="${cls}" viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+
+const YEARS=["2020","2022","2023","2024","2025"];
+// curated:false => hidden until "Show all". qual:true => qualitative (Negative/Normal).
+const DATA=[
+ {concern:"Cardiometabolic",tag:"lipids · glucose",icon:"activity",col:0,markers:[
+  {name:"Total cholesterol",unit:"mmol/L",dir:"highBad",range:[3.6,5.18],info:"Sum of all cholesterol fractions; a broad cardiovascular-risk screen.",s:{2020:5.41,2022:5.45,2023:4.97,2024:5.59,2025:5.42}},
+  {name:"LDL cholesterol",unit:"mmol/L",dir:"highBad",range:[0,3.34],target:{max:2.6,goal:true},info:"“Bad” cholesterol; drives atherosclerosis. Your note: keep it as low as possible.",s:{2022:3.20,2023:3.10,2024:3.39,2025:3.05}},
+  {name:"HDL cholesterol",unit:"mmol/L",dir:"lowBad",range:[0.9,null],info:"“Good” cholesterol; clears the rest. Higher is better.",s:{2022:1.55,2023:1.14,2024:1.47,2025:1.61}},
+  {name:"Triglycerides",unit:"mmol/L",dir:"highBad",range:[0.8,1.7],info:"Circulating blood fat; high raises cardiovascular risk.",s:{2020:0.99,2022:1.55,2023:1.62,2024:1.03,2025:0.88}},
+  {name:"Triglyceride : HDL ratio",unit:"",dir:"highBad",range:[0,null],target:{max:1.0},info:"Triglycerides ÷ HDL — an insulin-resistance proxy (Attia). Aim under 1.0.",derived:"tghdl"},
+  {name:"Fasting glucose",unit:"mg/dL",dir:"highBad",range:[70,100],info:"Fasting blood sugar, single point in time. HbA1c (a 3-month average) is on your add-test list.",s:{2024:94}},
+  {name:"Random glucose",unit:"mmol/L",dir:"band",range:[4.1,5.9],curated:false,info:"Non-fasting blood sugar.",s:{2020:4.43,2022:5.11,2023:4.63,2025:4.91}},
+  {name:"Calcium",unit:"mmol/L",dir:"band",range:[2.15,2.5],curated:false,info:"Serum calcium; bone, muscle and nerve function.",s:{2022:2.48,2023:2.42,2025:2.21}},
+ ]},
+ {concern:"Kidney & urate",tag:"filtration · urate",icon:"droplet",col:1,markers:[
+  {name:"Uric acid",unit:"µmol/L",dir:"highBad",range:[200,420],info:"Purine end-product. Chronically high raises gout and kidney-stone risk.",s:{2022:402,2023:430,2024:434.2,2025:453.56}},
+  {name:"Creatinine",unit:"µmol/L",dir:"band",range:[60,110],info:"Muscle byproduct cleared by the kidneys; a core kidney-function marker.",s:{2020:83.08,2022:88,2023:83.2,2024:83.98,2025:70.56}},
+  {name:"eGFR (filtration rate)",unit:"mL/min",dir:"lowBad",range:[60,null],info:"Estimated glomerular filtration rate. Higher is better; ≥60 is normal.",s:{2020:109.29,2023:99,2024:97,2025:117}},
+  {name:"Urea",unit:"mmol/L",dir:"band",range:[2.8,8.0],info:"Protein-breakdown product filtered by the kidneys.",s:{2022:3.70,2023:4.88,2024:3.56,2025:5.81}},
+ ]},
+ {concern:"Liver",tag:"enzymes",icon:"flask",col:1,markers:[
+  {name:"ALT enzyme",unit:"U/L",dir:"highBad",range:[0,41],target:{max:30},info:"Most liver-specific enzyme. Your target keeps men under 30 — tighter than the lab’s 41.",s:{2020:17.59,2022:22.9,2023:21.4,2024:21,2025:31.31}},
+  {name:"AST enzyme",unit:"U/L",dir:"highBad",range:[0,41],info:"Liver and muscle enzyme; read together with ALT.",s:{2020:19.26,2022:17.6,2023:20.2,2024:20,2025:29.2}},
+  {name:"Gamma GT",unit:"U/L",dir:"highBad",range:[8,61],curated:false,info:"Rises with bile-duct issues and alcohol. Measured once so far.",s:{2022:20}},
+ ]},
+ {concern:"Blood count",tag:"cells · platelets",icon:"droplets",col:2,markers:[
+  {name:"White blood cells",unit:"10⁹/L",dir:"band",range:[4,10],info:"Immune cells; abnormal counts flag infection or inflammation.",s:{2020:6.82,2022:6.12,2023:5.37,2024:4.80,2025:5.16}},
+  {name:"Hemoglobin",unit:"g/dL",dir:"lowBad",range:[13,17],info:"Oxygen-carrying protein; low means anemia.",s:{2020:15.3,2022:16.8,2023:15.1,2024:15.0,2025:15.3}},
+  {name:"Platelets",unit:"10⁹/L",dir:"band",range:[150,450],info:"Clotting cell fragments.",s:{2020:208,2022:244,2023:190,2024:228,2025:207}},
+  {name:"Neutrophil %",unit:"%",dir:"band",range:[40,80],curated:false,info:"Share of white cells that are neutrophils.",s:{2020:60.8,2022:58.6,2023:54,2024:51.8,2025:53.7}},
+  {name:"Lymphocyte %",unit:"%",dir:"band",range:[10,50],curated:false,info:"Share of white cells that are lymphocytes.",s:{2020:30.8,2022:30.6,2023:36.4,2024:38.4,2025:36.2}},
+  {name:"Monocyte %",unit:"%",dir:"band",range:[0,12],curated:false,info:"Share of white cells that are monocytes.",s:{2020:6.25,2022:7.08,2023:6.8,2024:6.9,2025:8.3}},
+  {name:"Eosinophil %",unit:"%",dir:"band",range:[0,7],curated:false,info:"Allergy / parasite-linked white cells.",s:{2020:1.49,2022:2.28,2023:2.6,2024:2.5,2025:1.6}},
+  {name:"Basophil %",unit:"%",dir:"band",range:[0,2.5],curated:false,info:"Rarest white cells; allergic response.",s:{2020:0.67,2022:1.42,2023:0.2,2024:0.4,2025:0.2}},
+  {name:"Red blood cells",unit:"10¹²/L",dir:"band",range:[4.0,5.8],curated:false,info:"Oxygen-carrying cell count.",s:{2020:5.23,2022:5.52,2023:5.01,2024:5.10,2025:5.18}},
+  {name:"Hematocrit",unit:"%",dir:"band",range:[34,51],curated:false,info:"Fraction of blood volume that is red cells.",s:{2022:49.1,2023:45.2,2024:45.5,2025:47.1}},
+  {name:"MCV (cell size)",unit:"fL",dir:"band",range:[80,100],curated:false,info:"Average red-cell size; hints at anemia type.",s:{2020:90.5,2022:89,2023:90.2,2024:88.5,2025:90.9}},
+  {name:"MCH",unit:"pg",dir:"band",range:[28,32],curated:false,info:"Average hemoglobin per red cell.",s:{2020:29.3,2022:30.5,2023:30.1,2024:29.2,2025:29.5}},
+  {name:"MCHC",unit:"g/dL",dir:"band",range:[32,36],curated:false,info:"Hemoglobin concentration in red cells.",s:{2020:32.4,2022:34.3,2023:33.4,2024:33.0,2025:32.5}},
+  {name:"RDW (size spread)",unit:"%",dir:"band",range:[11.6,14.8],curated:false,info:"Variation in red-cell size.",s:{2020:12.3,2022:13.3,2023:14.1,2024:12.9,2025:13.3}},
+  {name:"MPV (platelet size)",unit:"fL",dir:"band",range:[6,13],curated:false,info:"Average platelet size.",s:{2020:11.2,2022:9.0,2023:10.6,2024:10.8,2025:11.5}},
+ ]},
+ {concern:"Immunity & markers",tag:"antibodies · tumor",icon:"shield",col:2,markers:[
+  {name:"PSA (prostate)",unit:"ng/mL",dir:"highBad",range:[0,4],info:"Prostate-specific antigen. The 2024 blip settled back down in 2025.",s:{2020:0.38,2022:0.34,2023:0.41,2024:1.18,2025:0.332}},
+  {name:"CEA (tumor marker)",unit:"ng/mL",dir:"highBad",range:[0,5.5],curated:false,info:"Broad tumor marker, mainly for monitoring not screening.",s:{2022:0.81,2023:0.18,2025:0.62}},
+  {name:"Hepatitis B antibody",unit:"",dir:"lowBad",qual:true,curated:false,info:"Immunity from vaccination or past infection. You are immune.",s:{2023:"Immune",2022:"Immune"}},
+ ]},
+ {concern:"Vitals",tag:"blood pressure · body",icon:"pulse",col:2,markers:[
+  {name:"Blood pressure",unit:"mmHg",dir:"highBad",range:[0,140],target:{max:120},info:"Systolic / diastolic. Watch above 120/80. Comes in your annual report each year.",pair:true,s:{2020:118,2022:122,2023:125,2024:120,2025:119},dia:{2020:76,2022:80,2023:82,2024:78,2025:77}},
+  {name:"Weight",unit:"kg",dir:"highBad",range:[null,null],target:{max:72},info:"Body weight over time. Personal target ≤ 72 kg.",s:{2020:70.2,2022:72.8,2023:74.1,2024:72.0,2025:71.3}},
+  {name:"BMI",unit:"",dir:"highBad",range:[18.5,24.9],info:"Body-mass index. Normal 18.5–24.9.",s:{2020:22.9,2022:23.8,2023:24.2,2024:23.5,2025:23.3}},
+ ]},
+ {concern:"Urine",tag:"dipstick",icon:"flask",col:0,markers:[
+  {name:"Specific gravity",unit:"",dir:"band",range:[1.010,1.030],curated:false,info:"How concentrated the urine is.",s:{2020:1.015,2022:1.025,2023:1.020,2024:1.010,2025:1.020}},
+  {name:"pH",unit:"",dir:"band",range:[5.0,7.5],curated:false,info:"Acid/alkaline balance of urine.",s:{2020:6.5,2022:6.0,2023:6.0,2024:7.0,2025:7.0}},
+  {name:"Protein",unit:"",qual:true,curated:false,info:"Urine protein; raised in kidney issues.",s:{2022:"Negative",2023:"Negative",2024:"Negative",2025:"Negative"}},
+  {name:"Glucose (urine)",unit:"",qual:true,curated:false,info:"Sugar in urine; flags diabetes/kidney issues.",s:{2022:"Negative",2023:"Negative",2024:"Negative",2025:"Normal"}},
+  {name:"Ketones",unit:"",qual:true,curated:false,info:"Fat-breakdown products in urine.",s:{2022:"Negative",2023:"Negative",2024:"Negative",2025:"Negative"}},
+  {name:"Leukocytes",unit:"",qual:true,curated:false,info:"White cells in urine; infection sign.",s:{2022:"Negative",2023:"Negative",2024:"Negative",2025:"Negative"}},
+  {name:"Blood (urine)",unit:"",qual:true,curated:false,info:"Red cells in urine; stones/infection sign.",s:{2022:"Negative",2023:"Negative",2024:"Negative",2025:"Negative"}},
+ ]},
+];
+
+function isCur(m){return m.curated!==false;}
+function find(n){for(const g of DATA)for(const m of g.markers)if(m.name===n)return m;}
+function series(m){if(m.derived==="tghdl"){const tg=find("Triglycerides").s,hd=find("HDL cholesterol").s,o={};YEARS.forEach(y=>{if(tg[y]!=null&&hd[y]!=null)o[y]=+(tg[y]/hd[y]).toFixed(2);});return o;}return m.s||{};}
+function raw(m){const s=series(m);return YEARS.filter(y=>s[y]!=null).map(y=>({y,v:s[y]}));}
+function pts(m){return raw(m).filter(o=>typeof o.v==="number");}
+function diaPts(m){if(!m.dia)return[];return YEARS.filter(y=>m.dia[y]!=null).map(y=>({y,v:m.dia[y]}));}
+function latest(m){const r=raw(m);return r[r.length-1];}
+function prev(m){const p=pts(m);return p.length>1?p[p.length-2]:null;}
+function labStatus(m){const l=latest(m);if(!l)return"none";if(m.qual)return"in";const[lo,hi]=m.range||[];if(hi!=null&&l.v>hi)return"high";if(lo!=null&&l.v<lo)return"low";return"in";}
+function tgtStatus(m){const l=latest(m);if(!l||!m.target||m.qual)return null;if(m.target.max!=null&&l.v>m.target.max)return"over";if(m.target.min!=null&&l.v<m.target.min)return"under";return"ok";}
+function statusKey(m){const l=latest(m);if(m.qual){return(l&&/neg|normal|immune/i.test(l.v))?"good":"watch";}const ls=labStatus(m);if(ls==="high"||ls==="low")return ls;if(tgtStatus(m)==="over"||tgtStatus(m)==="under")return"watch";return"good";}
+function rising(m){const l=latest(m),p=prev(m);if(!l||!p||m.qual)return false;return m.dir==="lowBad"?l.v<p.v:l.v>p.v;}
+const SC={high:"var(--color-red)",low:"var(--color-blue)",watch:"var(--color-orange)",good:"var(--color-green)"};
+function statusColor(m){return SC[statusKey(m)];}
+function valColor(m){const k=statusKey(m);return k==="good"?"var(--fg-1)":SC[k];}
+function fmt(v){return typeof v==="number"?(Math.round(v*100)/100).toString():v;}
+function disp(m){const l=latest(m);if(!l)return"—";if(m.pair){return`${fmt(l.v)}/${fmt(m.dia[l.y])}`;}return fmt(l.v);}
+function rngText(m){if(m.qual)return"Negative";const[lo,hi]=m.range||[];return lo!=null&&hi!=null?`${lo} – ${hi}`:hi!=null?`< ${hi}`:lo!=null?`> ${lo}`:"—";}
+function arrow(m){if(m.qual)return{c:"var(--fg-4)",t:"·"};const l=latest(m),p=prev(m);if(!l||!p)return{c:"var(--fg-4)",t:"·"};const d=+(l.v-p.v).toFixed(2);if(d===0)return{c:"var(--fg-4)",t:"·"};const up=d>0;if(m.dir==="band")return{c:"var(--fg-4)",t:up?"▲":"▼"};const bad=m.dir==="lowBad"?!up:up;return{c:bad?"var(--color-red)":"var(--color-green)",t:up?"▲":"▼"};}
+
+function spark(m,w=62,h=20){
+  const p=pts(m);if(p.length<2)return`<svg class="spk" viewBox="0 0 ${w} ${h}"></svg>`;
+  const vs=p.map(o=>o.v);let mn=Math.min(...vs),mx=Math.max(...vs);const[lo,hi]=m.range||[];
+  const pad=(mx-mn)*0.18||1,yMin=mn-pad,yMax=mx+pad,span=yMax-yMin||1;
+  const X=i=>2+i*(w-4)/(p.length-1),Y=v=>h-2-((v-yMin)/span)*(h-4);
+  let band="";if(m.range&&!(m.range[0]==null&&m.range[1]==null)){const bt=hi!=null?Math.max(0,Y(Math.min(hi,yMax))):0,bb=lo!=null?Math.min(h,Y(Math.max(lo,yMin))):h;band=`<rect x="0" y="${bt.toFixed(1)}" width="${w}" height="${Math.max(0,bb-bt).toFixed(1)}" fill="var(--bg-tertiary)"/>`;}
+  const d=p.map((o,i)=>`${i?"L":"M"}${X(i).toFixed(1)} ${Y(o.v).toFixed(1)}`).join(" ");
+  return`<svg class="spk" viewBox="0 0 ${w} ${h}">${band}<path d="${d}" fill="none" stroke="var(--fg-3)" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(p.length-1).toFixed(1)}" cy="${Y(p[p.length-1].v).toFixed(1)}" r="2.4" fill="${statusColor(m)}"/></svg>`;
+}
+
+function bigChart(m){
+  if(m.qual){const r=raw(m);return`<div class="qhist">${r.map(o=>`<span><b>'${o.y.slice(2)}</b>${o.v}</span>`).join("")}</div>`;}
+  const W=300,H=120,padL=6,padR=6,padT=14,padB=20;
+  const p=pts(m);if(p.length<2)return`<div class="qhist">${raw(m).map(o=>`<span><b>'${o.y.slice(2)}</b>${fmt(o.v)}</span>`).join("")||"single reading"}</div>`;
+  const dp=diaPts(m);const all=p.map(o=>o.v).concat(dp.map(o=>o.v));const[lo,hi]=m.range||[];
+  const tgt=m.target&&(m.target.max??m.target.min);
+  if(lo!=null)all.push(lo);if(hi!=null&&hi<1e4)all.push(hi);if(tgt!=null)all.push(tgt);
+  let mn=Math.min(...all),mx=Math.max(...all);const pad=(mx-mn)*0.15||1;mn-=pad;mx+=pad;const span=mx-mn||1;
+  const X=i=>padL+i*(W-padL-padR)/Math.max(1,p.length-1),Y=v=>H-padB-((v-mn)/span)*(H-padT-padB);
+  let g="";
+  if(m.range&&!(lo==null&&hi==null)){const bt=hi!=null?Y(hi):padT,bb=lo!=null?Y(lo):H-padB;g+=`<rect x="0" y="${bt.toFixed(1)}" width="${W}" height="${Math.max(0,bb-bt).toFixed(1)}" fill="var(--bg-tertiary)" opacity=".7"/>`;}
+  if(tgt!=null){const ty=Y(tgt);g+=`<line x1="0" y1="${ty.toFixed(1)}" x2="${W}" y2="${ty.toFixed(1)}" stroke="var(--color-orange)" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/><text x="${W-4}" y="${(ty-4).toFixed(1)}" text-anchor="end" font-family="var(--font-mono)" font-size="9" fill="var(--color-orange)">target ${tgt}</text>`;}
+  if(dp.length){g+=`<path d="${dp.map((o,i)=>`${i?"L":"M"}${X(p.findIndex(q=>q.y===o.y)).toFixed(1)} ${Y(o.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--fg-4)" stroke-width="1.4" stroke-dasharray="3 2"/>`;}
+  g+=`<path d="${p.map((o,i)=>`${i?"L":"M"}${X(i).toFixed(1)} ${Y(o.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--fg-2)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+  p.forEach((o,i)=>{const last=i===p.length-1;g+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(o.v).toFixed(1)}" r="${last?3.4:2.4}" fill="${last?statusColor(m):"var(--fg-3)"}"/>`;
+    g+=`<text x="${X(i).toFixed(1)}" y="${H-6}" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--fg-3)">'${o.y.slice(2)}</text>`;
+    if(last)g+=`<text x="${X(i).toFixed(1)}" y="${(Y(o.v)-7).toFixed(1)}" text-anchor="middle" font-family="var(--font-head)" font-weight="700" font-size="10" fill="${statusColor(m)}">${m.pair?disp(m):fmt(o.v)}</text>`;});
+  return`<svg class="big" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
+}
+
+const mkId=n=>"mk-"+n.replace(/[^a-z0-9]/gi,'');
+let openId=null,showAll=false;
+function toggle(id){
+  const d=document.getElementById("d-"+id),r=document.getElementById(id);
+  if(openId&&openId!==id){document.getElementById("d-"+openId)?.classList.remove("open");document.getElementById(openId)?.classList.remove("open");}
+  const willOpen=openId!==id;d.classList.toggle("open",willOpen);r.classList.toggle("open",willOpen);openId=willOpen?id:null;
+}
+let toastT;
+function toast(msg){const t=document.getElementById("toast");t.innerHTML=ic("layers")+`<span>${msg}</span>`;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),1900);}
+
+document.getElementById("hEye").innerHTML=ic("eye");
+document.getElementById("hDrop").innerHTML=ic("droplet");
+
+// attention — considers ALL markers, curated or not. The flagged markers ARE the hero.
+function buildAttention(){
+  const items=[];for(const g of DATA)for(const m of g.markers){const k=statusKey(m);if(k==="good")continue;let sc=(k==="high"||k==="low")?100:50;if(rising(m))sc+=10;items.push({m,k,sc});}
+  items.sort((a,b)=>b.sc-a.sc);
+  document.getElementById("attnCnt").textContent=items.length?items.length+(items.length>1?" markers":" marker"):"";
+  const box=document.getElementById("attnItems");
+  if(!items.length){box.innerHTML=`<span class="attn-empty">${ic("heart")} All clear this year — nothing outside range or past a target.</span>`;return;}
+  box.innerHTML=items.map(({m,k})=>{const a=arrow(m),why=k==="high"?"above range":k==="low"?"below range":"past your target";
+    return`<span class="attn-item" data-mk="${mkId(m.name)}"><span class="dot" style="background:${SC[k]}"></span><span class="an">${m.name}</span><span class="av" style="color:${SC[k]}">${disp(m)}</span><span class="aw" style="color:${a.c}">${a.t}</span><span class="why">${why}</span></span>`;}).join("");
+  box.querySelectorAll(".attn-item").forEach(el=>el.addEventListener("click",()=>{
+    const id=el.dataset.mk;let t=document.getElementById(id);
+    if(t&&t.classList.contains("hidden-mk")){showAll=true;syncAll();t=document.getElementById(id);}
+    if(t){t.scrollIntoView({block:"center",behavior:"smooth"});if(openId!==id)toggle(id);}
+  }));
+}
+
+function buildGrid(){
+  const cols=[[],[],[]];DATA.forEach(g=>cols[g.col].push(g));
+  document.getElementById("grid").innerHTML=cols.map((groups,ci)=>{
+    let h=`<div class="col">`;
+    groups.forEach(g=>{
+      const ks=g.markers.map(statusKey),bad=ks.filter(k=>k==="high"||k==="low").length,watch=ks.filter(k=>k==="watch").length;
+      const dc=bad?"var(--color-red)":watch?"var(--color-orange)":"var(--color-green)";
+      const hiddenN=g.markers.filter(m=>!isCur(m)).length;
+      h+=`<div class="grp"><div class="grp-head" data-base="${g.concern}"><span class="gic">${ic(g.icon)}</span><span class="dot" style="background:${dc}"></span><span class="lbl">${g.concern}</span><span class="go">${ic("layers")} Base view</span><span class="tag">${hiddenN&&!showAll?`+${hiddenN} hidden · `:""}${g.tag}</span></div>`;
+      g.markers.forEach(m=>{const a=arrow(m),id=mkId(m.name),hide=!showAll&&!isCur(m);
+        h+=`<div class="mk${hide?" hidden-mk":""}" id="${id}" data-id="${id}"><span class="chev">${ic("chevron")}</span>
+          <div class="nm"><span class="t">${m.name}</span><span class="tip">${m.info}<span class="rng">Normal ${rngText(m)} ${m.unit}${m.target?` · your target ${m.dir==="lowBad"?"≥":"≤"}${m.target.min??m.target.max}`:""}</span></span></div>
+          ${spark(m)}
+          <div class="rt"><span class="arw" style="color:${a.c}">${a.t}</span><span class="val${m.qual?" qual":""}" style="color:${valColor(m)}">${disp(m)}</span><span class="unit">${m.unit}</span></div></div>
+          <div class="detail" id="d-${id}"><div class="detail-in"><div class="cap"><span class="m">${m.info}</span><span class="now" style="color:${valColor(m)}">${disp(m)} <span class="unit" style="font-size:11px;color:var(--fg-4)">${m.unit}</span></span></div>${bigChart(m)}</div></div>`;
+      });
+      h+=`</div>`;
+    });
+    if(ci===2){h+=`<div class="wgt-block"><span class="lbl">In lhak-dashboard</span><div class="widget" id="wgt"></div></div>`;}
+    return h+`</div>`;
+  }).join("");
+
+  const flags=[];for(const g of DATA)for(const m of g.markers){const k=statusKey(m);if(k!=="good")flags.push({m,k});}
+  flags.sort((a,b)=>((b.k==="high"||b.k==="low")?1:0)-((a.k==="high"||a.k==="low")?1:0));
+  document.getElementById("wgt").innerHTML=`<div class="wh"><span class="hic">${ic("heart")}</span><span class="wt">Health</span><span class="wc">${flags.length} flags</span></div>`+
+    flags.slice(0,3).map(({m,k})=>`<div class="wi"><span class="dot" style="background:${SC[k]}"></span><span class="wn">${m.name}</span><span class="wv" style="color:${SC[k]}">${disp(m)}</span></div>`).join("")+
+    `<div class="wf">Open health dashboard ${ic("arrow")}</div>`;
+
+  document.querySelectorAll(".mk").forEach(r=>r.addEventListener("click",()=>toggle(r.dataset.id)));
+  document.querySelectorAll(".grp-head").forEach(hd=>hd.addEventListener("click",()=>toast("Opening Base view — "+hd.dataset.base)));
+  openId=null;
+}
+function emptyState(name){
+  document.getElementById("attnCnt").textContent="";
+  document.getElementById("attnItems").innerHTML=`<span class="attn-empty" style="color:var(--fg-3)">No visits recorded for ${name} yet.</span>`;
+  document.getElementById("grid").innerHTML=`<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;color:var(--fg-3);font-family:var(--font-body);font-size:14px;padding:72px 20px;text-align:center;">No records for ${name} yet.<span style="font-size:12px;color:var(--fg-4)">Add the first visit in settings, or paste a lab report.</span></div>`;
+}
+const PEOPLE=[
+ {name:"You",profile:"A, Rh+ · No known allergies · Last record: 2025, Jul 23rd",data:true},
+ {name:"Spouse",profile:"Blood type — · Last record: none yet",data:false},
+ {name:"Child",profile:"Pediatric ranges · Last record: none yet",data:false},
+];
+let curP=0;
+function renderPeople(){
+  document.getElementById("ppl").innerHTML=PEOPLE.map((p,i)=>`<button class="pill${i===curP?" active":""}" data-p="${i}">${p.name}</button>`).join("");
+  document.querySelectorAll(".pill").forEach(b=>b.addEventListener("click",()=>{const i=+b.dataset.p;if(i!==curP){curP=i;renderPerson();}}));
+}
+function renderPerson(){
+  const p=PEOPLE[curP];openId=null;
+  document.getElementById("profileTxt").textContent=p.profile;
+  document.getElementById("allBtn").style.visibility=p.data?"visible":"hidden";
+  renderPeople();
+  if(p.data){buildAttention();buildGrid();}else{emptyState(p.name);}
+}
+function syncAll(){const b=document.getElementById("allBtn");b.classList.toggle("on",showAll);document.getElementById("allTxt").textContent=showAll?"Curated":"Show all";buildGrid();}
+document.getElementById("allBtn").addEventListener("click",()=>{showAll=!showAll;syncAll();});
+renderPerson();
+</script>

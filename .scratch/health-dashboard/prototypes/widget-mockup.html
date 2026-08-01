@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Health widget — size ladder</title>
+<style>
+  :root{
+    --c-red-l:#fc0135;--c-orange-l:#ff7d00;--c-yellow-l:#ffae00;--c-green-l:#28a948;
+    --c-cyan-l:#00ac96;--c-blue-l:#006bff;
+    --c-red-d:#ff3448;--c-orange-d:#fa7500;--c-green-d:#3ad25e;--c-blue-d:#4191ff;--c-cyan-d:#29ccc1;
+    --font-head:'Space Grotesk','SF Pro Display',system-ui,-apple-system,sans-serif;
+    --font-body:'Iosevka Charon',Georgia,'Times New Roman',serif;
+    --font-mono:'Maple Mono','SF Mono',Menlo,Consolas,monospace;
+    --r-sm:4px;--r-md:8px;--r-pill:999px;
+  }
+  :root, :root[data-theme="light"]{
+    --bg-primary:#fff;--bg-secondary:#f6f6f6;--bg-tertiary:#ececec;
+    --fg-1:#1f1f1f;--fg-2:#4a4a4a;--fg-3:#8a8a8a;--fg-4:#c6c6c6;
+    --border:rgba(0,0,0,.08);--dot-color:rgba(0,0,0,.07);
+    --color-red:var(--c-red-l);--color-orange:var(--c-orange-l);--color-green:var(--c-green-l);
+    --color-blue:var(--c-blue-l);--color-cyan:var(--c-cyan-l);--accent:hsl(144 50% 42%);
+    --page:#e9e9ea;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg-primary:#1c1c1c;--bg-secondary:#181818;--bg-tertiary:#242424;
+      --fg-1:#d8d8d8;--fg-2:#a0a0a0;--fg-3:#6e6e6e;--fg-4:#3c3c3c;
+      --border:rgba(255,255,255,.08);--dot-color:rgba(255,255,255,.05);
+      --color-red:var(--c-red-d);--color-orange:var(--c-orange-d);--color-green:var(--c-green-d);
+      --color-blue:var(--c-blue-d);--color-cyan:var(--c-cyan-d);--accent:hsl(144 50% 44%);
+      --page:#111;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg-primary:#1c1c1c;--bg-secondary:#181818;--bg-tertiary:#242424;
+    --fg-1:#d8d8d8;--fg-2:#a0a0a0;--fg-3:#6e6e6e;--fg-4:#3c3c3c;
+    --border:rgba(255,255,255,.08);--dot-color:rgba(255,255,255,.05);
+    --color-red:var(--c-red-d);--color-orange:var(--c-orange-d);--color-green:var(--c-green-d);
+    --color-blue:var(--c-blue-d);--color-cyan:var(--c-cyan-d);--accent:hsl(144 50% 44%);
+    --page:#111;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--font-body);color:var(--fg-1);background:var(--page);
+    min-height:100vh;padding:36px 20px 60px;}
+  h1{font-family:var(--font-head);font-size:15px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--fg-2);text-align:center;margin-bottom:6px;}
+  .lead{font-family:var(--font-mono);font-size:11px;color:var(--fg-3);text-align:center;
+    margin-bottom:34px;}
+  .ladder{display:flex;flex-wrap:wrap;gap:40px 48px;align-items:flex-start;justify-content:center;}
+  .stage{display:flex;flex-direction:column;gap:10px;align-items:center;}
+  .cap{font-family:var(--font-mono);font-size:11px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.1em;}
+  .cap b{color:var(--fg-1);font-weight:700;}
+  .note{font-family:var(--font-body);font-size:12px;color:var(--fg-3);max-width:230px;text-align:center;}
+  .heart{width:15px;height:15px;flex:none;color:var(--color-red);}
+  .heart.ok{color:var(--color-green);}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .d-red{background:var(--color-red);}.d-orange{background:var(--color-orange);}
+  .d-blue{background:var(--color-blue);}.d-green{background:var(--color-green);}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+  .arr{font-family:var(--font-mono);font-size:11px;line-height:1;}
+  .up-bad{color:var(--color-red);}.dn-good{color:var(--color-green);}
+
+  /* ---- Tier 1: CHIP (inline, fits a stat row) ---- */
+  .chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;
+    background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--r-pill);cursor:pointer;}
+  .chip .n{font-family:var(--font-head);font-weight:700;font-size:14px;color:var(--fg-1);}
+  .chip .u{font-family:var(--font-mono);font-size:10px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.06em;}
+  .chip .pips{display:flex;gap:3px;margin-left:2px;}
+
+  /* ---- Tier 2: LIST (full panel, default) ---- */
+  .widget{width:280px;background:var(--bg-primary);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:11px 12px 5px;
+    background-image:radial-gradient(var(--dot-color) 1px,transparent 1px);
+    background-size:14px 14px;background-position:-1px -1px;}
+  .whead{display:flex;align-items:center;gap:8px;margin-bottom:7px;cursor:pointer;}
+  .whead .lbl{font-family:var(--font-head);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-2);}
+  .whead .cnt{font-family:var(--font-mono);font-size:11px;color:var(--fg-3);margin-left:auto;}
+  .whead .chev{width:13px;height:13px;color:var(--fg-4);flex:none;}
+  .rows{display:flex;flex-direction:column;}
+  .row{display:grid;grid-template-columns:8px 1fr 30px auto;align-items:center;gap:9px;
+    padding:4px 3px;border-top:1px solid var(--border);cursor:pointer;}
+  .row:hover{background:var(--bg-secondary);border-radius:var(--r-sm);}
+  .row .dot{justify-self:center;}
+  .nm{min-width:0;}
+  .nm .t{font-family:var(--font-body);font-size:14px;color:var(--fg-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:1.3;}
+  .spark{width:30px;height:14px;}
+  .rt{display:flex;align-items:baseline;gap:4px;justify-self:end;}
+  .val{font-family:var(--font-head);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;color:var(--fg-1);line-height:1;}
+  .more{font-family:var(--font-mono);font-size:10px;color:var(--fg-3);padding:5px 3px 3px;border-top:1px solid var(--border);cursor:pointer;}
+  .more:hover{color:var(--accent);}
+</style>
+</head>
+<body>
+<h1>Health widget · size ladder</h1>
+<div class="lead">two tiers · one setting picks which mounts · both deep-link into the full Health Dashboard</div>
+
+<div class="ladder">
+
+  <!-- TIER 1 -->
+  <div class="stage">
+    <div class="cap"><b>1 · Chip</b></div>
+    <div class="chip" title="open Health Dashboard">
+      <svg class="heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>
+      <span class="n">3</span><span class="u">flagged</span>
+      <span class="pips"><span class="dot d-red"></span><span class="dot d-orange"></span><span class="dot d-blue"></span></span>
+    </div>
+    <div class="note">Inline pill — drops into an existing stat row. Count + status pips only.</div>
+    <div class="chip" title="all clear" style="margin-top:4px">
+      <svg class="heart ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>
+      <span class="n" style="color:var(--color-green)">✓</span><span class="u">in range</span>
+    </div>
+    <div class="cap" style="opacity:.6">all-clear</div>
+  </div>
+
+  <!-- TIER 2 -->
+  <div class="stage">
+    <div class="cap"><b>2 · List</b> (default)</div>
+    <div class="widget">
+      <div class="whead" title="open Health Dashboard">
+        <svg class="heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>
+        <span class="lbl">Health</span>
+        <span class="cnt">3 flagged · 24 tracked</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="rows">
+        <div class="row" title="LDL cholesterol · above range — open history">
+          <span class="dot d-red"></span>
+          <span class="nm"><span class="t">LDL cholesterol</span></span>
+          <svg class="spark" viewBox="0 0 30 14" preserveAspectRatio="none"><polyline points="0,10 7,9 15,6 22,4 30,2" fill="none" stroke="var(--color-red)" stroke-width="1.5"/></svg>
+          <span class="rt"><span class="val mono">4.2</span><span class="arr up-bad">▲</span></span>
+        </div>
+        <div class="row" title="Fasting glucose · past target — open history">
+          <span class="dot d-orange"></span>
+          <span class="nm"><span class="t">Fasting glucose</span></span>
+          <svg class="spark" viewBox="0 0 30 14" preserveAspectRatio="none"><polyline points="0,9 7,8 15,7 22,5 30,4" fill="none" stroke="var(--color-orange)" stroke-width="1.5"/></svg>
+          <span class="rt"><span class="val mono">99</span><span class="arr up-bad">▲</span></span>
+        </div>
+        <div class="row" title="Vitamin D · below range — open history">
+          <span class="dot d-blue"></span>
+          <span class="nm"><span class="t">Vitamin D</span></span>
+          <svg class="spark" viewBox="0 0 30 14" preserveAspectRatio="none"><polyline points="0,3 7,5 15,6 22,8 30,11" fill="none" stroke="var(--color-blue)" stroke-width="1.5"/></svg>
+          <span class="rt"><span class="val mono">21</span><span class="arr dn-good">▼</span></span>
+        </div>
+        <div class="more">+ 1 more watch · view all →</div>
+      </div>
+    </div>
+    <div class="note">Full panel — top-N flagged rows, sparkline + arrow, each a deep-link.</div>
+  </div>
+
+</div>
+</body>
+</html>
