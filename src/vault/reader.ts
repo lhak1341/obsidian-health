@@ -64,7 +64,7 @@ async function collect<T>(
 	return results;
 }
 
-function filesUnder(app: App, folder: string): TFile[] {
+export function filesUnder(app: App, folder: string): TFile[] {
 	const prefix = folder.endsWith("/") ? folder : `${folder}/`;
 	return app.vault.getMarkdownFiles().filter((file) => file.path === folder || file.path.startsWith(prefix));
 }

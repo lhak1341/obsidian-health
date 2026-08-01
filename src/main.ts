@@ -1,6 +1,7 @@
-import { Plugin, WorkspaceLeaf } from "obsidian";
+import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
+import { AddVisitModal } from "./modals/add-visit-modal";
 import { HEALTH_VIEW_TYPE, HealthView } from "./view";
-import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
+import { DEFAULT_VAULT_PATHS, scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
 
 export default class HealthPlugin extends Plugin {
 	async onload(): Promise<void> {
@@ -11,6 +12,30 @@ export default class HealthPlugin extends Plugin {
 			name: "Open dashboard",
 			callback: () => this.activateView(),
 		});
+
+		this.addCommand({
+			id: "add-lab-visit",
+			name: "Add lab visit",
+			callback: () => void this.openAddVisitModal(),
+		});
+	}
+
+	async openAddVisitModal(): Promise<void> {
+		const snapshot = await this.scanVault();
+		const defaultPerson = snapshot.profiles[0]?.person;
+		if (!defaultPerson) {
+			new Notice("Add a profile note before recording a lab visit.");
+			return;
+		}
+
+		new AddVisitModal(this.app, DEFAULT_VAULT_PATHS, snapshot, defaultPerson, () => this.refreshOpenViews()).open();
+	}
+
+	private refreshOpenViews(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(HEALTH_VIEW_TYPE)) {
+			const view = leaf.view;
+			if (view instanceof HealthView) void view.refresh();
+		}
 	}
 
 	scanVault(paths?: VaultPaths): Promise<VaultSnapshot> {

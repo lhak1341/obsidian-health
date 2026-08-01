@@ -38,7 +38,7 @@ export class HealthView extends ItemView {
 		this.contentEl.empty();
 	}
 
-	private async refresh(): Promise<void> {
+	async refresh(): Promise<void> {
 		const snapshot = await this.plugin.scanVault();
 		const profile = snapshot.profiles[0];
 
@@ -57,6 +57,7 @@ export class HealthView extends ItemView {
 				this.showAll = !this.showAll;
 				void this.refresh();
 			},
+			onAddVisit: () => void this.plugin.openAddVisitModal(),
 		});
 	}
 }

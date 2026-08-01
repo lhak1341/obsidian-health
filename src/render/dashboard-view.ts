@@ -6,6 +6,7 @@ import { formatArrow, formatRangeText, formatRawValue, formatTargetText, formatY
 export interface DashboardRenderOptions {
 	showAll: boolean;
 	onToggleShowAll: () => void;
+	onAddVisit: () => void;
 }
 
 interface RowEntry {
@@ -28,7 +29,7 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	root.appendChild(dash);
 
 	if (model.markers.length === 0) {
-		dash.appendChild(buildEmptyState());
+		dash.appendChild(buildEmptyState(opts));
 		return;
 	}
 
@@ -41,10 +42,21 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	dash.appendChild(groups);
 }
 
-function buildEmptyState(): HTMLElement {
+function buildEmptyState(opts: DashboardRenderOptions): HTMLElement {
 	const empty = document.createElement("div");
 	empty.className = "hlth-empty";
-	empty.textContent = "No visits recorded yet. Add the first lab visit to see your dashboard.";
+
+	const text = document.createElement("div");
+	text.textContent = "No visits recorded yet. Add the first lab visit to see your dashboard.";
+	empty.appendChild(text);
+
+	const button = document.createElement("button");
+	button.type = "button";
+	button.className = "hlth-showall-btn";
+	button.textContent = "+ Add visit";
+	button.addEventListener("click", () => opts.onAddVisit());
+	empty.appendChild(button);
+
 	return empty;
 }
 
@@ -57,12 +69,24 @@ function buildHeader(opts: DashboardRenderOptions): HTMLElement {
 	title.textContent = "Health";
 	top.appendChild(title);
 
+	const actions = document.createElement("div");
+	actions.className = "hlth-top-actions";
+
+	const addButton = document.createElement("button");
+	addButton.type = "button";
+	addButton.className = "hlth-showall-btn";
+	addButton.textContent = "+ Add visit";
+	addButton.addEventListener("click", () => opts.onAddVisit());
+	actions.appendChild(addButton);
+
 	const button = document.createElement("button");
 	button.type = "button";
 	button.className = "hlth-showall-btn";
 	button.textContent = opts.showAll ? "Curated" : "Show all";
 	button.addEventListener("click", () => opts.onToggleShowAll());
-	top.appendChild(button);
+	actions.appendChild(button);
+
+	top.appendChild(actions);
 
 	return top;
 }
