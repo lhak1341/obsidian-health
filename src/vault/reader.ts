@@ -18,6 +18,7 @@ export interface VaultPaths {
 	profilesFolder: string;
 	plansFolder: string;
 	visitsFolder: string;
+	basesFolder: string;
 }
 
 export const DEFAULT_VAULT_PATHS: VaultPaths = {
@@ -25,6 +26,7 @@ export const DEFAULT_VAULT_PATHS: VaultPaths = {
 	profilesFolder: "09 about-me/profiles",
 	plansFolder: "09 about-me/health/plans",
 	visitsFolder: "09 about-me/health/labs",
+	basesFolder: "09 about-me/health/bases",
 };
 
 export interface VaultSnapshot {
@@ -42,7 +44,7 @@ export async function scanVault(app: App, paths: VaultPaths = DEFAULT_VAULT_PATH
 		collect(app, paths.visitsFolder, (_file, fm) => parseVisitNote(fm)),
 		collect(app, paths.profilesFolder, (file, fm) => parseProfileNote(file.basename, fm)),
 		collect(app, paths.plansFolder, async (file, fm) =>
-			parsePlanNote(fm, stripFrontmatter(await app.vault.cachedRead(file))),
+			parsePlanNote(fm, stripFrontmatter(await app.vault.cachedRead(file)), file.path),
 		),
 	]);
 
@@ -138,11 +140,11 @@ function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileN
 	};
 }
 
-function parsePlanNote(fm: Record<string, unknown>, body: string): PlanNote | null {
+function parsePlanNote(fm: Record<string, unknown>, body: string, path: string): PlanNote | null {
 	if (typeof fm.person !== "string") return null;
 	if (typeof fm.year !== "number") return null;
 
-	return { person: fm.person, year: fm.year, body };
+	return { person: fm.person, year: fm.year, body, path };
 }
 
 function parseRanges(raw: unknown): MarkerRange[] | undefined {

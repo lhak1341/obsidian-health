@@ -197,6 +197,22 @@ describe("computeDashboardModel — qualitative status", () => {
 	});
 });
 
+describe("computeDashboardModel — candidate markers", () => {
+	it("omits a candidate marker with zero readings", () => {
+		const m = marker({ id: "candidate-test", status: "candidate" });
+		const model = computeDashboardModel([m], [], profile(), settings);
+
+		expect(model.markers).toEqual([]);
+	});
+
+	it("auto-graduates a candidate onto the dashboard once it has a reading", () => {
+		const m = marker({ id: "candidate-test", status: "candidate" });
+		const model = computeDashboardModel([m], [visit("2025-01-01", { "candidate-test": 5 })], profile(), settings);
+
+		expect(model.markers.map((info) => info.marker.id)).toEqual(["candidate-test"]);
+	});
+});
+
 describe("computeDashboardModel — arrow", () => {
 	it("has no arrow with only one reading", () => {
 		const m = marker({ id: "alt" });

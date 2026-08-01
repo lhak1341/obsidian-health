@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
 import { computeDashboardModel } from "./core/dashboard";
 import type HealthPlugin from "./main";
 import { renderDashboard } from "./render/dashboard-view";
@@ -63,6 +63,8 @@ export class HealthView extends ItemView {
 				void this.refresh();
 			},
 			onAddVisit: () => void this.plugin.openAddVisitModal(),
+			onOpenPlanner: () => void this.plugin.activatePlannerView(),
+			onOpenConcern: (concern) => this.openConcernBase(concern),
 			profiles: snapshot.profiles.map((p) => p.person),
 			activePerson: profile.person,
 			onSwitchProfile: (person) => {
@@ -70,5 +72,18 @@ export class HealthView extends ItemView {
 				void this.refresh();
 			},
 		});
+	}
+
+	/** By convention a concern header opens `<basesFolder>/<concern>.base`, or the per-concern override path. Returns false if the file doesn't exist so the caller can degrade to in-plugin expand. */
+	private openConcernBase(concern: string): boolean {
+		const settings = this.plugin.settings;
+		const override = settings.concernBaseOverrides[concern]?.trim();
+		const path = override || `${settings.basesFolder}/${concern}.base`;
+
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) return false;
+
+		void this.app.workspace.getLeaf(true).openFile(file);
+		return true;
 	}
 }

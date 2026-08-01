@@ -56,7 +56,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		const items = root.createDiv("setting-group").createDiv("setting-items");
 
 		const settings = this.plugin.settings;
-		const pathField = (name: string, key: "markersFolder" | "profilesFolder" | "plansFolder" | "visitsFolder") => {
+		const pathField = (name: string, key: "markersFolder" | "profilesFolder" | "plansFolder" | "visitsFolder" | "basesFolder") => {
 			new Setting(items).setName(name).addText((text) => {
 				text.setValue(settings[key]).onChange((value) => {
 					settings[key] = value.trim();
@@ -72,6 +72,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		pathField("Profiles folder", "profilesFolder");
 		pathField("Plans folder", "plansFolder");
 		pathField("Visits folder", "visitsFolder");
+		pathField("Bases folder", "basesFolder");
 	}
 
 	private renderDashboardSettings(root: HTMLElement): void {

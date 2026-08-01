@@ -57,4 +57,5 @@ export interface PlanNote {
 	person: string;
 	year: number;
 	body: string;
+	path: string;
 }

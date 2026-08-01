@@ -3,7 +3,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Maple+Mono:wght@300..700&display=swap");
 
 /* ── Token layer (scoped to view root) ──────────────────────────────────── */
-.health-dashboard-outer {
+.health-dashboard-outer,
+.health-planner-outer {
 	--hlth-bg: var(--background-primary, #ffffff);
 	--hlth-bg2: var(--background-secondary, #f6f6f6);
 	--hlth-bg3: var(--background-secondary-alt, #ececec);
@@ -194,6 +195,11 @@
 	margin: 0 -6px 5px;
 	padding: 3px 6px;
 	border-radius: 4px;
+	cursor: pointer;
+}
+
+.hlth-grp-head:hover {
+	background: var(--hlth-bg2);
 }
 
 .hlth-grp-label {
@@ -224,6 +230,10 @@
 
 .hlth-row.hlth-hidden {
 	display: none;
+}
+
+.hlth-grp.hlth-grp-expanded .hlth-row.hlth-hidden {
+	display: grid;
 }
 
 .hlth-chevron {
@@ -599,4 +609,99 @@ svg.hlth-chart {
 
 .hlth-widget-more:hover {
 	color: var(--text-muted);
+}
+
+/* ── Planner surface ─────────────────────────────────────────────────────── */
+.hlth-planner {
+	height: 100%;
+	overflow-y: auto;
+	box-sizing: border-box;
+	padding: 22px 28px 20px;
+	color: var(--hlth-fg1);
+	font-family: var(--hlth-fb);
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+}
+
+.hlth-planner-plan,
+.hlth-planner-backlog {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.hlth-planner-plan-empty {
+	color: var(--hlth-fg3);
+	font-size: 13px;
+}
+
+.hlth-planner-plan-row {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	border-top: 1px solid var(--hlth-border);
+	padding-top: 10px;
+}
+
+.hlth-planner-plan-year {
+	font-family: var(--hlth-fm);
+	font-weight: 700;
+	color: var(--hlth-fg2);
+	flex: none;
+}
+
+.hlth-planner-plan-preview {
+	flex: 1 1 auto;
+	color: var(--hlth-fg2);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hlth-planner-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.hlth-planner-row {
+	display: grid;
+	grid-template-columns: minmax(120px, 1fr) 90px 70px 60px auto;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 2px;
+	border-top: 1px solid var(--hlth-border);
+	font-size: 13px;
+}
+
+.hlth-planner-name {
+	color: var(--hlth-fg1);
+}
+
+.hlth-planner-priority {
+	font-family: var(--hlth-fh);
+	font-size: 10.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--hlth-fg3);
+}
+
+.hlth-planner-priority-essential {
+	color: var(--color-red);
+}
+
+.hlth-planner-priority-lifestyle {
+	color: var(--color-blue);
+}
+
+.hlth-planner-cost,
+.hlth-planner-year {
+	font-family: var(--hlth-fm);
+	color: var(--hlth-fg2);
+}
+
+.hlth-planner-link {
+	font-size: 12px;
+	color: var(--hlth-fg3);
 }

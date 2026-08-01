@@ -8,6 +8,9 @@ export interface DashboardRenderOptions {
 	showAll: boolean;
 	onToggleShowAll: () => void;
 	onAddVisit: () => void;
+	onOpenPlanner: () => void;
+	/** Tries to open the concern's filtered Base view; resolves false when none exists (caller degrades to in-plugin expand). */
+	onOpenConcern: (concern: string) => boolean | Promise<boolean>;
 	profiles: string[];
 	activePerson: string;
 	onSwitchProfile: (person: string) => void;
@@ -37,7 +40,7 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	const rowByMarkerId = indexPairs(model.markers);
 	const rowsById = new Map<string, RowRef>();
 
-	const groups = buildGroups(model, opts.showAll, rowByMarkerId, rowsById);
+	const groups = buildGroups(model, opts, rowByMarkerId, rowsById);
 	dash.appendChild(buildAttentionBar(model, rowsById));
 	dash.appendChild(groups);
 }
@@ -62,6 +65,13 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 
 	const actions = document.createElement("div");
 	actions.className = "hlth-top-actions";
+
+	const plannerButton = document.createElement("button");
+	plannerButton.type = "button";
+	plannerButton.className = "hlth-showall-btn";
+	plannerButton.textContent = "Planner";
+	plannerButton.addEventListener("click", () => opts.onOpenPlanner());
+	actions.appendChild(plannerButton);
 
 	const addButton = document.createElement("button");
 	addButton.type = "button";
@@ -188,7 +198,7 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 	return bar;
 }
 
-function buildGroups(model: DashboardModel, showAll: boolean, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
+function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
 	const container = document.createElement("div");
 	container.className = "hlth-groups";
 
@@ -197,7 +207,7 @@ function buildGroups(model: DashboardModel, showAll: boolean, rowByMarkerId: Map
 	const groups = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
 
 	for (const group of groups) {
-		container.appendChild(buildGroup(group, showAll, curated, rowByMarkerId, rowsById));
+		container.appendChild(buildGroup(group, opts, curated, rowByMarkerId, rowsById));
 	}
 
 	return container;
@@ -207,7 +217,7 @@ function groupRank(group: ConcernGroup, rankIndex: Map<string, number>): number 
 	return Math.min(...group.markers.map((info) => rankIndex.get(info.marker.id) ?? Number.POSITIVE_INFINITY));
 }
 
-function buildGroup(group: ConcernGroup, showAll: boolean, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
+function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
 	const rendered = new Set<string>();
 	const rows: RowEntry[] = [];
 	for (const info of group.markers) {
@@ -221,10 +231,16 @@ function buildGroup(group: ConcernGroup, showAll: boolean, curated: Set<string>,
 
 	const wrap = document.createElement("div");
 	wrap.className = "hlth-grp";
-	wrap.appendChild(buildGroupHeader(group, hiddenCount, showAll));
+	const head = buildGroupHeader(group, hiddenCount, opts.showAll);
+	head.addEventListener("click", () => {
+		void Promise.resolve(opts.onOpenConcern(group.concern)).then((opened) => {
+			if (!opened) wrap.classList.toggle("hlth-grp-expanded");
+		});
+	});
+	wrap.appendChild(head);
 
 	for (const row of rows) {
-		const hidden = !showAll && !curated.has(row.primary.marker.id);
+		const hidden = !opts.showAll && !curated.has(row.primary.marker.id);
 		const { header, detail, open } = buildRow(row, hidden);
 		wrap.appendChild(header);
 		wrap.appendChild(detail);

@@ -1,8 +1,7 @@
 import type { DashboardModel } from "../core/model";
 import type { WidgetTier } from "../settings";
-import { buildSparkline } from "./charts";
-import { formatArrow, formatRawValue, statusColor } from "./format";
-import { flaggedRows, type RowEntry } from "./rows";
+import { statusColor } from "./format";
+import { fillMarkerRowContent, flaggedRows, type RowEntry } from "./rows";
 
 export interface WidgetRenderOptions {
 	tier: WidgetTier;
@@ -108,39 +107,7 @@ function buildListRow(row: RowEntry, opts: WidgetRenderOptions): HTMLElement {
 	el.type = "button";
 	el.className = "hlth-widget-row";
 	el.addEventListener("click", () => opts.onOpenMarker?.(primary.marker.id));
-
-	const dot = document.createElement("span");
-	dot.className = "hlth-dot";
-	dot.style.background = statusColor(primary.status);
-	el.appendChild(dot);
-
-	const name = document.createElement("span");
-	name.className = "hlth-widget-row-name";
-	name.textContent = primary.marker.name;
-	el.appendChild(name);
-
-	if (opts.showSparkline) el.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
-
-	const value = document.createElement("span");
-	value.className = "hlth-widget-row-value";
-	value.style.color = statusColor(primary.status);
-	value.textContent = formatValue(row);
-	el.appendChild(value);
-
-	const arrow = formatArrow(primary.arrow);
-	const arrowEl = document.createElement("span");
-	arrowEl.className = "hlth-arrow";
-	arrowEl.style.color = arrow.color;
-	arrowEl.textContent = arrow.glyph;
-	el.appendChild(arrowEl);
+	fillMarkerRowContent(el, primary, secondary, { showSparkline: opts.showSparkline });
 
 	return el;
-}
-
-function formatValue(row: RowEntry): string {
-	const { primary, secondary } = row;
-	if (!primary.latest) return "—";
-	const primaryText = formatRawValue(primary.latest.value);
-	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
-	return primaryText;
 }

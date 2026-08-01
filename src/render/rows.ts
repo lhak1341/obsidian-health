@@ -1,4 +1,6 @@
 import type { DashboardModel, MarkerStatusInfo } from "../core/model";
+import { buildSparkline } from "./charts";
+import { formatArrow, formatRawValue, statusColor } from "./format";
 
 export interface RowEntry {
 	primary: MarkerStatusInfo;
@@ -55,4 +57,40 @@ export function flaggedRows(model: DashboardModel): RowEntry[] {
 	}
 
 	return flagged;
+}
+
+/** Latest reading as display text, paired (`primary/secondary`) for BP-style markers. */
+export function formatRowValue(primary: MarkerStatusInfo, secondary?: MarkerStatusInfo): string {
+	if (!primary.latest) return "—";
+	const primaryText = formatRawValue(primary.latest.value);
+	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
+	return primaryText;
+}
+
+/** Fills a status dot, name, optional sparkline, value, and arrow into `el` — the compact row shape shared by the widget and the Bases view. */
+export function fillMarkerRowContent(el: HTMLElement, primary: MarkerStatusInfo, secondary: MarkerStatusInfo | undefined, opts: { showSparkline: boolean }): void {
+	const dot = document.createElement("span");
+	dot.className = "hlth-dot";
+	dot.style.background = statusColor(primary.status);
+	el.appendChild(dot);
+
+	const name = document.createElement("span");
+	name.className = "hlth-widget-row-name";
+	name.textContent = primary.marker.name;
+	el.appendChild(name);
+
+	if (opts.showSparkline) el.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
+
+	const value = document.createElement("span");
+	value.className = "hlth-widget-row-value";
+	value.style.color = statusColor(primary.status);
+	value.textContent = formatRowValue(primary, secondary);
+	el.appendChild(value);
+
+	const arrow = formatArrow(primary.arrow);
+	const arrowEl = document.createElement("span");
+	arrowEl.className = "hlth-arrow";
+	arrowEl.style.color = arrow.color;
+	arrowEl.textContent = arrow.glyph;
+	el.appendChild(arrowEl);
 }

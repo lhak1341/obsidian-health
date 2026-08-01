@@ -1,6 +1,8 @@
 import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
+import { HEALTH_BASES_VIEW_TYPE, HealthBasesView } from "./bases-view";
 import { computeDashboardModel } from "./core/dashboard";
 import { AddVisitModal } from "./modals/add-visit-modal";
+import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
 import { DEFAULT_SETTINGS, type HealthPluginSettings, type WidgetTier } from "./settings";
@@ -28,12 +30,24 @@ export default class HealthPlugin extends Plugin {
 		this.settings.concernBaseOverrides = { ...DEFAULT_SETTINGS.concernBaseOverrides, ...saved?.concernBaseOverrides };
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
+		this.registerView(HEALTH_PLANNER_VIEW_TYPE, (leaf) => new HealthPlannerView(leaf, this));
+		this.registerBasesView(HEALTH_BASES_VIEW_TYPE, {
+			name: "Health markers",
+			icon: "heart-pulse",
+			factory: (controller, containerEl) => new HealthBasesView(controller, containerEl, this),
+		});
 		this.addSettingTab(new HealthSettingTab(this.app, this));
 
 		this.addCommand({
 			id: "open-health-dashboard",
 			name: "Open dashboard",
 			callback: () => this.activateView(),
+		});
+
+		this.addCommand({
+			id: "open-health-planner",
+			name: "Open planner",
+			callback: () => this.activatePlannerView(),
 		});
 
 		this.addCommand({
@@ -119,6 +133,18 @@ export default class HealthPlugin extends Plugin {
 		if (!leaf) {
 			leaf = workspace.getLeaf("tab");
 			await leaf.setViewState({ type: HEALTH_VIEW_TYPE, active: true });
+		}
+
+		workspace.revealLeaf(leaf);
+	}
+
+	async activatePlannerView(): Promise<void> {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(HEALTH_PLANNER_VIEW_TYPE)[0] ?? null;
+		if (!leaf) {
+			leaf = workspace.getLeaf("tab");
+			await leaf.setViewState({ type: HEALTH_PLANNER_VIEW_TYPE, active: true });
 		}
 
 		workspace.revealLeaf(leaf);
