@@ -103,10 +103,10 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Dashboard ItemView (read-only render).
 
-- [ ] Planner is a separate surface; backlog = candidate markers with zero readings, sorted priority then cost
-- [ ] Yearly package-analysis plan note linked from the Planner
-- [ ] First reading auto-graduates a candidate onto the dashboard
-- [ ] Custom Bases view registered; concern headers open a filtered Base (convention + override), degrading to in-plugin expand when absent
+- [x] Planner is a separate surface; backlog = candidate markers with zero readings, sorted priority then cost
+- [x] Yearly package-analysis plan note linked from the Planner
+- [x] First reading auto-graduates a candidate onto the dashboard
+- [x] Custom Bases view registered; concern headers open a filtered Base (convention + override), degrading to in-plugin expand when absent
 
 ## Migration data hand-refinement
 
