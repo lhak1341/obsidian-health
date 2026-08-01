@@ -26,7 +26,7 @@ export function computeDashboardModel(
 
 		const latest = series[series.length - 1];
 		const band = marker.type === "numeric" ? resolve(marker, profile, latest.date) : {};
-		const status = deriveStatus(marker, band, latest);
+		const { status } = deriveStatus(marker, band, latest);
 		const arrow = deriveArrow(marker, series, settings);
 
 		markerInfos.push({ marker, status, band, series, latest, arrow });
@@ -79,18 +79,9 @@ function attentionMagnitude(info: MarkerStatusInfo): number {
 	const { marker, status, band, latest } = info;
 
 	if (marker.type === "qualitative") return status === "good" ? 0 : Number.POSITIVE_INFINITY;
-	if (status === "good" || latest === undefined || typeof latest.value !== "number") return 0;
+	if (latest === undefined) return 0;
 
-	const value = latest.value;
-	const width = band.high !== undefined && band.low !== undefined ? band.high - band.low || 1 : 1;
-
-	if (status === "high" && band.high !== undefined) return (value - band.high) / width;
-	if (status === "low" && band.low !== undefined) return (band.low - value) / width;
-	if (status === "watch") {
-		if (marker.optimalHigh !== undefined && value > marker.optimalHigh) return (value - marker.optimalHigh) / width;
-		if (marker.optimalLow !== undefined && value < marker.optimalLow) return (marker.optimalLow - value) / width;
-	}
-	return 0;
+	return deriveStatus(marker, band, latest).excess;
 }
 
 function trendWeight(info: MarkerStatusInfo): number {
@@ -100,12 +91,13 @@ function trendWeight(info: MarkerStatusInfo): number {
 function statusTier(status: Status): number {
 	switch (status) {
 		case "high":
-		case "low":
 			return 0;
-		case "watch":
+		case "low":
 			return 1;
-		case "good":
+		case "watch":
 			return 2;
+		case "good":
+			return 3;
 	}
 }
 
@@ -120,20 +112,27 @@ function buildSeries(marker: MarkerNote, visits: VisitNote[]): SeriesPoint[] {
 	return points;
 }
 
-function deriveStatus(marker: MarkerNote, band: ResolvedRange, latest: SeriesPoint): Status {
+function deriveStatus(marker: MarkerNote, band: ResolvedRange, latest: SeriesPoint): { status: Status; excess: number } {
 	if (marker.type === "qualitative") {
 		const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
-		return normal.includes(String(latest.value)) ? "good" : "high";
+		const status: Status = normal.includes(String(latest.value)) ? "good" : "high";
+		return { status, excess: 0 };
 	}
 
-	if (marker.type !== "numeric") return "good";
+	if (marker.type !== "numeric" || typeof latest.value !== "number") return { status: "good", excess: 0 };
 
-	const value = latest.value as number;
-	if (band.low !== undefined && value < band.low) return "low";
-	if (band.high !== undefined && value > band.high) return "high";
-	if (marker.optimalHigh !== undefined && value > marker.optimalHigh) return "watch";
-	if (marker.optimalLow !== undefined && value < marker.optimalLow) return "watch";
-	return "good";
+	const value = latest.value;
+	const width = band.high !== undefined && band.low !== undefined ? band.high - band.low || 1 : 1;
+
+	if (band.low !== undefined && value < band.low) return { status: "low", excess: (band.low - value) / width };
+	if (band.high !== undefined && value > band.high) return { status: "high", excess: (value - band.high) / width };
+	if (marker.optimalHigh !== undefined && value > marker.optimalHigh) {
+		return { status: "watch", excess: (value - marker.optimalHigh) / width };
+	}
+	if (marker.optimalLow !== undefined && value < marker.optimalLow) {
+		return { status: "watch", excess: (marker.optimalLow - value) / width };
+	}
+	return { status: "good", excess: 0 };
 }
 
 export function resolve(marker: MarkerNote, profile: ProfileNote, atDate: string): ResolvedRange {

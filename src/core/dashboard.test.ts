@@ -55,6 +55,13 @@ describe("resolve", () => {
 		expect(band).toEqual({ low: 5, high: 50 });
 	});
 
+	it("resolves a different band for a different profile sex", () => {
+		const m = marker({ ranges: [{ sex: "m", low: 13, high: 17 }, { sex: "f", low: 12, high: 16.5 }] });
+
+		expect(resolve(m, profile({ sex: "m" }), "2025-01-01")).toEqual({ low: 13, high: 17 });
+		expect(resolve(m, profile({ sex: "f" }), "2025-01-01")).toEqual({ low: 12, high: 16.5 });
+	});
+
 	it("returns an empty band when no range matches the profile's sex", () => {
 		const m = marker({ ranges: [{ sex: "f", low: 10, high: 90 }] });
 
@@ -95,6 +102,14 @@ describe("isSoftWarn", () => {
 
 	it("does not flag a value within the wild-outlier threshold", () => {
 		expect(isSoftWarn(30, { low: 10, high: 50 })).toBe(false);
+	});
+
+	it("flags a converted alt-unit value that lands wildly outside the band", () => {
+		// 1000 mg/dL entered where mmol/L was meant -- a classic unit-slip typo.
+		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
+		const canonical = convert(1000, "mg/dL", m);
+
+		expect(isSoftWarn(canonical, { low: 3.6, high: 5.18 })).toBe(true);
 	});
 });
 
@@ -332,6 +347,21 @@ describe("computeDashboardModel — concern groups", () => {
 		const lipids = model.concernGroups.find((g) => g.concern === "lipids");
 		expect(lipids?.status).toBe("high");
 		expect(lipids?.markers.map((m) => m.marker.id).sort()).toEqual(["hdl", "ldl"]);
+	});
+
+	it("prefers high over low for the worst-member dot when a group has both", () => {
+		const lowMarker = marker({ id: "low-one", concern: ["panel"], ranges: [{ sex: "any", low: 10, high: 20 }] });
+		const highMarker = marker({ id: "high-one", concern: ["panel"], ranges: [{ sex: "any", low: 10, high: 20 }] });
+
+		const model = computeDashboardModel(
+			[lowMarker, highMarker],
+			[visit("2025-01-01", { "low-one": 5, "high-one": 25 })],
+			profile(),
+			settings,
+		);
+
+		const panel = model.concernGroups.find((g) => g.concern === "panel");
+		expect(panel?.status).toBe("high");
 	});
 
 	it("puts a marker in every concern group it belongs to", () => {
