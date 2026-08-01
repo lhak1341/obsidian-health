@@ -10,10 +10,10 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** None — can start immediately.
 
-- [ ] Plugin manifest declares id `health`; plugin loads in the vault without errors
-- [ ] An open command registers and opens an empty `ItemView`
-- [ ] A unit-test runner is configured and runnable, scoped to the core (Obsidian-free)
-- [ ] Build tooling bundles the plugin (dev + prod)
+- [x] Plugin manifest declares id `health`; plugin loads in the vault without errors
+- [x] An open command registers and opens an empty `ItemView`
+- [x] A unit-test runner is configured and runnable, scoped to the core (Obsidian-free)
+- [x] Build tooling bundles the plugin (dev + prod)
 
 ## Domain types + vault reader
 
@@ -21,11 +21,11 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Scaffold plugin + core test runner.
 
-- [ ] Visit, marker, profile, and plan notes each parse into a typed structure
-- [ ] Visits discovered by `type: lab-visit`, keyed by `person` + `date`, folder-per-person
-- [ ] Omitted marker keys represented as gaps (not zeros/nulls that read as readings)
-- [ ] Censored/qualitative strings preserved intact
-- [ ] The real migrated dataset reads into the snapshot cleanly (validated against Obsidian's own parser, not just a self-consistent round-trip)
+- [x] Visit, marker, profile, and plan notes each parse into a typed structure
+- [x] Visits discovered by `type: lab-visit`, keyed by `person` + `date`, folder-per-person
+- [x] Omitted marker keys represented as gaps (not zeros/nulls that read as readings)
+- [x] Censored/qualitative strings preserved intact
+- [x] The real migrated dataset reads into the snapshot cleanly (validated against Obsidian's own parser, not just a self-consistent round-trip)
 
 ## Domain core — flags, arrows, ranking, grouping
 
