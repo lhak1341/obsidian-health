@@ -1,9 +1,9 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { parseAllergies, validateProfileInput } from "./core/entry";
-import type { PersonSex, ProfileNote } from "./core/types";
+import type { MarkerNote, PersonSex, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
 import type { VaultSnapshot } from "./vault/reader";
-import { saveProfileNote } from "./vault/writer";
+import { saveMarkerOrder, saveProfileNote } from "./vault/writer";
 import type { WidgetTier } from "./settings";
 
 interface NewProfileDraft {
@@ -17,6 +17,9 @@ interface NewProfileDraft {
 export class HealthSettingTab extends PluginSettingTab {
 	private snapshot?: VaultSnapshot;
 	private newProfile: NewProfileDraft = { person: "", sex: "m", dob: "", bloodType: "", allergies: "" };
+	// The settings modal is an overlay -- an open dashboard behind it can't be seen anyway, so
+	// there's no point refreshing it after every single drag. Batch to one rescan on tab close.
+	private dirty = false;
 
 	constructor(
 		app: App,
@@ -29,6 +32,13 @@ export class HealthSettingTab extends PluginSettingTab {
 		this.containerEl.empty();
 		this.containerEl.createDiv({ text: "Loading…" });
 		void this.reload();
+	}
+
+	hide(): void {
+		if (this.dirty) {
+			this.plugin.refreshOpenViews();
+			this.dirty = false;
+		}
 	}
 
 	private async reload(): Promise<void> {
@@ -48,6 +58,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		this.renderDashboardSettings(root);
 		this.renderWidgetSettings(root);
 		this.renderConcernOverrides(root);
+		this.renderRowOrder(root);
 		this.renderProfiles(root);
 	}
 
@@ -209,6 +220,94 @@ export class HealthSettingTab extends PluginSettingTab {
 					this.renderContent();
 				}),
 			);
+	}
+
+	private renderRowOrder(root: HTMLElement): void {
+		new Setting(root).setName("Row order").setHeading();
+		root.createEl("p", {
+			cls: "setting-item-description",
+			text: "Drag to reorder markers within a concern. Dropping writes order: to every marker note in that group -- no manual renumbering.",
+		});
+		const items = root.createDiv("setting-group").createDiv("setting-items");
+
+		const byConcern = new Map<string, MarkerNote[]>();
+		for (const marker of this.snapshot?.markers ?? []) {
+			for (const concern of marker.concern) {
+				const group = byConcern.get(concern) ?? [];
+				group.push(marker);
+				byConcern.set(concern, group);
+			}
+		}
+
+		const concerns = [...byConcern.keys()].sort((a, b) => a.localeCompare(b));
+		if (concerns.length === 0) {
+			items.createEl("p", { cls: "setting-item-description", text: "No markers with a concern yet." });
+			return;
+		}
+
+		for (const concern of concerns) {
+			const markers = byConcern.get(concern)!.sort((a, b) => (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) || a.name.localeCompare(b.name));
+			this.renderConcernOrderList(items, concern, markers);
+		}
+	}
+
+	private renderConcernOrderList(root: HTMLElement, concern: string, markers: MarkerNote[]): void {
+		const details = root.createEl("details", { cls: "hlth-settings-details" });
+		details.createEl("summary", { text: `${concern} (${markers.length})` });
+		const list = details.createDiv({ cls: "hlth-order-list" });
+
+		const order = [...markers];
+		let dragId: string | undefined;
+
+		const renderRows = () => {
+			list.empty();
+			for (const marker of order) {
+				const row = list.createDiv({ cls: "hlth-order-row" });
+				row.draggable = true;
+				row.dataset.id = marker.id;
+
+				row.createSpan({ cls: "hlth-order-handle", text: "⠿" });
+				row.createSpan({ cls: "hlth-order-name", text: marker.name });
+
+				row.addEventListener("dragstart", (evt) => {
+					dragId = marker.id;
+					row.classList.add("hlth-order-dragging");
+					evt.dataTransfer?.setData("text/plain", marker.id);
+				});
+				row.addEventListener("dragend", () => row.classList.remove("hlth-order-dragging"));
+				row.addEventListener("dragover", (evt) => {
+					evt.preventDefault();
+					if (dragId && dragId !== marker.id) row.classList.add("hlth-order-over");
+				});
+				row.addEventListener("dragleave", () => row.classList.remove("hlth-order-over"));
+				row.addEventListener("drop", (evt) => {
+					evt.preventDefault();
+					row.classList.remove("hlth-order-over");
+					if (!dragId || dragId === marker.id) return;
+					const fromIdx = order.findIndex((m) => m.id === dragId);
+					const toIdx = order.findIndex((m) => m.id === marker.id);
+					if (fromIdx < 0 || toIdx < 0) return;
+					const [moved] = order.splice(fromIdx, 1);
+					order.splice(toIdx, 0, moved);
+					dragId = undefined;
+					renderRows();
+					void this.saveConcernOrder(order);
+				});
+			}
+		};
+
+		renderRows();
+	}
+
+	/** Writes sparse `order:` values (10, 20, 30…) for a concern's full list so a future drag only
+	 *  ever needs to touch that one moved marker's file again, not renumber its neighbors.
+	 *  Updates the in-memory snapshot instead of a full `reload()` -- reloading re-scans the vault
+	 *  and rebuilds the whole tab, which would collapse every open `<details>` accordion mid-drag. */
+	private async saveConcernOrder(order: MarkerNote[]): Promise<void> {
+		const paths = this.plugin.settings;
+		order.forEach((marker, i) => (marker.order = (i + 1) * 10));
+		await Promise.all(order.map((marker) => saveMarkerOrder(this.app, paths, marker.id, marker.order!)));
+		this.dirty = true;
 	}
 
 	private renderProfiles(root: HTMLElement): void {

@@ -86,6 +86,7 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "hlth-showall-btn";
+		if (opts.showAll) button.classList.add("hlth-btn-on");
 		button.appendChild(iconFor("eye"));
 		button.appendChild(document.createTextNode(opts.showAll ? "Curated" : "Show all"));
 		button.addEventListener("click", () => opts.onToggleShowAll());
@@ -220,16 +221,37 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 	return bar;
 }
 
+// Column placement is pinned by concern, not by attention urgency -- Vitals/Cardiometabolic
+// always read left, Blood Count (cbc) always reads center, everything else always reads right.
+// Keeps muscle memory for where a concern lives even as flagged markers come and go.
+const LEFT_CONCERNS = new Set(["vitals", "cardiometabolic", "cancer", "immunity"]);
+const CENTER_CONCERNS = new Set(["cbc", "blood", "blood count"]);
+
+function columnForConcern(concern: string): 0 | 1 | 2 {
+	const key = concern.toLowerCase();
+	if (LEFT_CONCERNS.has(key)) return 0;
+	if (CENTER_CONCERNS.has(key)) return 1;
+	return 2;
+}
+
 function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
 	const container = document.createElement("div");
 	container.className = "hlth-groups";
 
 	const rankIndex = new Map(model.attentionOrder.map((id, i) => [id, i]));
 	const curated = new Set(model.curated);
-	const groups = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
+	const sorted = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
 
-	for (const group of groups) {
-		container.appendChild(buildGroup(group, opts, curated, rowByMarkerId, rowsById));
+	const columns: ConcernGroup[][] = [[], [], []];
+	for (const group of sorted) columns[columnForConcern(group.concern)].push(group);
+
+	for (const columnGroups of columns) {
+		const col = document.createElement("div");
+		col.className = "hlth-col";
+		for (const group of columnGroups) {
+			col.appendChild(buildGroup(group, opts, curated, rowByMarkerId, rowsById));
+		}
+		container.appendChild(col);
 	}
 
 	return container;
@@ -237,6 +259,10 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 
 function groupRank(group: ConcernGroup, rankIndex: Map<string, number>): number {
 	return Math.min(...group.markers.map((info) => rankIndex.get(info.marker.id) ?? Number.POSITIVE_INFINITY));
+}
+
+function rowOrder(row: RowEntry): number {
+	return row.primary.marker.order ?? Number.POSITIVE_INFINITY;
 }
 
 function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
@@ -248,6 +274,10 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 		rendered.add(row.primary.marker.id);
 		rows.push(row);
 	}
+	// Vault scan order is otherwise arbitrary (filesystem/cache enumeration, not alphabetical) --
+	// `order:` frontmatter lets a marker note pin its row position; unset markers fall back to
+	// alphabetical by name so the layout is still deterministic without it.
+	rows.sort((a, b) => rowOrder(a) - rowOrder(b) || a.primary.marker.name.localeCompare(b.primary.marker.name));
 
 	const hiddenCount = rows.filter((row) => !curated.has(row.primary.marker.id)).length;
 

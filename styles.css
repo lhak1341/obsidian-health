@@ -51,7 +51,7 @@ svg.hlth-ic {
 
 .hlth-lbl {
 	font-family: var(--hlth-fh);
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
@@ -89,9 +89,13 @@ svg.hlth-ic {
 	flex: none;
 }
 
-.hlth-pill {
+/* `.hlth-dash` prefix on every button rule below isn't just scoping -- Obsidian's own theme
+   ships a default `<button>` skin (solid `--interactive-normal` fill) that otherwise beats a
+   bare single-class selector on specificity, silently overriding `background: transparent` and
+   the border color. Two classes' worth of specificity is what actually wins that fight. */
+.hlth-dash .hlth-pill {
 	font-family: var(--hlth-fh);
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 600;
 	color: var(--hlth-fg3);
 	padding: 4px 12px;
@@ -99,14 +103,15 @@ svg.hlth-ic {
 	border: 1px solid var(--hlth-border);
 	cursor: pointer;
 	background: transparent;
+	box-shadow: none;
 }
 
-.hlth-pill:hover {
+.hlth-dash .hlth-pill:hover {
 	background: var(--hlth-bg2);
 	color: var(--hlth-fg1);
 }
 
-.hlth-pill-active {
+.hlth-dash .hlth-pill-active {
 	background: var(--interactive-accent, var(--hlth-fg1));
 	color: var(--text-on-accent, var(--hlth-bg));
 	border-color: transparent;
@@ -114,7 +119,7 @@ svg.hlth-ic {
 
 .hlth-profile-info {
 	font-family: var(--hlth-fm);
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--hlth-fg3);
 	display: flex;
 	align-items: center;
@@ -137,24 +142,35 @@ svg.hlth-ic {
 	flex: none;
 }
 
-.hlth-showall-btn {
+.hlth-dash .hlth-showall-btn {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	font-family: var(--hlth-fh);
 	font-weight: 600;
-	font-size: 12px;
+	font-size: 14px;
 	color: var(--hlth-fg2);
 	background: transparent;
+	box-shadow: none;
 	border: 1px solid var(--hlth-border);
 	border-radius: 8px;
-	padding: 5px 12px;
+	padding: 6px 12px;
 	cursor: pointer;
 }
 
-.hlth-showall-btn:hover {
+.hlth-dash .hlth-showall-btn:hover {
 	background: var(--hlth-bg2);
 	color: var(--hlth-fg1);
+}
+
+.hlth-dash .hlth-showall-btn:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
+.hlth-dash .hlth-showall-btn.hlth-btn-on {
+	color: var(--interactive-accent);
+	border-color: color-mix(in srgb, var(--interactive-accent) 45%, var(--hlth-border));
 }
 
 /* ── Attention hero ──────────────────────────────────────────────────────── */
@@ -175,7 +191,7 @@ svg.hlth-ic {
 
 .hlth-attn-count {
 	font-family: var(--hlth-fm);
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--hlth-fg3);
 }
 
@@ -201,20 +217,20 @@ svg.hlth-ic {
 
 .hlth-attn-name {
 	font-family: var(--hlth-fb);
-	font-size: 14px;
+	font-size: 15px;
 	color: var(--hlth-fg1);
 }
 
 .hlth-attn-value {
 	font-family: var(--hlth-fh);
 	font-weight: 700;
-	font-size: 15px;
+	font-size: 16px;
 	font-variant-numeric: tabular-nums;
 }
 
 .hlth-attn-why {
 	font-family: var(--hlth-fm);
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--hlth-fg3);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
@@ -222,23 +238,30 @@ svg.hlth-ic {
 
 .hlth-attn-empty {
 	font-family: var(--hlth-fb);
-	font-size: 13px;
+	font-size: 14px;
 	color: var(--color-green);
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
-/* ── Concern groups (auto-balanced columns) ─────────────────────────────── */
+/* ── Concern groups (pinned columns: left=Vitals/Cardiometabolic, center=Blood Count, right=rest) ── */
 .hlth-groups {
 	margin-top: 10px;
-	column-width: 380px;
-	column-gap: 0;
-	column-rule: 1px solid var(--hlth-border);
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+	align-items: start;
+}
+
+.hlth-col {
+	min-width: 0;
+}
+
+.hlth-col + .hlth-col {
+	border-left: 1px solid var(--hlth-border);
 }
 
 .hlth-grp {
-	break-inside: avoid-column;
 	margin-bottom: 18px;
 	padding: 0 4px;
 }
@@ -259,7 +282,7 @@ svg.hlth-ic {
 
 .hlth-grp-icon {
 	color: var(--hlth-fg3);
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .hlth-grp-head:hover .hlth-grp-label {
@@ -275,7 +298,7 @@ svg.hlth-ic {
 	align-items: center;
 	gap: 3px;
 	font-family: var(--hlth-fm);
-	font-size: 9.5px;
+	font-size: 10.5px;
 	color: var(--color-cyan);
 	opacity: 0;
 	transition: opacity 0.12s;
@@ -289,7 +312,7 @@ svg.hlth-ic {
 
 .hlth-grp-tag {
 	font-family: var(--hlth-fm);
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--hlth-fg4);
 	margin-left: auto;
 }
@@ -336,7 +359,7 @@ svg.hlth-ic {
 
 .hlth-chevron {
 	color: var(--hlth-fg4);
-	font-size: 12px;
+	font-size: 13px;
 	transition: transform 0.15s ease;
 	display: flex;
 }
@@ -353,7 +376,7 @@ svg.hlth-ic {
 
 .hlth-name-text {
 	font-family: var(--hlth-fb);
-	font-size: 14px;
+	font-size: 15px;
 	color: var(--hlth-fg1);
 	white-space: nowrap;
 	overflow: hidden;
@@ -373,7 +396,7 @@ svg.hlth-ic {
 	background: var(--text-normal, #1f1f1f);
 	color: var(--background-primary, #ffffff);
 	font-family: "Iosevka Charon", var(--font-text), Georgia, serif;
-	font-size: 12px;
+	font-size: 13px;
 	line-height: 1.5;
 	padding: 9px 11px;
 	border-radius: 8px;
@@ -392,7 +415,7 @@ svg.hlth-ic {
 	display: block;
 	margin-top: 6px;
 	font-family: var(--hlth-fm);
-	font-size: 11px;
+	font-size: 12px;
 	opacity: 0.82;
 }
 
@@ -407,7 +430,7 @@ svg.hlth-spk {
 }
 
 .hlth-arrow {
-	font-size: 11px;
+	font-size: 12px;
 	width: 12px;
 	text-align: center;
 	display: flex;
@@ -417,7 +440,7 @@ svg.hlth-spk {
 .hlth-value {
 	font-family: var(--hlth-fh);
 	font-weight: 700;
-	font-size: 15px;
+	font-size: 16px;
 	font-variant-numeric: tabular-nums;
 	color: var(--hlth-fg1);
 }
@@ -431,14 +454,14 @@ svg.hlth-spk {
 }
 
 .hlth-value-qual {
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
 }
 
 .hlth-unit {
 	font-family: var(--hlth-fm);
-	font-size: 10.5px;
+	font-size: 11.5px;
 	color: var(--hlth-fg4);
 }
 
@@ -475,7 +498,7 @@ svg.hlth-spk {
 
 .hlth-detail-meaning {
 	font-family: var(--hlth-fb);
-	font-size: 12px;
+	font-size: 13px;
 	color: var(--hlth-fg2);
 	line-height: 1.45;
 	max-width: 72%;
@@ -484,7 +507,7 @@ svg.hlth-spk {
 .hlth-detail-now {
 	font-family: var(--hlth-fh);
 	font-weight: 700;
-	font-size: 19px;
+	font-size: 20px;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
@@ -508,7 +531,7 @@ svg.hlth-chart {
 	gap: 2px;
 	align-items: center;
 	font-family: var(--hlth-fm);
-	font-size: 12px;
+	font-size: 13px;
 	padding: 6px 10px;
 	border: 1px solid var(--hlth-border);
 	border-radius: 4px;
@@ -518,7 +541,7 @@ svg.hlth-chart {
 .hlth-qchip b {
 	color: var(--hlth-fg4);
 	font-weight: 400;
-	font-size: 10px;
+	font-size: 11px;
 }
 
 .hlth-qchip-bad {
@@ -532,14 +555,14 @@ svg.hlth-chart {
 
 .hlth-single-note {
 	font-family: var(--hlth-fb);
-	font-size: 12.5px;
+	font-size: 13.5px;
 	color: var(--hlth-fg3);
 	padding: 8px 0;
 }
 
 .hlth-empty {
 	font-family: var(--hlth-fb);
-	font-size: 14px;
+	font-size: 15px;
 	color: var(--hlth-fg3);
 	display: flex;
 	flex-direction: column;
@@ -554,7 +577,7 @@ svg.hlth-chart {
 /* ── Add lab visit modal ─────────────────────────────────────────────────── */
 .hlth-modal-errors {
 	color: var(--color-red);
-	font-size: 12.5px;
+	font-size: 13.5px;
 	margin: 8px 0;
 	display: flex;
 	flex-direction: column;
@@ -570,7 +593,7 @@ svg.hlth-chart {
 .hlth-modal-addmarker summary {
 	cursor: pointer;
 	color: var(--hlth-fg2);
-	font-size: 12.5px;
+	font-size: 13.5px;
 }
 
 .hlth-modal-summary {
@@ -608,13 +631,54 @@ svg.hlth-chart {
 	margin-bottom: 8px;
 }
 
+/* ── Settings tab: drag-to-reorder marker list ───────────────────────────── */
+.hlth-order-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.hlth-order-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	border-radius: 4px;
+	cursor: grab;
+	border: 1px solid transparent;
+}
+
+.hlth-order-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.hlth-order-row.hlth-order-dragging {
+	opacity: 0.4;
+}
+
+.hlth-order-row.hlth-order-over {
+	border-top: 2px solid var(--interactive-accent);
+}
+
+.hlth-order-handle {
+	color: var(--text-faint);
+	font-size: 15px;
+	line-height: 1;
+	flex: none;
+}
+
+.hlth-order-name {
+	font-size: 14px;
+	color: var(--text-normal);
+}
+
 /* ── lhak-dashboard widget ────────────────────────────────────────────────── */
 .hlth-widget {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
 	font-family: var(--font-interface);
-	font-size: 12.5px;
+	font-size: 13.5px;
 	color: var(--text-normal);
 }
 
@@ -625,7 +689,7 @@ svg.hlth-chart {
 	padding: 0;
 	margin: 0;
 	font-weight: 700;
-	font-size: 11px;
+	font-size: 12px;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 	color: var(--text-faint);
@@ -715,7 +779,7 @@ svg.hlth-chart {
 	border: none;
 	padding: 2px 0;
 	margin: 0;
-	font-size: 11.5px;
+	font-size: 12.5px;
 	color: var(--text-faint);
 	cursor: pointer;
 }
@@ -746,7 +810,7 @@ svg.hlth-chart {
 
 .hlth-planner-plan-empty {
 	color: var(--hlth-fg3);
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .hlth-planner-plan-row {
@@ -784,7 +848,7 @@ svg.hlth-chart {
 	gap: 10px;
 	padding: 8px 2px;
 	border-top: 1px solid var(--hlth-border);
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .hlth-planner-name {
@@ -793,7 +857,7 @@ svg.hlth-chart {
 
 .hlth-planner-priority {
 	font-family: var(--hlth-fh);
-	font-size: 10.5px;
+	font-size: 11.5px;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
@@ -815,6 +879,6 @@ svg.hlth-chart {
 }
 
 .hlth-planner-link {
-	font-size: 12px;
+	font-size: 13px;
 	color: var(--hlth-fg3);
 }

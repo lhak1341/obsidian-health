@@ -36,6 +36,12 @@ The vault is itself a git repo — after manually testing a feature that writes 
 
 Testing a feature by writing new files directly into the vault (not through Obsidian's own write path) won't show up in an already-open view — opening the dashboard via command just reveals the existing leaf, it doesn't rescan. Force it with `leaf.view.refresh()` via `eval` (`app.workspace.getLeavesOfType("health-dashboard")[0].view.refresh()`). New files created this way are untracked, so clean up with `rm`, not `git checkout --`.
 
+`app.setting.open()`/`openTabById(id)` throw a "circular structure" JSON error in `eval`'s return-value serialization — the action still succeeds; ignore the error and check the resulting screenshot/DOM instead.
+
+To script the settings tab: `app.setting.open(); app.setting.openTabById('health')`, then scroll `.vertical-tab-content` or find a section via `[...document.querySelectorAll('.setting-item-heading')].find(h=>h.textContent==='X').scrollIntoView()`.
+
+To test drag-and-drop via `eval`: dispatch real events sharing one `DataTransfer` — `const dt=new DataTransfer(); src.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt})); tgt.dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt}))`. `.click()` won't trigger drop handlers.
+
 ## Obsidian view rendering gotcha
 
 Never put layout padding directly on an `ItemView`'s `contentEl` — it already carries Obsidian's `view-content` class, and themes often force `div.view-content { padding: 0 !important }` there, beating any rule regardless of specificity. Nest a child div for padding/layout; keep only sizing/CSS-variable-token declarations on `contentEl` itself.
@@ -54,11 +60,23 @@ A `mountX(container, opts) → handle{ destroy }` entry point that does async se
 
 Reference for `mountX(container, ...) → handle{ destroy }` host-handshake APIs: `obsidian-linear-calendar/src/main.ts` (`mountMonthStrip`, plugin side) + `obsidian-lhak-dashboard/src/panels/CalendarPanel.ts` (host side — looks the plugin up via `app.plugins.plugins[id]`, owns placement, destroys the handle on close).
 
+## Obsidian button styling gotcha
+
+Obsidian's theme ships a default `<button>` skin (solid `--interactive-normal` fill) that beats a bare single-class selector like `.my-btn` on specificity, silently overriding `background: transparent` and border-color with no visible error. Source CSS looking correct doesn't mean it's applying — verify with `getComputedStyle(el).backgroundColor` via `eval`. Fix by scoping the selector under a parent class (e.g. `.hlth-dash .my-btn`) for two-class specificity.
+
+## Obsidian vault ordering gotcha
+
+`app.vault.getMarkdownFiles()` returns files in arbitrary cache/filesystem order, NOT alphabetical — never rely on it for display order; sort explicitly (by name, a frontmatter `order` field, etc.).
+
 ## Data authoring gotcha
 
 Quote frontmatter values starting with `%`, `@`, `|`, `>`, etc. — unquoted, Obsidian's parser silently drops the WHOLE note's frontmatter, no error surfaced anywhere.
 
 When writing frontmatter from plugin code, use `app.fileManager.processFrontMatter(file, fn)` rather than hand-built YAML — it applies Obsidian's own serializer and quoting, sidestepping the above by construction.
+
+New marker notes default to `curated: false` (hidden until "Show all") and no `direction` (trend arrow stays neutral gray) unless set explicitly — easy to forget both when authoring a new marker.
+
+Marker `panel` (drives the Add Visit form's grouping, mirrors the physical lab report's sections) and `concern` (drives dashboard column grouping, clinical/thematic) are intentionally separate axes over the same markers — don't collapse them.
 
 ## Ticket tracking
 

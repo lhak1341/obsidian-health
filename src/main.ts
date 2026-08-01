@@ -72,7 +72,7 @@ export default class HealthPlugin extends Plugin {
 		new AddVisitModal(this.app, this.settings, snapshot, defaultPerson, () => this.refreshOpenViews()).open();
 	}
 
-	private refreshOpenViews(): void {
+	refreshOpenViews(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType(HEALTH_VIEW_TYPE)) {
 			const view = leaf.view;
 			if (view instanceof HealthView) void view.refresh();

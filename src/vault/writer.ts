@@ -69,6 +69,21 @@ export async function saveNewMarkerNote(app: App, paths: VaultPaths, input: NewM
 	});
 }
 
+/** Locates the marker note file for an id (file basename = marker id), if one already exists. */
+export function findMarkerFile(app: App, paths: VaultPaths, id: string): TFile | null {
+	const target = app.vault.getAbstractFileByPath(`${paths.markersFolder}/${id}.md`);
+	return target && "extension" in target ? (target as TFile) : null;
+}
+
+/** Sets a marker note's `order:` frontmatter -- used by the settings tab's drag-to-reorder list. */
+export async function saveMarkerOrder(app: App, paths: VaultPaths, id: string, order: number): Promise<void> {
+	const file = findMarkerFile(app, paths, id);
+	if (!file) return;
+	await app.fileManager.processFrontMatter(file, (frontmatter) => {
+		frontmatter.order = order;
+	});
+}
+
 export interface ProfileInput {
 	sex: PersonSex;
 	dob?: string;
