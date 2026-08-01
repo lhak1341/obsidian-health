@@ -92,10 +92,10 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Dashboard ItemView (read-only render).
 
-- [ ] `mountHealthWidget` entry point returns a handle with `destroy`; host handshake mirrors the month-strip pattern
-- [ ] Chip tier (flagged count + pips) and List tier (top-N rows + "view all", all-clear green line)
-- [ ] Header opens the dashboard; List rows deep-link to the marker via `onOpenMarker`
-- [ ] Pinned to self; recomputes on mount only
+- [x] `mountHealthWidget` entry point returns a handle with `destroy`; host handshake mirrors the month-strip pattern
+- [x] Chip tier (flagged count + pips) and List tier (top-N rows + "view all", all-clear green line)
+- [x] Header opens the dashboard; List rows deep-link to the marker via `onOpenMarker`
+- [x] Pinned to self; recomputes on mount only
 
 ## Planner surface + Bases view
 
