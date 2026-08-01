@@ -57,12 +57,12 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Dashboard ItemView (read-only render).
 
-- [ ] Modal pre-populates all known markers grouped by panel; picks create-or-edit by date
-- [ ] Numeric pipeline: unit pick → convert → validate canonical → pre-save summary of converted values → write
-- [ ] Validation hard-blocks malformed, soft-warns wildly-outside, never warns merely out-of-range
-- [ ] Qualitative dropdown + free-text; BP paired row
-- [ ] Inline add-marker mini-form; dropped test omits the key
-- [ ] Person selector routes write to the active profile's folder; only raw values stored; dashboard reflects the save
+- [x] Modal pre-populates all known markers grouped by panel; picks create-or-edit by date
+- [x] Numeric pipeline: unit pick → convert → validate canonical → pre-save summary of converted values → write
+- [x] Validation hard-blocks malformed, soft-warns wildly-outside, never warns merely out-of-range
+- [x] Qualitative dropdown + free-text; BP paired row
+- [x] Inline add-marker mini-form; dropped test omits the key
+- [x] Person selector routes write to the active profile's folder; only raw values stored; dashboard reflects the save
 
 ## Settings tab + profile add/edit
 
