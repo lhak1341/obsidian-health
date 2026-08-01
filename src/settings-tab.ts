@@ -52,11 +52,12 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderVaultPaths(root: HTMLElement): void {
-		root.createEl("h3", { text: "Vault paths" });
+		new Setting(root).setName("Vault paths").setHeading();
+		const items = root.createDiv("setting-group").createDiv("setting-items");
 
 		const settings = this.plugin.settings;
 		const pathField = (name: string, key: "markersFolder" | "profilesFolder" | "plansFolder" | "visitsFolder") => {
-			new Setting(root).setName(name).addText((text) => {
+			new Setting(items).setName(name).addText((text) => {
 				text.setValue(settings[key]).onChange((value) => {
 					settings[key] = value.trim();
 					void this.save();
@@ -74,10 +75,11 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderDashboardSettings(root: HTMLElement): void {
-		root.createEl("h3", { text: "Dashboard" });
+		new Setting(root).setName("Dashboard").setHeading();
+		const items = root.createDiv("setting-group").createDiv("setting-items");
 		const settings = this.plugin.settings;
 
-		new Setting(root)
+		new Setting(items)
 			.setName("Arrow deadband")
 			.setDesc("Percent change below which the trend arrow shows flat.")
 			.addText((text) => {
@@ -90,7 +92,7 @@ export class HealthSettingTab extends PluginSettingTab {
 				});
 			});
 
-		new Setting(root)
+		new Setting(items)
 			.setName("Show all markers by default")
 			.setDesc("Opens the dashboard with the full marker list instead of just the curated set.")
 			.addToggle((toggle) =>
@@ -100,7 +102,7 @@ export class HealthSettingTab extends PluginSettingTab {
 				}),
 			);
 
-		new Setting(root)
+		new Setting(items)
 			.setName("Default profile")
 			.setDesc("Profile the dashboard loads on open.")
 			.addDropdown((dropdown) => {
@@ -115,10 +117,11 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderWidgetSettings(root: HTMLElement): void {
-		root.createEl("h3", { text: "lhak-dashboard widget" });
+		new Setting(root).setName("lhak-dashboard widget").setHeading();
+		const items = root.createDiv("setting-group").createDiv("setting-items");
 		const settings = this.plugin.settings;
 
-		new Setting(root)
+		new Setting(items)
 			.setName("Tier")
 			.addDropdown((dropdown) =>
 				dropdown
@@ -131,7 +134,7 @@ export class HealthSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(root)
+		new Setting(items)
 			.setName("Max rows")
 			.setDesc("Applies to the List tier.")
 			.addText((text) => {
@@ -144,7 +147,7 @@ export class HealthSettingTab extends PluginSettingTab {
 				});
 			});
 
-		new Setting(root)
+		new Setting(items)
 			.setName("Show sparkline")
 			.setDesc("Applies to the List tier.")
 			.addToggle((toggle) =>
@@ -156,17 +159,18 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderConcernOverrides(root: HTMLElement): void {
-		root.createEl("h3", { text: "Concern → Base overrides" });
+		new Setting(root).setName("Concern → Base overrides").setHeading();
 		root.createEl("p", {
 			cls: "setting-item-description",
 			text: "By convention a concern header opens a .base file named after the concern. Override the target here when the name differs.",
 		});
+		const items = root.createDiv("setting-group").createDiv("setting-items");
 
 		const settings = this.plugin.settings;
 		const overrides = settings.concernBaseOverrides;
 
 		for (const concern of Object.keys(overrides)) {
-			new Setting(root)
+			new Setting(items)
 				.setName(concern)
 				.addText((text) =>
 					text.setValue(overrides[concern]).onChange((value) => {
@@ -188,7 +192,7 @@ export class HealthSettingTab extends PluginSettingTab {
 
 		let newConcern = "";
 		let newBase = "";
-		new Setting(root)
+		new Setting(items)
 			.setName("Add override")
 			.addText((text) => text.setPlaceholder("concern").onChange((value) => (newConcern = value)))
 			.addText((text) => text.setPlaceholder("Base file path").onChange((value) => (newBase = value)))
@@ -207,10 +211,11 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderProfiles(root: HTMLElement): void {
-		root.createEl("h3", { text: "Profiles" });
+		new Setting(root).setName("Profiles").setHeading();
+		const items = root.createDiv("setting-group").createDiv("setting-items");
 
-		for (const profile of this.snapshot?.profiles ?? []) this.renderProfileEditor(root, profile);
-		this.renderAddProfileForm(root);
+		for (const profile of this.snapshot?.profiles ?? []) this.renderProfileEditor(items, profile);
+		this.renderAddProfileForm(items);
 	}
 
 	private renderProfileEditor(root: HTMLElement, profile: ProfileNote): void {
