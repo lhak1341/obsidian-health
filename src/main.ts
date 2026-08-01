@@ -1,5 +1,6 @@
 import { Plugin, WorkspaceLeaf } from "obsidian";
 import { HEALTH_VIEW_TYPE, HealthView } from "./view";
+import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
 
 export default class HealthPlugin extends Plugin {
 	async onload(): Promise<void> {
@@ -10,6 +11,10 @@ export default class HealthPlugin extends Plugin {
 			name: "Open dashboard",
 			callback: () => this.activateView(),
 		});
+	}
+
+	scanVault(paths?: VaultPaths): Promise<VaultSnapshot> {
+		return scanVault(this.app, paths);
 	}
 
 	async activateView(): Promise<void> {
