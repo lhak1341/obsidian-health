@@ -20,20 +20,25 @@ interface RowRef {
 
 export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: DashboardRenderOptions): void {
 	root.textContent = "";
-	root.classList.add("hlth-dash");
+
+	// A dedicated child carries layout/padding -- `root` is Obsidian's own `.view-content`
+	// element, and themes routinely pin `div.view-content { padding: 0 !important }`.
+	const dash = document.createElement("div");
+	dash.className = "hlth-dash";
+	root.appendChild(dash);
 
 	if (model.markers.length === 0) {
-		root.appendChild(buildEmptyState());
+		dash.appendChild(buildEmptyState());
 		return;
 	}
 
 	const rowByMarkerId = indexPairs(model.markers);
 	const rowsById = new Map<string, RowRef>();
 
-	root.appendChild(buildHeader(opts));
+	dash.appendChild(buildHeader(opts));
 	const groups = buildGroups(model, opts.showAll, rowByMarkerId, rowsById);
-	root.appendChild(buildAttentionBar(model, rowByMarkerId, rowsById));
-	root.appendChild(groups);
+	dash.appendChild(buildAttentionBar(model, rowByMarkerId, rowsById));
+	dash.appendChild(groups);
 }
 
 function buildEmptyState(): HTMLElement {
