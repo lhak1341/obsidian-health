@@ -81,10 +81,10 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Add lab visit modal (create-or-edit); Settings tab + profile add/edit.
 
-- [ ] Top-bar switcher shows exactly one active profile; default loads on open; no merged view
-- [ ] Visits stored folder-per-person; shared dates across people do not collide
-- [ ] Range resolution uses the active profile's sex
-- [ ] Switching profiles re-renders that person's dashboard
+- [x] Top-bar switcher shows exactly one active profile; default loads on open; no merged view
+- [x] Visits stored folder-per-person; shared dates across people do not collide
+- [x] Range resolution uses the active profile's sex
+- [x] Switching profiles re-renders that person's dashboard
 
 ## lhak-dashboard widget
 
