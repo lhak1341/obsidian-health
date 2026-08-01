@@ -1,9 +1,21 @@
 import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
+import { computeDashboardModel } from "./core/dashboard";
 import { AddVisitModal } from "./modals/add-visit-modal";
+import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
-import { DEFAULT_SETTINGS, type HealthPluginSettings } from "./settings";
+import { DEFAULT_SETTINGS, type HealthPluginSettings, type WidgetTier } from "./settings";
 import { HEALTH_VIEW_TYPE, HealthView } from "./view";
 import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
+
+export interface HealthWidgetHandle {
+	destroy(): void;
+}
+
+export interface HealthWidgetOptions {
+	tier?: WidgetTier;
+	maxRows?: number;
+	onOpenMarker?: (markerId: string) => void;
+}
 
 export default class HealthPlugin extends Plugin {
 	settings: HealthPluginSettings = DEFAULT_SETTINGS;
@@ -11,6 +23,8 @@ export default class HealthPlugin extends Plugin {
 	async onload(): Promise<void> {
 		const saved = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+		// Object.assign only shallow-copies; nested-object fields (e.g. concernBaseOverrides)
+		// would otherwise stay reference-shared with the DEFAULT_SETTINGS module constant.
 		this.settings.concernBaseOverrides = { ...DEFAULT_SETTINGS.concernBaseOverrides, ...saved?.concernBaseOverrides };
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
@@ -53,6 +67,49 @@ export default class HealthPlugin extends Plugin {
 
 	scanVault(paths?: VaultPaths): Promise<VaultSnapshot> {
 		return scanVault(this.app, paths ?? this.settings);
+	}
+
+	/** Public API — mounts a compact widget (e.g. into the lhak-dashboard host). Recomputes on mount only. */
+	mountHealthWidget(container: HTMLElement, opts: HealthWidgetOptions = {}): HealthWidgetHandle {
+		const root = document.createElement("div");
+		container.appendChild(root);
+
+		let destroyed = false;
+		void this.renderWidgetInto(root, opts, () => destroyed);
+
+		return {
+			destroy: () => {
+				destroyed = true;
+				root.remove();
+			},
+		};
+	}
+
+	private async renderWidgetInto(root: HTMLElement, opts: HealthWidgetOptions, isDestroyed: () => boolean): Promise<void> {
+		const snapshot = await this.scanVault();
+		if (isDestroyed()) return;
+
+		const defaultPerson = this.settings.defaultProfile;
+		const profile = (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
+
+		if (!profile) {
+			renderHealthWidgetEmpty(root, "No profile configured yet.");
+			return;
+		}
+
+		const model = computeDashboardModel(snapshot.markers, snapshot.visits, profile, { deadbandPct: this.settings.deadbandPct });
+		if (model.markers.length === 0) {
+			renderHealthWidgetEmpty(root, "No visits recorded yet.");
+			return;
+		}
+
+		renderHealthWidget(root, model, {
+			tier: opts.tier ?? this.settings.widgetTier,
+			maxRows: opts.maxRows ?? this.settings.widgetMaxRows,
+			showSparkline: this.settings.widgetShowSparkline,
+			onOpenDashboard: () => void this.activateView(),
+			onOpenMarker: opts.onOpenMarker,
+		});
 	}
 
 	async activateView(): Promise<void> {

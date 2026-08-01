@@ -484,3 +484,119 @@ svg.hlth-chart {
 .setting-items > details.hlth-settings-details[open] > summary {
 	margin-bottom: 8px;
 }
+
+/* ── lhak-dashboard widget ────────────────────────────────────────────────── */
+.hlth-widget {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-family: var(--font-interface);
+	font-size: 12.5px;
+	color: var(--text-normal);
+}
+
+.hlth-widget-header {
+	align-self: flex-start;
+	background: transparent;
+	border: none;
+	padding: 0;
+	margin: 0;
+	font-weight: 700;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--text-faint);
+	cursor: pointer;
+}
+
+.hlth-widget-header:hover {
+	color: var(--text-muted);
+}
+
+.hlth-widget-empty,
+.hlth-widget-clear {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted);
+}
+
+.hlth-widget-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	width: fit-content;
+	padding: 3px 8px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.hlth-widget-chip-clear {
+	color: var(--text-muted);
+}
+
+.hlth-widget-chip-count {
+	font-weight: 600;
+}
+
+.hlth-widget-chip-pips {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.hlth-widget-list {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.hlth-widget-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	background: transparent;
+	border: none;
+	padding: 3px 0;
+	margin: 0;
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	border-radius: 4px;
+}
+
+.hlth-widget-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.hlth-widget-row-name {
+	flex: 1 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hlth-widget-row-value {
+	font-family: var(--font-monospace);
+	font-weight: 600;
+	flex: none;
+}
+
+.hlth-widget-more {
+	align-self: flex-start;
+	background: transparent;
+	border: none;
+	padding: 2px 0;
+	margin: 0;
+	font-size: 11.5px;
+	color: var(--text-faint);
+	cursor: pointer;
+}
+
+.hlth-widget-more:hover {
+	color: var(--text-muted);
+}

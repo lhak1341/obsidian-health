@@ -2,6 +2,7 @@ import type { ConcernGroup, DashboardModel, MarkerStatusInfo, SeriesPoint, Statu
 import type { MarkerNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
 import { formatArrow, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
+import { flaggedRows, indexPairs, type RowEntry } from "./rows";
 
 export interface DashboardRenderOptions {
 	showAll: boolean;
@@ -10,11 +11,6 @@ export interface DashboardRenderOptions {
 	profiles: string[];
 	activePerson: string;
 	onSwitchProfile: (person: string) => void;
-}
-
-interface RowEntry {
-	primary: MarkerStatusInfo;
-	secondary?: MarkerStatusInfo;
 }
 
 interface RowRef {
@@ -42,7 +38,7 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	const rowsById = new Map<string, RowRef>();
 
 	const groups = buildGroups(model, opts.showAll, rowByMarkerId, rowsById);
-	dash.appendChild(buildAttentionBar(model, rowByMarkerId, rowsById));
+	dash.appendChild(buildAttentionBar(model, rowsById));
 	dash.appendChild(groups);
 }
 
@@ -115,18 +111,8 @@ function attentionReason(status: Status): string {
 	}
 }
 
-function buildAttentionBar(model: DashboardModel, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
-	const infoById = new Map(model.markers.map((info) => [info.marker.id, info]));
-	const seen = new Set<string>();
-	const flagged: RowEntry[] = [];
-	for (const id of model.attentionOrder) {
-		const info = infoById.get(id)!;
-		if (info.status === "good") continue;
-		const row = rowByMarkerId.get(id)!;
-		if (seen.has(row.primary.marker.id)) continue;
-		seen.add(row.primary.marker.id);
-		flagged.push(row);
-	}
+function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>): HTMLElement {
+	const flagged = flaggedRows(model);
 
 	const bar = document.createElement("div");
 	bar.className = "hlth-attn";
@@ -200,39 +186,6 @@ function buildAttentionBar(model: DashboardModel, rowByMarkerId: Map<string, Row
 	bar.appendChild(items);
 
 	return bar;
-}
-
-function indexPairs(markers: MarkerStatusInfo[]): Map<string, RowEntry> {
-	const rows = pairEntries(markers);
-	const index = new Map<string, RowEntry>();
-	for (const row of rows) {
-		index.set(row.primary.marker.id, row);
-		if (row.secondary) index.set(row.secondary.marker.id, row);
-	}
-	return index;
-}
-
-function pairEntries(markers: MarkerStatusInfo[]): RowEntry[] {
-	const consumed = new Set<string>();
-	const rows: RowEntry[] = [];
-
-	for (const info of markers) {
-		if (consumed.has(info.marker.id)) continue;
-		consumed.add(info.marker.id);
-
-		const partner = info.marker.pair ? markers.find((other) => other.marker.id !== info.marker.id && other.marker.pair === info.marker.pair) : undefined;
-
-		if (partner) {
-			consumed.add(partner.marker.id);
-			const infoOrder = info.marker.order ?? 0;
-			const partnerOrder = partner.marker.order ?? 1;
-			rows.push(infoOrder <= partnerOrder ? { primary: info, secondary: partner } : { primary: partner, secondary: info });
-		} else {
-			rows.push({ primary: info });
-		}
-	}
-
-	return rows;
 }
 
 function buildGroups(model: DashboardModel, showAll: boolean, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
