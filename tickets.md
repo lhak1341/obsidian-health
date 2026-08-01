@@ -44,12 +44,12 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Domain core — flags, arrows, ranking, grouping.
 
-- [ ] Concern groups render with worst-member status dot; ordering follows attention rank
-- [ ] Rows show sparkline + value + arrow; accordion expands inline history chart (ref band + target line + latest point)
-- [ ] Meaning + normal range on hover
-- [ ] Curated set shown by default; "Show all" reveals the rest
-- [ ] Qualitative markers render as chips (flagged when ∉ normal); BP renders paired with a dual trend line
-- [ ] Light/dark theme-aware, matching the mockups as the visual source of truth
+- [x] Concern groups render with worst-member status dot; ordering follows attention rank
+- [x] Rows show sparkline + value + arrow; accordion expands inline history chart (ref band + target line + latest point)
+- [x] Meaning + normal range on hover
+- [x] Curated set shown by default; "Show all" reveals the rest
+- [x] Qualitative markers render as chips (flagged when ∉ normal); BP renders paired with a dual trend line
+- [x] Light/dark theme-aware, matching the mockups as the visual source of truth
 
 ## Add lab visit modal (create-or-edit)
 
