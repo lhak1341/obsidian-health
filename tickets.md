@@ -33,10 +33,10 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Domain types + vault reader.
 
-- [ ] `computeDashboardModel` returns statuses, arrows, sparkline series, attention rank, concern groups + worst-member dots, curated selection
-- [ ] `convert` produces canonical values via `alt_factor`; `resolve` picks the sex/age band
-- [ ] Unit tests off real fixtures cover: deadband boundary (just inside vs just outside ±3%), status precedence (tier-1 beats tier-2; qualitative-abnormal red), inclusive bounds, direction-aware arrow colour, sex-based band selection, conversion + resulting soft-warn threshold, attention order, worst-member dot, omitted keys in a series
-- [ ] Core has zero Obsidian imports
+- [x] `computeDashboardModel` returns statuses, arrows, sparkline series, attention rank, concern groups + worst-member dots, curated selection
+- [x] `convert` produces canonical values via `alt_factor`; `resolve` picks the sex/age band
+- [x] Unit tests off real fixtures cover: deadband boundary (just inside vs just outside ±3%), status precedence (tier-1 beats tier-2; qualitative-abnormal red), inclusive bounds, direction-aware arrow colour, sex-based band selection, conversion + resulting soft-warn threshold, attention order, worst-member dot, omitted keys in a series
+- [x] Core has zero Obsidian imports
 
 ## Dashboard ItemView (read-only render)
 
