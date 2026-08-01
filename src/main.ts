@@ -4,7 +4,7 @@ import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
 
 export default class HealthPlugin extends Plugin {
 	async onload(): Promise<void> {
-		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf));
+		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
 
 		this.addCommand({
 			id: "open-health-dashboard",

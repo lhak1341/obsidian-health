@@ -4,7 +4,7 @@ Obsidian plugin (`health`, see `docs/PRD.md` and `tickets.md`).
 
 ## Verifying changes live in Obsidian
 
-Dev loop: `bun run deploy` (builds + copies `manifest.json`/`main.js` into the real vault's plugin folder) then `obsidian-cli plugin:reload id=health`.
+Dev loop: `bun run deploy` (builds + copies `manifest.json`/`main.js`/`styles.css` into the real vault's plugin folder) then `obsidian-cli plugin:reload id=health`.
 
 `obsidian-cli` (at `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli`) drives the running app — `eval code=<js>` runs JS with `app` in scope, `plugin:reload id=<id>` hot-reloads a plugin, `plugin id=<id>` shows enabled state.
 

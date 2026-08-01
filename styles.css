@@ -1,0 +1,409 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Iosevka+Charon:ital,wght@0,300;0,400;0,500;0,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Maple+Mono:wght@300..700&display=swap");
+
+/* ── Token layer (scoped to view root) ──────────────────────────────────── */
+.health-dashboard-outer {
+	--hlth-bg: var(--background-primary, #ffffff);
+	--hlth-bg2: var(--background-secondary, #f6f6f6);
+	--hlth-bg3: var(--background-secondary-alt, #ececec);
+	--hlth-fg1: var(--text-normal, #1f1f1f);
+	--hlth-fg2: var(--text-muted, #4a4a4a);
+	--hlth-fg3: var(--text-faint, #8a8a8a);
+	--hlth-fg4: color-mix(in oklch, var(--text-faint, #8a8a8a), var(--background-primary, #ffffff) 45%);
+	--hlth-border: var(--background-modifier-border, rgba(0, 0, 0, 0.08));
+	--hlth-dot: rgba(127, 127, 127, 0.07);
+	--hlth-fh: "Space Grotesk", var(--font-interface), system-ui, sans-serif;
+	--hlth-fb: "Iosevka Charon", var(--font-text), Georgia, serif;
+	--hlth-fm: "Maple Mono", var(--font-monospace), "SF Mono", Menlo, monospace;
+
+	height: 100%;
+	width: 100% !important;
+	max-width: none !important;
+	overflow: hidden;
+	background-color: var(--hlth-bg);
+	position: relative;
+}
+
+.hlth-dash {
+	height: 100%;
+	overflow-y: auto;
+	box-sizing: border-box;
+	padding: 22px 28px 20px;
+	color: var(--hlth-fg1);
+	font-family: var(--hlth-fb);
+	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
+	background-size: 14px 14px;
+}
+
+.hlth-lbl {
+	font-family: var(--hlth-fh);
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--hlth-fg3);
+}
+
+.hlth-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex: none;
+	display: inline-block;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.hlth-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding-bottom: 12px;
+}
+
+.hlth-title {
+	font-family: var(--hlth-fh);
+	font-weight: 700;
+	font-size: 16px;
+	color: var(--hlth-fg1);
+}
+
+.hlth-showall-btn {
+	font-family: var(--hlth-fh);
+	font-weight: 600;
+	font-size: 12px;
+	color: var(--hlth-fg2);
+	background: transparent;
+	border: 1px solid var(--hlth-border);
+	border-radius: 8px;
+	padding: 5px 12px;
+	cursor: pointer;
+}
+
+.hlth-showall-btn:hover {
+	background: var(--hlth-bg2);
+	color: var(--hlth-fg1);
+}
+
+/* ── Attention hero ──────────────────────────────────────────────────────── */
+.hlth-attn {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px 4px 14px;
+	border-top: 1px solid var(--hlth-border);
+	border-bottom: 1px solid var(--hlth-border);
+}
+
+.hlth-attn-lead {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+}
+
+.hlth-attn-count {
+	font-family: var(--hlth-fm);
+	font-size: 11px;
+	color: var(--hlth-fg3);
+}
+
+.hlth-attn-items {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+
+.hlth-attn-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	padding: 4px 6px;
+	border-radius: 4px;
+	transition: background 0.12s;
+}
+
+.hlth-attn-item:hover {
+	background: var(--hlth-bg2);
+}
+
+.hlth-attn-name {
+	font-family: var(--hlth-fb);
+	font-size: 14px;
+	color: var(--hlth-fg1);
+}
+
+.hlth-attn-value {
+	font-family: var(--hlth-fh);
+	font-weight: 700;
+	font-size: 15px;
+	font-variant-numeric: tabular-nums;
+}
+
+.hlth-attn-why {
+	font-family: var(--hlth-fm);
+	font-size: 10px;
+	color: var(--hlth-fg3);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.hlth-attn-empty {
+	font-family: var(--hlth-fb);
+	font-size: 13px;
+	color: var(--color-green);
+}
+
+/* ── Concern groups (auto-balanced columns) ─────────────────────────────── */
+.hlth-groups {
+	margin-top: 10px;
+	column-width: 380px;
+	column-gap: 0;
+	column-rule: 1px solid var(--hlth-border);
+}
+
+.hlth-grp {
+	break-inside: avoid-column;
+	margin-bottom: 18px;
+	padding: 0 14px;
+}
+
+.hlth-grp-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 -6px 5px;
+	padding: 3px 6px;
+	border-radius: 4px;
+}
+
+.hlth-grp-label {
+	white-space: nowrap;
+}
+
+.hlth-grp-tag {
+	font-family: var(--hlth-fm);
+	font-size: 10px;
+	color: var(--hlth-fg4);
+	margin-left: auto;
+}
+
+/* ── Marker row ──────────────────────────────────────────────────────────── */
+.hlth-row {
+	display: grid;
+	grid-template-columns: 12px minmax(48px, 1fr) 52px minmax(66px, auto);
+	align-items: center;
+	gap: 8px;
+	padding: 7px 2px;
+	border-top: 1px solid var(--hlth-border);
+	cursor: pointer;
+}
+
+.hlth-row:hover {
+	background: var(--hlth-bg2);
+}
+
+.hlth-row.hlth-hidden {
+	display: none;
+}
+
+.hlth-chevron {
+	color: var(--hlth-fg4);
+	font-size: 12px;
+	transition: transform 0.15s ease;
+	display: flex;
+}
+
+.hlth-row.hlth-open .hlth-chevron {
+	transform: rotate(90deg);
+	color: var(--hlth-fg2);
+}
+
+.hlth-name {
+	position: relative;
+	min-width: 0;
+}
+
+.hlth-name-text {
+	font-family: var(--hlth-fb);
+	font-size: 14px;
+	color: var(--hlth-fg1);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+}
+
+.hlth-tip {
+	position: absolute;
+	bottom: 145%;
+	left: 0;
+	width: 220px;
+	background: var(--hlth-fg1);
+	color: var(--hlth-bg);
+	font-family: var(--hlth-fb);
+	font-size: 12px;
+	line-height: 1.5;
+	padding: 9px 11px;
+	border-radius: 8px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.14s;
+	z-index: 40;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+.hlth-tip-range {
+	display: block;
+	margin-top: 6px;
+	font-family: var(--hlth-fm);
+	font-size: 11px;
+	opacity: 0.82;
+}
+
+.hlth-name:hover .hlth-tip {
+	opacity: 1;
+}
+
+svg.hlth-spk {
+	width: 52px;
+	height: 20px;
+	flex: none;
+}
+
+.hlth-value-group {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	justify-content: flex-end;
+	white-space: nowrap;
+}
+
+.hlth-arrow {
+	font-size: 11px;
+	width: 12px;
+	text-align: center;
+	display: flex;
+	justify-content: center;
+}
+
+.hlth-value {
+	font-family: var(--hlth-fh);
+	font-weight: 700;
+	font-size: 15px;
+	font-variant-numeric: tabular-nums;
+	color: var(--hlth-fg1);
+}
+
+.hlth-value-qual {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.hlth-unit {
+	font-family: var(--hlth-fm);
+	font-size: 10.5px;
+	color: var(--hlth-fg4);
+}
+
+/* ── Accordion detail ────────────────────────────────────────────────────── */
+.hlth-detail {
+	overflow: hidden;
+	max-height: 0;
+	transition: max-height 0.26s ease;
+}
+
+.hlth-detail.hlth-open {
+	max-height: 340px;
+	border-top: 1px dashed var(--hlth-border);
+}
+
+.hlth-detail-in {
+	padding: 13px 4px 15px;
+}
+
+.hlth-detail-cap {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.hlth-detail-meaning {
+	font-family: var(--hlth-fb);
+	font-size: 12px;
+	color: var(--hlth-fg2);
+	line-height: 1.45;
+	max-width: 72%;
+}
+
+.hlth-detail-now {
+	font-family: var(--hlth-fh);
+	font-weight: 700;
+	font-size: 19px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+svg.hlth-chart {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
+.hlth-qhist {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	padding: 6px 0 2px;
+}
+
+.hlth-qchip {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	align-items: center;
+	font-family: var(--hlth-fm);
+	font-size: 12px;
+	padding: 6px 10px;
+	border: 1px solid var(--hlth-border);
+	border-radius: 4px;
+	min-width: 52px;
+}
+
+.hlth-qchip b {
+	color: var(--hlth-fg4);
+	font-weight: 400;
+	font-size: 10px;
+}
+
+.hlth-qchip-bad {
+	border-color: color-mix(in srgb, var(--color-orange) 55%, var(--hlth-border));
+	color: var(--color-orange);
+}
+
+.hlth-qchip-good {
+	color: var(--hlth-fg1);
+}
+
+.hlth-single-note {
+	font-family: var(--hlth-fb);
+	font-size: 12.5px;
+	color: var(--hlth-fg3);
+	padding: 8px 0;
+}
+
+.hlth-empty {
+	font-family: var(--hlth-fb);
+	font-size: 14px;
+	color: var(--hlth-fg3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	text-align: center;
+	padding: 60px 20px;
+}

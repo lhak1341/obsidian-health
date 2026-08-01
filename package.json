@@ -9,7 +9,7 @@
 		"build": "tsc --noEmit && node esbuild.config.mjs production",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
-		"deploy": "bun run build && mkdir -p \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/health\" && cp manifest.json main.js \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/health/\""
+		"deploy": "bun run build && mkdir -p \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/health\" && cp manifest.json main.js styles.css \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/health/\""
 	},
 	"devDependencies": {
 		"@types/node": "^22.10.0",

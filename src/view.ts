@@ -1,9 +1,20 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
+import { computeDashboardModel } from "./core/dashboard";
+import type { DashboardSettings } from "./core/model";
+import type HealthPlugin from "./main";
+import { renderDashboard } from "./render/dashboard-view";
 
 export const HEALTH_VIEW_TYPE = "health-dashboard";
 
+const DEFAULT_SETTINGS: DashboardSettings = { deadbandPct: 0.03 };
+
 export class HealthView extends ItemView {
-	constructor(leaf: WorkspaceLeaf) {
+	private showAll = false;
+
+	constructor(
+		leaf: WorkspaceLeaf,
+		private readonly plugin: HealthPlugin,
+	) {
 		super(leaf);
 	}
 
@@ -20,11 +31,32 @@ export class HealthView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		this.contentEl.empty();
-		this.contentEl.createDiv({ cls: "health-dashboard" });
+		await this.refresh();
 	}
 
 	async onClose(): Promise<void> {
 		this.contentEl.empty();
+	}
+
+	private async refresh(): Promise<void> {
+		const snapshot = await this.plugin.scanVault();
+		const profile = snapshot.profiles[0];
+
+		this.contentEl.empty();
+		this.contentEl.addClass("health-dashboard-outer");
+
+		if (!profile) {
+			this.contentEl.createDiv({ cls: "hlth-empty", text: "No profile configured yet. Add a profile note to get started." });
+			return;
+		}
+
+		const model = computeDashboardModel(snapshot.markers, snapshot.visits, profile, DEFAULT_SETTINGS);
+		renderDashboard(this.contentEl, model, {
+			showAll: this.showAll,
+			onToggleShowAll: () => {
+				this.showAll = !this.showAll;
+				void this.refresh();
+			},
+		});
 	}
 }

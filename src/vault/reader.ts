@@ -21,10 +21,10 @@ export interface VaultPaths {
 }
 
 export const DEFAULT_VAULT_PATHS: VaultPaths = {
-	markersFolder: "Health/markers",
-	profilesFolder: "Health/profiles",
-	plansFolder: "Health/plans",
-	visitsFolder: "Health/labs",
+	markersFolder: "09 about-me/markers",
+	profilesFolder: "09 about-me/profiles",
+	plansFolder: "09 about-me/health/plans",
+	visitsFolder: "09 about-me/health/labs",
 };
 
 export interface VaultSnapshot {
