@@ -35,41 +35,33 @@ export interface VaultSnapshot {
 }
 
 export async function scanVault(app: App, paths: VaultPaths = DEFAULT_VAULT_PATHS): Promise<VaultSnapshot> {
-	const markers: MarkerNote[] = [];
-	for (const file of filesUnder(app, paths.markersFolder)) {
-		const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-		if (!frontmatter) continue;
-		const blurb = stripFrontmatter(await app.vault.cachedRead(file));
-		const marker = parseMarkerNote(file.basename, frontmatter, blurb);
-		if (marker) markers.push(marker);
-	}
-
-	const visits: VisitNote[] = [];
-	for (const file of filesUnder(app, paths.visitsFolder)) {
-		const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-		if (!frontmatter) continue;
-		const visit = parseVisitNote(frontmatter);
-		if (visit) visits.push(visit);
-	}
-
-	const profiles: ProfileNote[] = [];
-	for (const file of filesUnder(app, paths.profilesFolder)) {
-		const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-		if (!frontmatter) continue;
-		const profile = parseProfileNote(file.basename, frontmatter);
-		if (profile) profiles.push(profile);
-	}
-
-	const plans: PlanNote[] = [];
-	for (const file of filesUnder(app, paths.plansFolder)) {
-		const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-		if (!frontmatter) continue;
-		const body = stripFrontmatter(await app.vault.cachedRead(file));
-		const plan = parsePlanNote(file.basename, frontmatter, body);
-		if (plan) plans.push(plan);
-	}
+	const [markers, visits, profiles, plans] = await Promise.all([
+		collect(app, paths.markersFolder, async (file, fm) =>
+			parseMarkerNote(file.basename, fm, stripFrontmatter(await app.vault.cachedRead(file))),
+		),
+		collect(app, paths.visitsFolder, (_file, fm) => parseVisitNote(fm)),
+		collect(app, paths.profilesFolder, (file, fm) => parseProfileNote(file.basename, fm)),
+		collect(app, paths.plansFolder, async (file, fm) =>
+			parsePlanNote(fm, stripFrontmatter(await app.vault.cachedRead(file))),
+		),
+	]);
 
 	return { markers, visits, profiles, plans };
+}
+
+async function collect<T>(
+	app: App,
+	folder: string,
+	parse: (file: TFile, frontmatter: Record<string, unknown>) => T | null | Promise<T | null>,
+): Promise<T[]> {
+	const results: T[] = [];
+	for (const file of filesUnder(app, folder)) {
+		const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
+		if (!frontmatter) continue;
+		const parsed = await parse(file, frontmatter);
+		if (parsed) results.push(parsed);
+	}
+	return results;
 }
 
 function filesUnder(app: App, folder: string): TFile[] {
@@ -146,11 +138,11 @@ function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileN
 	};
 }
 
-function parsePlanNote(id: string, fm: Record<string, unknown>, body: string): PlanNote | null {
+function parsePlanNote(fm: Record<string, unknown>, body: string): PlanNote | null {
 	if (typeof fm.person !== "string") return null;
 	if (typeof fm.year !== "number") return null;
 
-	return { person: fm.person, year: fm.year, body: body || id };
+	return { person: fm.person, year: fm.year, body };
 }
 
 function parseRanges(raw: unknown): MarkerRange[] | undefined {
