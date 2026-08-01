@@ -70,3 +70,9 @@ export function formatYear(date: string): string {
 	const year = date.slice(2, 4);
 	return `’${year}`;
 }
+
+export function formatFullDate(date: string): string {
+	const [year, month, day] = date.split("-").map(Number);
+	const parsed = new Date(Date.UTC(year, month - 1, day));
+	return parsed.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}

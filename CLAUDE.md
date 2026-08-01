@@ -14,6 +14,14 @@ A click that triggers a CSS transition (e.g. an accordion) can screenshot mid-an
 
 `plugin:reload` does not close open Modals — a modal left open across a reload stacks a stale instance under the fresh one; `document.querySelectorAll(".modal").length` should read 1 before you script it, and `document.querySelectorAll(".modal-bg").forEach(b=>b.click())` clears strays. Commands that open a modal after an async step (e.g. a vault scan) also return before the modal exists — a bare `eval` right after `executeCommandById` can see 0 modals; add a brief pause.
 
+`plugin:reload`/`disablePlugin`+`enablePlugin` alone don't guarantee an already-open leaf picks up new code — force it: `app.workspace.getLeavesOfType(id).forEach(l=>l.detach())` then reopen, before trusting any live check.
+
+After a multi-site `replace_all` edit, grep the deployed bundle for the exact expected pattern near each call site — `replace_all` matches by exact indentation and silently skips occurrences that don't match, with no error.
+
+To verify a spacing/alignment fix, measure the actual glyph (`Range.selectNodeContents(el).getBoundingClientRect()`), not the container's box — box edges can shift via margin while right-aligned/flex-end content stays pinned to the track boundary and never visibly moves.
+
+Confirm the active leaf/tab title (visible in the screenshot itself) before trusting `dev:screenshot` — this vault has dozens of unrelated tabs open, and it captures whatever's frontmost, not necessarily `health`.
+
 A leaf not currently visible is lazy-loaded (`leaf.isDeferred`) — `leaf.view` is a stub placeholder until revealed, so `app.workspace.getLeavesOfType(...)[0].view.refresh()` fails with a misleading `refresh is not a function`. Force-load it first (`plugin.activateView()` / `workspace.revealLeaf(leaf)`), then `.view.refresh()` works.
 
 When scripting form fields via `eval`, scope the query to the specific control (e.g. its `.setting-item` by label text), not a bare `.value ===` match across the whole modal — duplicate values across fields make a broad match silently edit the wrong one.

@@ -29,11 +29,16 @@ function scaleY(min: number, max: number, bottom: number, top: number): (v: numb
 	return (v: number) => bottom - ((v - min) / span) * (bottom - top);
 }
 
+// `--background-secondary-alt` can compute nearly identical to `--background-primary` in some
+// themes, making the reference band invisible. Tinting relative to `--text-faint` instead
+// guarantees visible-but-subtle contrast against any background, in either theme.
+const BAND_FILL = "color-mix(in srgb, var(--text-faint) 16%, transparent)";
+
 function buildBandRect(band: ResolvedRange, y: (v: number) => number, width: number, top: number, bottom: number): SVGRectElement | undefined {
 	if (band.low === undefined && band.high === undefined) return undefined;
 	const rectTop = band.high !== undefined ? y(band.high) : top;
 	const rectBottom = band.low !== undefined ? y(band.low) : bottom;
-	return svgEl("rect", { x: 0, y: rectTop.toFixed(1), width, height: Math.max(0, rectBottom - rectTop).toFixed(1), fill: "var(--background-secondary-alt)" });
+	return svgEl("rect", { x: 0, y: rectTop.toFixed(1), width, height: Math.max(0, rectBottom - rectTop).toFixed(1), fill: BAND_FILL });
 }
 
 function buildSecondaryPath(
@@ -59,7 +64,15 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 	const pad = 2;
 	const primary = numericPoints(series);
 	const svg = svgEl("svg", { class: "hlth-spk", viewBox: `0 0 ${width} ${height}` });
-	if (primary.length < 2) return svg;
+	if (primary.length < 2) {
+		// No trend line to draw (qualitative marker, or a single reading) -- an entirely empty
+		// track reads as a big dead gap between the name and value columns. A faint dash gives
+		// that stretch some visual weight without implying a trend that isn't there. Right-flush
+		// (ending at width-pad, same x as a real trend line's last point) so its end lines up
+		// with every other row's sparkline endpoint instead of stopping short in the middle.
+		svg.appendChild(svgEl("line", { x1: width - pad - 16, y1: height / 2, x2: width - pad, y2: height / 2, stroke: "var(--text-faint)", "stroke-width": 1.3, "stroke-linecap": "round", opacity: 0.5 }));
+		return svg;
+	}
 
 	const secondaryPoints = secondary ? numericPoints(secondary) : [];
 	const allValues = primary.map((p) => p.value).concat(secondaryPoints.map((p) => p.value));

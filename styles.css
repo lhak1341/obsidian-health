@@ -37,6 +37,18 @@
 	background-size: 14px 14px;
 }
 
+svg.hlth-ic {
+	width: 1em;
+	height: 1em;
+	stroke: currentColor;
+	fill: none;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	display: block;
+	flex: none;
+}
+
 .hlth-lbl {
 	font-family: var(--hlth-fh);
 	font-size: 11px;
@@ -63,32 +75,72 @@
 	padding-bottom: 12px;
 }
 
-.hlth-title {
+.hlth-top-left {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+.hlth-ppl {
+	display: flex;
+	gap: 6px;
+	flex: none;
+}
+
+.hlth-pill {
 	font-family: var(--hlth-fh);
-	font-weight: 700;
-	font-size: 16px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--hlth-fg3);
+	padding: 4px 12px;
+	border-radius: 999px;
+	border: 1px solid var(--hlth-border);
+	cursor: pointer;
+	background: transparent;
+}
+
+.hlth-pill:hover {
+	background: var(--hlth-bg2);
 	color: var(--hlth-fg1);
+}
+
+.hlth-pill-active {
+	background: var(--interactive-accent, var(--hlth-fg1));
+	color: var(--text-on-accent, var(--hlth-bg));
+	border-color: transparent;
+}
+
+.hlth-profile-info {
+	font-family: var(--hlth-fm);
+	font-size: 11px;
+	color: var(--hlth-fg3);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hlth-profile-info svg.hlth-ic {
+	color: var(--color-red);
+	flex: none;
 }
 
 .hlth-top-actions {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-}
-
-.hlth-profile-switch {
-	font-family: var(--hlth-fh);
-	font-weight: 600;
-	font-size: 12px;
-	color: var(--hlth-fg2);
-	background: transparent;
-	border: 1px solid var(--hlth-border);
-	border-radius: 8px;
-	padding: 4px 8px;
-	cursor: pointer;
+	flex: none;
 }
 
 .hlth-showall-btn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	font-family: var(--hlth-fh);
 	font-weight: 600;
 	font-size: 12px;
@@ -172,6 +224,9 @@
 	font-family: var(--hlth-fb);
 	font-size: 13px;
 	color: var(--color-green);
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 /* ── Concern groups (auto-balanced columns) ─────────────────────────────── */
@@ -185,14 +240,14 @@
 .hlth-grp {
 	break-inside: avoid-column;
 	margin-bottom: 18px;
-	padding: 0 14px;
+	padding: 0 4px;
 }
 
 .hlth-grp-head {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	margin: 0 -6px 5px;
+	margin: 0 -2px 5px;
 	padding: 3px 6px;
 	border-radius: 4px;
 	cursor: pointer;
@@ -202,8 +257,34 @@
 	background: var(--hlth-bg2);
 }
 
+.hlth-grp-icon {
+	color: var(--hlth-fg3);
+	font-size: 13px;
+}
+
+.hlth-grp-head:hover .hlth-grp-label {
+	color: var(--hlth-fg1);
+}
+
 .hlth-grp-label {
 	white-space: nowrap;
+}
+
+.hlth-grp-hint {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	font-family: var(--hlth-fm);
+	font-size: 9.5px;
+	color: var(--color-cyan);
+	opacity: 0;
+	transition: opacity 0.12s;
+	flex: none;
+	white-space: nowrap;
+}
+
+.hlth-grp-head:hover .hlth-grp-hint {
+	opacity: 1;
 }
 
 .hlth-grp-tag {
@@ -213,13 +294,30 @@
 	margin-left: auto;
 }
 
+.hlth-grp-hint + .hlth-grp-tag {
+	margin-left: 8px;
+}
+
 /* ── Marker row ──────────────────────────────────────────────────────────── */
 .hlth-row {
 	display: grid;
-	grid-template-columns: 12px minmax(48px, 1fr) 52px minmax(66px, auto);
+	/* chevron | name | sparkline | arrow | value | unit -- each its own fixed track (name is the
+	   only flexible one) so every column lines up row to row. Trade-off, explicitly chosen:
+	   `.hlth-value`'s box is fixed-width (measured against "Negative", the actual widest value
+	   in the dataset -- see dashboard-view.ts), right-aligned within it, so the visible gap
+	   between the arrow and a short value's digits ("0.38") is bigger than for a long one
+	   ("453.56"). Alignment wins over that variance here. */
+	grid-template-columns: 14px minmax(40px, 1fr) 56px 12px 58px 44px;
 	align-items: center;
 	gap: 8px;
-	padding: 7px 2px;
+	/* `.hlth-attn` draws its border directly on the padded container, so the border sits at the
+	   OUTER edge (padding only pushes its content inward). This row's border is instead on a
+	   CHILD that `.hlth-grp`'s own padding has already pushed 4px inward -- so without this
+	   margin/padding pair, the row's divider line would start 4px short of where `.hlth-attn`'s
+	   border does. Negative margin pulls the row (and its border) back out to `.hlth-grp`'s true
+	   edge; the matching padding increase keeps the actual row CONTENT exactly where it was. */
+	margin: 0 -4px;
+	padding: 7px 6px;
 	border-top: 1px solid var(--hlth-border);
 	cursor: pointer;
 }
@@ -263,14 +361,18 @@
 	display: block;
 }
 
+/* Appended directly to `document.body` (see dashboard-view.ts `getSharedTooltip`) so it escapes
+   both `.hlth-dash`'s scroll clip and any transformed ancestor in Obsidian's own workspace chrome.
+   That also puts it OUTSIDE `.health-dashboard-outer`'s scope, where the `--hlth-*` token aliases
+   are defined -- so this rule uses the raw Obsidian vars directly instead (see CLAUDE.md's
+   "widget/embed mounting" gotcha), otherwise background/color resolve to nothing and the tooltip
+   is a transparent box with unreadable text blending into whatever's behind it. */
 .hlth-tip {
-	position: absolute;
-	bottom: 145%;
-	left: 0;
+	position: fixed;
 	width: 220px;
-	background: var(--hlth-fg1);
-	color: var(--hlth-bg);
-	font-family: var(--hlth-fb);
+	background: var(--text-normal, #1f1f1f);
+	color: var(--background-primary, #ffffff);
+	font-family: "Iosevka Charon", var(--font-text), Georgia, serif;
 	font-size: 12px;
 	line-height: 1.5;
 	padding: 9px 11px;
@@ -278,8 +380,12 @@
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.14s;
-	z-index: 40;
+	z-index: 200;
 	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+.hlth-tip-meaning {
+	display: block;
 }
 
 .hlth-tip-range {
@@ -290,7 +396,7 @@
 	opacity: 0.82;
 }
 
-.hlth-name:hover .hlth-tip {
+.hlth-tip.hlth-open {
 	opacity: 1;
 }
 
@@ -300,20 +406,12 @@ svg.hlth-spk {
 	flex: none;
 }
 
-.hlth-value-group {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-	justify-content: flex-end;
-	white-space: nowrap;
-}
-
 .hlth-arrow {
 	font-size: 11px;
 	width: 12px;
 	text-align: center;
 	display: flex;
-	justify-content: center;
+	justify-content: flex-end;
 }
 
 .hlth-value {
@@ -322,6 +420,14 @@ svg.hlth-spk {
 	font-size: 15px;
 	font-variant-numeric: tabular-nums;
 	color: var(--hlth-fg1);
+}
+
+.hlth-row > .hlth-value {
+	display: block;
+	text-align: right;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .hlth-value-qual {
@@ -334,6 +440,13 @@ svg.hlth-spk {
 	font-family: var(--hlth-fm);
 	font-size: 10.5px;
 	color: var(--hlth-fg4);
+}
+
+.hlth-row > .hlth-unit {
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 /* ── Accordion detail ────────────────────────────────────────────────────── */

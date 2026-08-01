@@ -1,7 +1,8 @@
 import type { ConcernGroup, DashboardModel, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
-import type { MarkerNote } from "../core/types";
+import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
-import { formatArrow, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
+import { formatArrow, formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
+import { iconFor, iconForConcern } from "./icons";
 import { flaggedRows, indexPairs, type RowEntry } from "./rows";
 
 export interface DashboardRenderOptions {
@@ -14,6 +15,8 @@ export interface DashboardRenderOptions {
 	profiles: string[];
 	activePerson: string;
 	onSwitchProfile: (person: string) => void;
+	profile: ProfileNote;
+	lastVisitDate?: string;
 }
 
 interface RowRef {
@@ -56,12 +59,11 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 	const top = document.createElement("div");
 	top.className = "hlth-top";
 
-	const title = document.createElement("span");
-	title.className = "hlth-title";
-	title.textContent = "Health";
-	top.appendChild(title);
-
-	if (opts.profiles.length > 1) top.appendChild(buildProfileSwitcher(opts));
+	const left = document.createElement("div");
+	left.className = "hlth-top-left";
+	if (opts.profiles.length > 1) left.appendChild(buildProfileSwitcher(opts));
+	left.appendChild(buildProfileInfo(opts));
+	top.appendChild(left);
 
 	const actions = document.createElement("div");
 	actions.className = "hlth-top-actions";
@@ -84,7 +86,8 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "hlth-showall-btn";
-		button.textContent = opts.showAll ? "Curated" : "Show all";
+		button.appendChild(iconFor("eye"));
+		button.appendChild(document.createTextNode(opts.showAll ? "Curated" : "Show all"));
 		button.addEventListener("click", () => opts.onToggleShowAll());
 		actions.appendChild(button);
 	}
@@ -95,17 +98,35 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 }
 
 function buildProfileSwitcher(opts: DashboardRenderOptions): HTMLElement {
-	const select = document.createElement("select");
-	select.className = "hlth-profile-switch";
+	const ppl = document.createElement("div");
+	ppl.className = "hlth-ppl";
 	for (const person of opts.profiles) {
-		const option = document.createElement("option");
-		option.value = person;
-		option.textContent = person;
-		if (person === opts.activePerson) option.selected = true;
-		select.appendChild(option);
+		const pill = document.createElement("button");
+		pill.type = "button";
+		pill.className = "hlth-pill";
+		if (person === opts.activePerson) pill.classList.add("hlth-pill-active");
+		pill.textContent = person;
+		pill.addEventListener("click", () => opts.onSwitchProfile(person));
+		ppl.appendChild(pill);
 	}
-	select.addEventListener("change", () => opts.onSwitchProfile(select.value));
-	return select;
+	return ppl;
+}
+
+function buildProfileInfo(opts: DashboardRenderOptions): HTMLElement {
+	const line = document.createElement("div");
+	line.className = "hlth-profile-info";
+	line.appendChild(iconFor("droplet"));
+
+	const bits: string[] = [];
+	if (opts.profile.bloodType) bits.push(opts.profile.bloodType);
+	bits.push(opts.profile.allergies?.length ? opts.profile.allergies.join(", ") : "No known allergies");
+	bits.push(opts.lastVisitDate ? `Last record: ${formatFullDate(opts.lastVisitDate)}` : "No records yet");
+
+	const text = document.createElement("span");
+	text.textContent = bits.join(" · ");
+	line.appendChild(text);
+
+	return line;
 }
 
 function attentionReason(status: Status): string {
@@ -144,7 +165,8 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 	if (flagged.length === 0) {
 		const empty = document.createElement("div");
 		empty.className = "hlth-attn-empty";
-		empty.textContent = "All clear this visit — nothing outside range or past a target.";
+		empty.appendChild(iconFor("heart"));
+		empty.appendChild(document.createTextNode("All clear this visit — nothing outside range or past a target."));
 		bar.appendChild(empty);
 		return bar;
 	}
@@ -256,6 +278,10 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 	const head = document.createElement("div");
 	head.className = "hlth-grp-head";
 
+	const icon = iconForConcern(group.concern);
+	icon.classList.add("hlth-grp-icon");
+	head.appendChild(icon);
+
 	const label = document.createElement("span");
 	label.className = "hlth-lbl hlth-grp-label";
 	label.textContent = group.concern;
@@ -265,6 +291,12 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 	dot.className = "hlth-dot";
 	dot.style.background = statusColor(group.status);
 	head.appendChild(dot);
+
+	const hint = document.createElement("span");
+	hint.className = "hlth-grp-hint";
+	hint.appendChild(iconFor("external-link"));
+	hint.appendChild(document.createTextNode("Base view"));
+	head.appendChild(hint);
 
 	if (!showAll && hiddenCount > 0) {
 		const tag = document.createElement("span");
@@ -285,14 +317,22 @@ function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail
 
 	const chevron = document.createElement("span");
 	chevron.className = "hlth-chevron";
-	chevron.textContent = "▸";
+	chevron.appendChild(iconFor("chevron-right"));
 	header.appendChild(chevron);
 
 	header.appendChild(buildNameCell(primary));
 
 	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
 
-	header.appendChild(buildValueCell(row));
+	// Arrow/value/unit each get their own fixed-width grid column so the sparkline, arrow,
+	// value, and unit all line up into consistent vertical tracks across every row. Trade-off
+	// (explicitly chosen over packing arrow+value together): the visible gap between the arrow
+	// and a value's actual digits varies with the value's text length, since the value's box is
+	// fixed-width but right-aligned -- e.g. "0.38" sits further from its box's left edge than
+	// "453.56" does. Column alignment wins over that variance here.
+	header.appendChild(buildArrowCell(primary));
+	header.appendChild(buildValueOnlyCell(row));
+	header.appendChild(buildUnitCell(primary));
 
 	const detail = document.createElement("div");
 	detail.className = "hlth-detail";
@@ -317,48 +357,78 @@ function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 	text.textContent = marker.name;
 	cell.appendChild(text);
 
-	const tip = document.createElement("span");
-	tip.className = "hlth-tip";
-	if (marker.blurb) tip.appendChild(document.createTextNode(marker.blurb));
-
-	const range = document.createElement("span");
-	range.className = "hlth-tip-range";
 	const target = formatTargetText(marker);
-	range.textContent = `Normal ${formatRangeText(info.band, marker)}${target ? ` · ${target}` : ""}`;
-	tip.appendChild(range);
+	const rangeText = `Normal ${formatRangeText(info.band, marker)}${target ? ` · ${target}` : ""}`;
 
-	cell.appendChild(tip);
+	cell.addEventListener("mouseenter", () => showTooltip(cell, marker.blurb, rangeText));
+	cell.addEventListener("mouseleave", hideTooltip);
 
 	return cell;
 }
 
-function buildValueCell(row: RowEntry): HTMLElement {
-	const { primary, secondary } = row;
-	const cell = document.createElement("div");
-	cell.className = "hlth-value-group";
+// Obsidian's own workspace chrome applies a CSS transform up the tree (pane/tab transitions),
+// which breaks naive `position: fixed` math for anything nested inside it -- and `.hlth-dash`'s
+// `overflow-y: auto` clips a same-container absolutely-positioned tooltip for rows near the top.
+// A single tooltip appended directly to `document.body` sidesteps both: no transformed ancestor,
+// no clipping container.
+let sharedTooltip: HTMLElement | undefined;
 
+function getSharedTooltip(): HTMLElement {
+	if (sharedTooltip?.isConnected) return sharedTooltip;
+	const tip = document.createElement("div");
+	tip.className = "hlth-tip";
+	const meaning = document.createElement("span");
+	meaning.className = "hlth-tip-meaning";
+	const range = document.createElement("span");
+	range.className = "hlth-tip-range";
+	tip.append(meaning, range);
+	document.body.appendChild(tip);
+	sharedTooltip = tip;
+	return tip;
+}
+
+function showTooltip(anchor: HTMLElement, meaning: string, rangeText: string): void {
+	const tip = getSharedTooltip();
+	tip.querySelector(".hlth-tip-meaning")!.textContent = meaning;
+	tip.querySelector(".hlth-tip-range")!.textContent = rangeText;
+	tip.classList.add("hlth-open");
+
+	const anchorRect = anchor.getBoundingClientRect();
+	const tipHeight = tip.offsetHeight;
+	const tipWidth = tip.offsetWidth;
+	const opensUp = anchorRect.top - tipHeight - 8 > 0;
+	tip.style.top = opensUp ? `${anchorRect.top - tipHeight - 8}px` : `${anchorRect.bottom + 8}px`;
+	tip.style.left = `${Math.min(Math.max(anchorRect.left, 8), window.innerWidth - tipWidth - 8)}px`;
+}
+
+function hideTooltip(): void {
+	sharedTooltip?.classList.remove("hlth-open");
+}
+
+function buildArrowCell(primary: MarkerStatusInfo): HTMLElement {
 	const arrow = formatArrow(primary.arrow);
 	const arrowEl = document.createElement("span");
 	arrowEl.className = "hlth-arrow";
 	arrowEl.style.color = arrow.color;
 	arrowEl.textContent = arrow.glyph;
-	cell.appendChild(arrowEl);
+	return arrowEl;
+}
 
+function buildValueOnlyCell(row: RowEntry): HTMLElement {
+	const { primary, secondary } = row;
 	const value = document.createElement("span");
 	value.className = "hlth-value";
 	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
 	value.textContent = formatLatestValue(primary, secondary);
-	cell.appendChild(value);
+	return value;
+}
 
-	if (primary.marker.unit) {
-		const unit = document.createElement("span");
-		unit.className = "hlth-unit";
-		unit.textContent = primary.marker.unit;
-		cell.appendChild(unit);
-	}
-
-	return cell;
+function buildUnitCell(primary: MarkerStatusInfo): HTMLElement {
+	const unit = document.createElement("span");
+	unit.className = "hlth-unit";
+	unit.textContent = primary.marker.unit ?? "";
+	return unit;
 }
 
 function formatLatestValue(primary: MarkerStatusInfo, secondary?: MarkerStatusInfo): string {

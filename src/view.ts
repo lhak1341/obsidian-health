@@ -56,6 +56,11 @@ export class HealthView extends ItemView {
 		}
 
 		const model = computeDashboardModel(snapshot.markers, snapshot.visits, profile, { deadbandPct: this.plugin.settings.deadbandPct });
+		const lastVisitDate = snapshot.visits
+			.filter((v) => v.person === profile.person)
+			.map((v) => v.date)
+			.sort()
+			.at(-1);
 		renderDashboard(this.contentEl, model, {
 			showAll: this.showAll,
 			onToggleShowAll: () => {
@@ -71,6 +76,8 @@ export class HealthView extends ItemView {
 				this.activePerson = person;
 				void this.refresh();
 			},
+			profile,
+			lastVisitDate,
 		});
 	}
 
