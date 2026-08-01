@@ -118,3 +118,4 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 - [ ] The ~9 markers missing a blurb have one
 - [ ] Dual-unit `alt_factor`s and personal `optimal_*` targets set where applicable
 - [ ] Planner prose moved into candidate markers + a yearly plan note; old note retired
+- [ ] (Optional) Per-concern `.base` files authored at `09 about-me/health/bases/<concern>.base` using the `health-markers` view, for concerns where a native Bases pivot is wanted; concerns without one keep degrading to in-plugin expand
