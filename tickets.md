@@ -70,10 +70,10 @@ Work the **frontier**: any ticket whose blockers are all done. Migration itself 
 
 **Blocked by:** Dashboard ItemView (read-only render).
 
-- [ ] Settings persist folder paths, deadband %, widget tier/maxRows/showSparkline, show-all default, concern→Base overrides, default profile
-- [ ] No marker/person meaning stored in settings
-- [ ] Profile CRUD captures sex, dob, blood type, allergies
-- [ ] Plugin works out of the box before any configuration
+- [x] Settings persist folder paths, deadband %, widget tier/maxRows/showSparkline, show-all default, concern→Base overrides, default profile
+- [x] No marker/person meaning stored in settings
+- [x] Profile CRUD captures sex, dob, blood type, allergies
+- [x] Plugin works out of the box before any configuration
 
 ## Multi-profile switcher
 
