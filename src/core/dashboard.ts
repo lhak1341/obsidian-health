@@ -17,7 +17,7 @@ export function computeDashboardModel(
 	profile: ProfileNote,
 	settings: DashboardSettings,
 ): DashboardModel {
-	const sortedVisits = [...visits].sort((a, b) => a.date.localeCompare(b.date));
+	const sortedVisits = visits.filter((v) => v.person === profile.person).sort((a, b) => a.date.localeCompare(b.date));
 
 	const markerInfos: MarkerStatusInfo[] = [];
 	for (const marker of markers) {

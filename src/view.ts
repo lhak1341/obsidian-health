@@ -7,6 +7,7 @@ export const HEALTH_VIEW_TYPE = "health-dashboard";
 
 export class HealthView extends ItemView {
 	private showAll: boolean;
+	private activePerson: string | undefined;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -38,8 +39,13 @@ export class HealthView extends ItemView {
 
 	async refresh(): Promise<void> {
 		const snapshot = await this.plugin.scanVault();
+
+		// The active profile is session-only: it survives a refresh (e.g. after saving a visit)
+		// but resets to the configured default whenever it no longer resolves to a real profile.
+		const current = this.activePerson && snapshot.profiles.find((p) => p.person === this.activePerson);
 		const defaultPerson = this.plugin.settings.defaultProfile;
-		const profile = (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
+		const profile = current || (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
+		this.activePerson = profile?.person;
 
 		this.contentEl.empty();
 		this.contentEl.addClass("health-dashboard-outer");
@@ -57,6 +63,12 @@ export class HealthView extends ItemView {
 				void this.refresh();
 			},
 			onAddVisit: () => void this.plugin.openAddVisitModal(),
+			profiles: snapshot.profiles.map((p) => p.person),
+			activePerson: profile.person,
+			onSwitchProfile: (person) => {
+				this.activePerson = person;
+				void this.refresh();
+			},
 		});
 	}
 }

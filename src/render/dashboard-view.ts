@@ -7,6 +7,9 @@ export interface DashboardRenderOptions {
 	showAll: boolean;
 	onToggleShowAll: () => void;
 	onAddVisit: () => void;
+	profiles: string[];
+	activePerson: string;
+	onSwitchProfile: (person: string) => void;
 }
 
 interface RowEntry {
@@ -28,39 +31,29 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	dash.className = "hlth-dash";
 	root.appendChild(dash);
 
+	dash.appendChild(buildHeader(opts, model.markers.length > 0));
+
 	if (model.markers.length === 0) {
-		dash.appendChild(buildEmptyState(opts));
+		dash.appendChild(buildEmptyState());
 		return;
 	}
 
 	const rowByMarkerId = indexPairs(model.markers);
 	const rowsById = new Map<string, RowRef>();
 
-	dash.appendChild(buildHeader(opts));
 	const groups = buildGroups(model, opts.showAll, rowByMarkerId, rowsById);
 	dash.appendChild(buildAttentionBar(model, rowByMarkerId, rowsById));
 	dash.appendChild(groups);
 }
 
-function buildEmptyState(opts: DashboardRenderOptions): HTMLElement {
+function buildEmptyState(): HTMLElement {
 	const empty = document.createElement("div");
 	empty.className = "hlth-empty";
-
-	const text = document.createElement("div");
-	text.textContent = "No visits recorded yet. Add the first lab visit to see your dashboard.";
-	empty.appendChild(text);
-
-	const button = document.createElement("button");
-	button.type = "button";
-	button.className = "hlth-showall-btn";
-	button.textContent = "+ Add visit";
-	button.addEventListener("click", () => opts.onAddVisit());
-	empty.appendChild(button);
-
+	empty.textContent = "No visits recorded yet. Add the first lab visit to see your dashboard.";
 	return empty;
 }
 
-function buildHeader(opts: DashboardRenderOptions): HTMLElement {
+function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLElement {
 	const top = document.createElement("div");
 	top.className = "hlth-top";
 
@@ -68,6 +61,8 @@ function buildHeader(opts: DashboardRenderOptions): HTMLElement {
 	title.className = "hlth-title";
 	title.textContent = "Health";
 	top.appendChild(title);
+
+	if (opts.profiles.length > 1) top.appendChild(buildProfileSwitcher(opts));
 
 	const actions = document.createElement("div");
 	actions.className = "hlth-top-actions";
@@ -79,16 +74,32 @@ function buildHeader(opts: DashboardRenderOptions): HTMLElement {
 	addButton.addEventListener("click", () => opts.onAddVisit());
 	actions.appendChild(addButton);
 
-	const button = document.createElement("button");
-	button.type = "button";
-	button.className = "hlth-showall-btn";
-	button.textContent = opts.showAll ? "Curated" : "Show all";
-	button.addEventListener("click", () => opts.onToggleShowAll());
-	actions.appendChild(button);
+	if (hasMarkers) {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "hlth-showall-btn";
+		button.textContent = opts.showAll ? "Curated" : "Show all";
+		button.addEventListener("click", () => opts.onToggleShowAll());
+		actions.appendChild(button);
+	}
 
 	top.appendChild(actions);
 
 	return top;
+}
+
+function buildProfileSwitcher(opts: DashboardRenderOptions): HTMLElement {
+	const select = document.createElement("select");
+	select.className = "hlth-profile-switch";
+	for (const person of opts.profiles) {
+		const option = document.createElement("option");
+		option.value = person;
+		option.textContent = person;
+		if (person === opts.activePerson) option.selected = true;
+		select.appendChild(option);
+	}
+	select.addEventListener("change", () => opts.onSwitchProfile(select.value));
+	return select;
 }
 
 function attentionReason(status: Status): string {

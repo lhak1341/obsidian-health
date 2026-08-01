@@ -75,6 +75,18 @@
 	gap: 8px;
 }
 
+.hlth-profile-switch {
+	font-family: var(--hlth-fh);
+	font-weight: 600;
+	font-size: 12px;
+	color: var(--hlth-fg2);
+	background: transparent;
+	border: 1px solid var(--hlth-border);
+	border-radius: 8px;
+	padding: 4px 8px;
+	cursor: pointer;
+}
+
 .hlth-showall-btn {
 	font-family: var(--hlth-fh);
 	font-weight: 600;

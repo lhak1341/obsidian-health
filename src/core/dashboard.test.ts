@@ -262,6 +262,14 @@ describe("computeDashboardModel — series", () => {
 		]);
 	});
 
+	it("excludes another profile's visits, even when dates and marker ids collide", () => {
+		const m = marker({ id: "alt" });
+		const visits = [visit("2025-01-01", { alt: 20 }, "self"), visit("2025-01-01", { alt: 999 }, "spouse")];
+		const model = computeDashboardModel([m], visits, profile({ person: "self" }), settings);
+
+		expect(model.markers[0].series).toEqual([{ date: "2025-01-01", value: 20 }]);
+	});
+
 	it("drops a marker entirely when no visit ever recorded it", () => {
 		const m = marker({ id: "never-measured" });
 		const model = computeDashboardModel([m], [visit("2025-01-01", { alt: 20 })], profile(), settings);
