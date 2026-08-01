@@ -452,3 +452,23 @@ svg.hlth-chart {
 .hlth-modal-footer {
 	margin-top: 14px;
 }
+
+/* ── Settings tab: profile accordions ────────────────────────────────────── */
+/* Matches the 20px card padding Obsidian's own .setting-items rows get; a bare
+   <details> in that context otherwise sits flush against the box edge. */
+.setting-items > details.hlth-settings-details {
+	padding: 20px;
+}
+
+.setting-items > details.hlth-settings-details:not(:first-child) {
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.setting-items > details.hlth-settings-details > summary {
+	cursor: pointer;
+	font-weight: var(--font-medium);
+}
+
+.setting-items > details.hlth-settings-details[open] > summary {
+	margin-bottom: 8px;
+}

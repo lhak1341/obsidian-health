@@ -219,7 +219,7 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderProfileEditor(root: HTMLElement, profile: ProfileNote): void {
-		const details = root.createEl("details", { cls: "hlth-modal-addmarker" });
+		const details = root.createEl("details", { cls: "hlth-settings-details" });
 		details.createEl("summary", { text: profile.person });
 		const body = details.createDiv();
 
@@ -259,7 +259,7 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderAddProfileForm(root: HTMLElement): void {
-		const details = root.createEl("details", { cls: "hlth-modal-addmarker" });
+		const details = root.createEl("details", { cls: "hlth-settings-details" });
 		details.createEl("summary", { text: "+ Add a profile" });
 		const body = details.createDiv();
 
