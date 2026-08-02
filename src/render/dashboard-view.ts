@@ -1,9 +1,9 @@
 import type { ConcernGroup, DashboardModel, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
-import { formatArrow, formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
+import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
-import { flaggedRows, indexPairs, type RowEntry } from "./rows";
+import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
 
 export interface DashboardRenderOptions {
 	showAll: boolean;
@@ -193,15 +193,10 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 		const value = document.createElement("span");
 		value.className = "hlth-attn-value";
 		value.style.color = statusColor(primary.status);
-		value.textContent = formatLatestValue(primary, secondary);
+		value.textContent = formatRowValue(primary, secondary);
 		item.appendChild(value);
 
-		const arrow = formatArrow(primary.arrow);
-		const arrowEl = document.createElement("span");
-		arrowEl.className = "hlth-arrow";
-		arrowEl.style.color = arrow.color;
-		arrowEl.textContent = arrow.glyph;
-		item.appendChild(arrowEl);
+		item.appendChild(buildArrowCell(primary));
 
 		const why = document.createElement("span");
 		why.className = "hlth-attn-why";
@@ -431,22 +426,13 @@ function hideTooltip(): void {
 	sharedTooltip?.classList.remove("hlth-open");
 }
 
-function buildArrowCell(primary: MarkerStatusInfo): HTMLElement {
-	const arrow = formatArrow(primary.arrow);
-	const arrowEl = document.createElement("span");
-	arrowEl.className = "hlth-arrow";
-	arrowEl.style.color = arrow.color;
-	arrowEl.textContent = arrow.glyph;
-	return arrowEl;
-}
-
 function buildValueOnlyCell(row: RowEntry): HTMLElement {
 	const { primary, secondary } = row;
 	const value = document.createElement("span");
 	value.className = "hlth-value";
 	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	value.textContent = formatLatestValue(primary, secondary);
+	value.textContent = formatRowValue(primary, secondary);
 	return value;
 }
 
@@ -455,13 +441,6 @@ function buildUnitCell(primary: MarkerStatusInfo): HTMLElement {
 	unit.className = "hlth-unit";
 	unit.textContent = primary.marker.unit ?? "";
 	return unit;
-}
-
-function formatLatestValue(primary: MarkerStatusInfo, secondary?: MarkerStatusInfo): string {
-	if (!primary.latest) return "—";
-	const primaryText = formatRawValue(primary.latest.value);
-	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
-	return primaryText;
 }
 
 function buildDetailContent(row: RowEntry): HTMLElement {
@@ -480,7 +459,7 @@ function buildDetailContent(row: RowEntry): HTMLElement {
 	const now = document.createElement("span");
 	now.className = "hlth-detail-now";
 	now.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	now.textContent = formatLatestValue(primary, secondary);
+	now.textContent = formatRowValue(primary, secondary);
 	if (marker.unit) {
 		const unit = document.createElement("span");
 		unit.className = "hlth-unit";

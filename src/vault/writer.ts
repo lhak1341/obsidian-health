@@ -124,6 +124,15 @@ export async function saveProfileNote(app: App, paths: VaultPaths, person: strin
 	});
 }
 
+/** Sets a profile note's `order:` frontmatter -- used by the settings tab's drag-to-reorder list. */
+export async function saveProfileOrder(app: App, paths: VaultPaths, person: string, order: number): Promise<void> {
+	const file = findProfileFile(app, paths, person);
+	if (!file) return;
+	await app.fileManager.processFrontMatter(file, (frontmatter) => {
+		frontmatter.order = order;
+	});
+}
+
 /** Renames a profile id: the profile note file, its labs subfolder, and the `person:` field on
  *  every visit/plan note that references it. Uses `renameFile` (not raw `vault.rename`) so any
  *  wikilinks pointing at the profile note or a visit note get fixed up too. Throws if `newPerson`

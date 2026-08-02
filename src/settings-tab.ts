@@ -2,6 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { parseAllergies, validateProfileInput } from "./core/entry";
 import type { MarkerNote, PersonSex, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
+import { renderDragReorderList } from "./render/drag-reorder";
 import { IconSuggest } from "./render/icon-suggest";
 import { iconForConcern } from "./render/icons";
 import type { VaultSnapshot } from "./vault/reader";
@@ -10,8 +11,9 @@ import {
 	renameProfile as renameProfileInVault,
 	saveMarkerOrder,
 	saveProfileNote,
+	saveProfileOrder,
 } from "./vault/writer";
-import type { WidgetTier } from "./settings";
+import { renameConcernInSettings, type WidgetTier } from "./settings";
 
 interface NewProfileDraft {
 	person: string;
@@ -66,6 +68,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		this.renderWidgetSettings(root);
 		this.renderConcernOverrides(root);
 		this.renderRowOrder(root);
+		this.renderProfileOrder(root);
 		this.renderProfiles(root);
 	}
 
@@ -237,24 +240,25 @@ export class HealthSettingTab extends PluginSettingTab {
 		}
 
 		await renameConcernInVault(this.app, this.plugin.settings, this.snapshot?.markers ?? [], oldConcern, newConcern);
+		renameConcernInSettings(this.plugin.settings, oldConcern, newConcern);
 
-		const overrides = this.plugin.settings.concernBaseOverrides;
-		if (overrides[oldConcern] !== undefined) {
-			overrides[newConcern] = overrides[oldConcern];
-			delete overrides[oldConcern];
-		}
-		const icons = this.plugin.settings.concernIcons;
-		if (icons[oldConcern] !== undefined) {
-			icons[newConcern] = icons[oldConcern];
-			delete icons[oldConcern];
+		// Patch the in-memory snapshot instead of `reload()`-ing: `app.metadataCache` can still be
+		// serving the pre-rename frontmatter for a beat after `processFrontMatter`'s promise resolves
+		// (its own re-index runs on a separate, unawaited pass), so an immediate re-scan risks reading
+		// stale concern values right back for the very markers we just wrote.
+		for (const marker of this.snapshot?.markers ?? []) {
+			marker.concern = marker.concern.map((c) => (c === oldConcern ? newConcern : c));
 		}
 
 		await this.save();
 		this.dirty = true;
 		new Notice(`Renamed "${oldConcern}" to "${newConcern}".`);
-		await this.reload();
+		this.renderContent();
 	}
 
+	/** Which dashboard column (left/center/right) a concern lands in is NOT configurable here --
+	 *  it's a hardcoded, deliberately-stable pin (LEFT_CONCERNS/CENTER_CONCERNS in dashboard-view.ts,
+	 *  next to columnForConcern). Row order below only controls marker order within a concern. */
 	private renderRowOrder(root: HTMLElement): void {
 		new Setting(root).setName("Row order").setHeading();
 		root.createEl("p", {
@@ -316,48 +320,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		});
 
 		const list = details.createDiv({ cls: "hlth-order-list" });
-
-		const order = [...markers];
-		let dragId: string | undefined;
-
-		const renderRows = () => {
-			list.empty();
-			for (const marker of order) {
-				const row = list.createDiv({ cls: "hlth-order-row" });
-				row.draggable = true;
-				row.dataset.id = marker.id;
-
-				row.createSpan({ cls: "hlth-order-handle", text: "⠿" });
-				row.createSpan({ cls: "hlth-order-name", text: marker.name });
-
-				row.addEventListener("dragstart", (evt) => {
-					dragId = marker.id;
-					row.classList.add("hlth-order-dragging");
-					evt.dataTransfer?.setData("text/plain", marker.id);
-				});
-				row.addEventListener("dragend", () => row.classList.remove("hlth-order-dragging"));
-				row.addEventListener("dragover", (evt) => {
-					evt.preventDefault();
-					if (dragId && dragId !== marker.id) row.classList.add("hlth-order-over");
-				});
-				row.addEventListener("dragleave", () => row.classList.remove("hlth-order-over"));
-				row.addEventListener("drop", (evt) => {
-					evt.preventDefault();
-					row.classList.remove("hlth-order-over");
-					if (!dragId || dragId === marker.id) return;
-					const fromIdx = order.findIndex((m) => m.id === dragId);
-					const toIdx = order.findIndex((m) => m.id === marker.id);
-					if (fromIdx < 0 || toIdx < 0) return;
-					const [moved] = order.splice(fromIdx, 1);
-					order.splice(toIdx, 0, moved);
-					dragId = undefined;
-					renderRows();
-					void this.saveConcernOrder(order);
-				});
-			}
-		};
-
-		renderRows();
+		renderDragReorderList(list, markers, { getId: (m) => m.id, getLabel: (m) => m.name }, (order) => void this.saveConcernOrder(order));
 	}
 
 	/** Writes sparse `order:` values (10, 20, 30…) for a concern's full list so a future drag only
@@ -368,6 +331,25 @@ export class HealthSettingTab extends PluginSettingTab {
 		const paths = this.plugin.settings;
 		order.forEach((marker, i) => (marker.order = (i + 1) * 10));
 		await Promise.all(order.map((marker) => saveMarkerOrder(this.app, paths, marker.id, marker.order!)));
+		this.dirty = true;
+	}
+
+	private renderProfileOrder(root: HTMLElement): void {
+		new Setting(root).setName("Profile order").setHeading();
+		root.createEl("p", {
+			cls: "setting-item-description",
+			text: "Drag to reorder the profile switcher buttons on the dashboard.",
+		});
+		const list = root.createDiv("setting-group").createDiv("setting-items").createDiv({ cls: "hlth-order-list" });
+		const profiles = this.snapshot?.profiles ?? [];
+		renderDragReorderList(list, profiles, { getId: (p) => p.person, getLabel: (p) => p.person }, (order) => void this.saveProfileOrder(order));
+	}
+
+	/** Writes sparse `order:` values (10, 20, 30…) for the full profile list, mirroring saveConcernOrder. */
+	private async saveProfileOrder(order: ProfileNote[]): Promise<void> {
+		const paths = this.plugin.settings;
+		order.forEach((profile, i) => (profile.order = (i + 1) * 10));
+		await Promise.all(order.map((profile) => saveProfileOrder(this.app, paths, profile.person, profile.order!)));
 		this.dirty = true;
 	}
 

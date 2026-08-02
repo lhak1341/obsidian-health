@@ -51,6 +51,7 @@ export interface ProfileNote {
 	dob?: string;
 	bloodType?: string;
 	allergies?: string[];
+	order?: number;
 }
 
 export interface PlanNote {

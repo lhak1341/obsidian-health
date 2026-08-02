@@ -48,6 +48,8 @@ export async function scanVault(app: App, paths: VaultPaths = DEFAULT_VAULT_PATH
 		),
 	]);
 
+	profiles.sort((a, b) => (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) || a.person.localeCompare(b.person));
+
 	return { markers, visits, profiles, plans };
 }
 
@@ -137,6 +139,7 @@ function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileN
 		dob: asOptionalString(fm.dob),
 		bloodType: asOptionalString(fm.blood_type),
 		allergies: fm.allergies === undefined ? undefined : asStringArray(fm.allergies),
+		order: asOptionalNumber(fm.order),
 	};
 }
 

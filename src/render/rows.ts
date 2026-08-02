@@ -67,6 +67,16 @@ export function formatRowValue(primary: MarkerStatusInfo, secondary?: MarkerStat
 	return primaryText;
 }
 
+/** Builds the `hlth-arrow` span (glyph + color) shared by the widget row, the Bases row, and the dashboard's attention/table rows. */
+export function buildArrowCell(primary: MarkerStatusInfo): HTMLElement {
+	const arrow = formatArrow(primary.arrow);
+	const arrowEl = document.createElement("span");
+	arrowEl.className = "hlth-arrow";
+	arrowEl.style.color = arrow.color;
+	arrowEl.textContent = arrow.glyph;
+	return arrowEl;
+}
+
 /** Fills a status dot, name, optional sparkline, value, and arrow into `el` — the compact row shape shared by the widget and the Bases view. */
 export function fillMarkerRowContent(
 	el: HTMLElement,
@@ -92,10 +102,5 @@ export function fillMarkerRowContent(
 	value.textContent = formatRowValue(primary, secondary);
 	el.appendChild(value);
 
-	const arrow = formatArrow(primary.arrow);
-	const arrowEl = document.createElement("span");
-	arrowEl.className = "hlth-arrow";
-	arrowEl.style.color = arrow.color;
-	arrowEl.textContent = arrow.glyph;
-	el.appendChild(arrowEl);
+	el.appendChild(buildArrowCell(primary));
 }

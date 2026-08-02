@@ -53,7 +53,7 @@ svg.hlth-ic {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 18px;
+	font-size: 17px;
 	color: var(--text-muted);
 	margin-right: 8px;
 }
@@ -71,7 +71,7 @@ svg.hlth-ic {
 
 .hlth-lbl {
 	font-family: var(--hlth-fh);
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
@@ -115,7 +115,7 @@ svg.hlth-ic {
    the border color. Two classes' worth of specificity is what actually wins that fight. */
 .hlth-dash .hlth-pill {
 	font-family: var(--hlth-fh);
-	font-size: 13px;
+	font-size: 12px;
 	font-weight: 600;
 	color: var(--hlth-fg3);
 	padding: 4px 12px;
@@ -139,7 +139,7 @@ svg.hlth-ic {
 
 .hlth-profile-info {
 	font-family: var(--hlth-fm);
-	font-size: 12px;
+	font-size: 11px;
 	color: var(--hlth-fg3);
 	display: flex;
 	align-items: center;
@@ -168,7 +168,7 @@ svg.hlth-ic {
 	gap: 6px;
 	font-family: var(--hlth-fh);
 	font-weight: 600;
-	font-size: 14px;
+	font-size: 13px;
 	color: var(--hlth-fg2);
 	background: transparent;
 	box-shadow: none;
@@ -211,7 +211,7 @@ svg.hlth-ic {
 
 .hlth-attn-count {
 	font-family: var(--hlth-fm);
-	font-size: 12px;
+	font-size: 11px;
 	color: var(--hlth-fg3);
 }
 
@@ -237,20 +237,20 @@ svg.hlth-ic {
 
 .hlth-attn-name {
 	font-family: var(--hlth-fb);
-	font-size: 15px;
+	font-size: 14px;
 	color: var(--hlth-fg1);
 }
 
 .hlth-attn-value {
 	font-family: var(--hlth-fh);
 	font-weight: 700;
-	font-size: 16px;
+	font-size: 15px;
 	font-variant-numeric: tabular-nums;
 }
 
 .hlth-attn-why {
 	font-family: var(--hlth-fm);
-	font-size: 11px;
+	font-size: 10px;
 	color: var(--hlth-fg3);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
@@ -258,7 +258,7 @@ svg.hlth-ic {
 
 .hlth-attn-empty {
 	font-family: var(--hlth-fb);
-	font-size: 14px;
+	font-size: 13px;
 	color: var(--color-green);
 	display: flex;
 	align-items: center;
@@ -317,7 +317,7 @@ svg.hlth-ic {
 
 .hlth-grp-icon {
 	color: var(--hlth-fg3);
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .hlth-grp-head:hover .hlth-grp-label {
@@ -333,7 +333,7 @@ svg.hlth-ic {
 	align-items: center;
 	gap: 3px;
 	font-family: var(--hlth-fm);
-	font-size: 10.5px;
+	font-size: 10px;
 	color: var(--color-cyan);
 	opacity: 0;
 	transition: opacity 0.12s;
@@ -347,7 +347,7 @@ svg.hlth-ic {
 
 .hlth-grp-tag {
 	font-family: var(--hlth-fm);
-	font-size: 11px;
+	font-size: 10px;
 	color: var(--hlth-fg4);
 	margin-left: auto;
 }
@@ -399,7 +399,7 @@ svg.hlth-ic {
 
 .hlth-name-text {
 	font-family: var(--hlth-fb);
-	font-size: 15px;
+	font-size: 14px;
 	color: var(--hlth-fg1);
 	white-space: nowrap;
 	overflow: hidden;
@@ -420,7 +420,7 @@ svg.hlth-ic {
 	color: var(--text-normal, #1f1f1f);
 	border: 1px solid var(--background-modifier-border, transparent);
 	font-family: "Iosevka Charon", var(--font-text), Georgia, serif;
-	font-size: 13px;
+	font-size: 12px;
 	line-height: 1.5;
 	padding: 9px 11px;
 	border-radius: 8px;
@@ -439,7 +439,7 @@ svg.hlth-ic {
 	display: block;
 	margin-top: 6px;
 	font-family: var(--hlth-fm);
-	font-size: 12px;
+	font-size: 11px;
 	opacity: 0.82;
 }
 
@@ -454,7 +454,7 @@ svg.hlth-spk {
 }
 
 .hlth-arrow {
-	font-size: 12px;
+	font-size: 11px;
 	width: 12px;
 	text-align: center;
 	display: flex;
@@ -465,7 +465,7 @@ svg.hlth-spk {
 .hlth-value {
 	font-family: var(--hlth-fh);
 	font-weight: 700;
-	font-size: 16px;
+	font-size: 15px;
 	font-variant-numeric: tabular-nums;
 	color: var(--hlth-fg1);
 }
@@ -479,14 +479,14 @@ svg.hlth-spk {
 }
 
 .hlth-value-qual {
-	font-size: 13px;
+	font-size: 12px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
 }
 
 .hlth-unit {
 	font-family: var(--hlth-fm);
-	font-size: 11.5px;
+	font-size: 10.5px;
 	color: var(--hlth-fg4);
 }
 
@@ -523,7 +523,7 @@ svg.hlth-spk {
 
 .hlth-detail-meaning {
 	font-family: var(--hlth-fb);
-	font-size: 13px;
+	font-size: 12px;
 	color: var(--hlth-fg2);
 	line-height: 1.45;
 	max-width: 72%;
@@ -532,7 +532,7 @@ svg.hlth-spk {
 .hlth-detail-now {
 	font-family: var(--hlth-fh);
 	font-weight: 700;
-	font-size: 20px;
+	font-size: 19px;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
@@ -556,7 +556,7 @@ svg.hlth-chart {
 	gap: 2px;
 	align-items: center;
 	font-family: var(--hlth-fm);
-	font-size: 13px;
+	font-size: 12px;
 	padding: 6px 10px;
 	border: 1px solid var(--hlth-border);
 	border-radius: 4px;
@@ -566,7 +566,7 @@ svg.hlth-chart {
 .hlth-qchip b {
 	color: var(--hlth-fg4);
 	font-weight: 400;
-	font-size: 11px;
+	font-size: 10px;
 }
 
 .hlth-qchip-bad {
@@ -580,14 +580,14 @@ svg.hlth-chart {
 
 .hlth-single-note {
 	font-family: var(--hlth-fb);
-	font-size: 13.5px;
+	font-size: 12.5px;
 	color: var(--hlth-fg3);
 	padding: 8px 0;
 }
 
 .hlth-empty {
 	font-family: var(--hlth-fb);
-	font-size: 15px;
+	font-size: 14px;
 	color: var(--hlth-fg3);
 	display: flex;
 	flex-direction: column;
@@ -602,7 +602,7 @@ svg.hlth-chart {
 /* ── Add lab visit modal ─────────────────────────────────────────────────── */
 .hlth-modal-errors {
 	color: var(--color-red);
-	font-size: 13.5px;
+	font-size: 12.5px;
 	margin: 8px 0;
 	display: flex;
 	flex-direction: column;
@@ -618,7 +618,7 @@ svg.hlth-chart {
 .hlth-modal-addmarker summary {
 	cursor: pointer;
 	color: var(--hlth-fg2);
-	font-size: 13.5px;
+	font-size: 12.5px;
 }
 
 .hlth-modal-summary {
@@ -687,13 +687,13 @@ svg.hlth-chart {
 
 .hlth-order-handle {
 	color: var(--text-faint);
-	font-size: 15px;
+	font-size: 14px;
 	line-height: 1;
 	flex: none;
 }
 
 .hlth-order-name {
-	font-size: 14px;
+	font-size: 13px;
 	color: var(--text-normal);
 }
 
@@ -713,7 +713,7 @@ svg.hlth-chart {
 	background-size: 14px 14px;
 	background-position: -1px -1px;
 	font-family: var(--font-interface);
-	font-size: 13.5px;
+	font-size: 12.5px;
 	color: var(--text-normal);
 	box-sizing: border-box;
 }
@@ -753,7 +753,7 @@ svg.hlth-chart {
 .hlth-widget-lbl {
 	font-family: var(--font-interface);
 	font-weight: 700;
-	font-size: 12px;
+	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.12em;
 	color: var(--text-muted);
@@ -761,7 +761,7 @@ svg.hlth-chart {
 
 .hlth-widget-count {
 	font-family: var(--font-monospace);
-	font-size: 11px;
+	font-size: 10px;
 	color: var(--text-faint);
 	margin-left: auto;
 }
@@ -823,7 +823,7 @@ svg.hlth-widget-chip-unit-flag {
 .hlth-widget-chip-count {
 	font-family: var(--font-interface);
 	font-weight: 700;
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .hlth-widget-chip-count-ok {
@@ -869,7 +869,7 @@ svg.hlth-widget-chip-unit-flag {
 	padding: 4px 3px;
 	margin: 0;
 	font-family: inherit;
-	font-size: 14px;
+	font-size: 13px;
 	line-height: 1.3;
 	color: inherit;
 	text-align: left;
@@ -947,7 +947,7 @@ svg.hlth-widget-chip-unit-flag {
 
 .hlth-planner-plan-empty {
 	color: var(--hlth-fg3);
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .hlth-planner-plan-row {
@@ -985,7 +985,7 @@ svg.hlth-widget-chip-unit-flag {
 	gap: 10px;
 	padding: 8px 2px;
 	border-top: 1px solid var(--hlth-border);
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .hlth-planner-name {
@@ -994,7 +994,7 @@ svg.hlth-widget-chip-unit-flag {
 
 .hlth-planner-priority {
 	font-family: var(--hlth-fh);
-	font-size: 11.5px;
+	font-size: 10.5px;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
@@ -1016,6 +1016,6 @@ svg.hlth-widget-chip-unit-flag {
 }
 
 .hlth-planner-link {
-	font-size: 13px;
+	font-size: 12px;
 	color: var(--hlth-fg3);
 }

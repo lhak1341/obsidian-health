@@ -6,6 +6,7 @@ import {
 	checkDuplicateMarkerId,
 	evaluateNumericField,
 	evaluateQualitativeField,
+	evaluateVisitFields,
 	findVisit,
 	groupMarkersByPanel,
 	pairMarkerNotes,
@@ -13,8 +14,9 @@ import {
 	unitOptions,
 	validateDate,
 	validateProfileInput,
+	type FieldState,
 } from "./entry";
-import type { MarkerNote, VisitNote } from "./types";
+import type { MarkerNote, ProfileNote, VisitNote } from "./types";
 
 function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
 	return {
@@ -32,6 +34,10 @@ function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
 
 function visit(date: string, values: VisitNote["values"], person = "self"): VisitNote {
 	return { person, date, values };
+}
+
+function profile(overrides: Partial<ProfileNote> = {}): ProfileNote {
+	return { person: "self", sex: "m", ...overrides };
 }
 
 describe("groupMarkersByPanel", () => {
@@ -159,6 +165,47 @@ describe("evaluateQualitativeField", () => {
 
 	it("keeps a non-blank reading", () => {
 		expect(evaluateQualitativeField("Negative")).toEqual({ kind: "ok", value: "Negative", softWarn: false });
+	});
+});
+
+describe("evaluateVisitFields", () => {
+	function fields(entries: Record<string, FieldState>): Map<string, FieldState> {
+		return new Map(Object.entries(entries));
+	}
+
+	it("skips a derived marker even when a field is present for it", () => {
+		const derived = marker({ id: "bmi", type: "derived" });
+		const { entries, errors } = evaluateVisitFields([derived], fields({ bmi: { raw: "22", unit: "" } }), undefined, "2025-01-01");
+		expect(entries).toEqual([]);
+		expect(errors).toEqual([]);
+	});
+
+	it("skips a marker with no field state entered", () => {
+		const alt = marker({ id: "alt", unit: "U/L" });
+		const { entries } = evaluateVisitFields([alt], fields({}), undefined, "2025-01-01");
+		expect(entries).toEqual([]);
+	});
+
+	it("passes an empty band (no soft-warn) when no profile is resolved, but the profile's band when one is", () => {
+		const uric = marker({ id: "uric", unit: "umol/L", ranges: [{ sex: "any", low: 1, high: 2 }] });
+		const state = fields({ uric: { raw: "20", unit: "umol/L" } });
+
+		const withoutProfile = evaluateVisitFields([uric], state, undefined, "2025-01-01");
+		expect(withoutProfile.entries[0].outcome).toMatchObject({ kind: "ok", softWarn: false });
+
+		const withProfile = evaluateVisitFields([uric], state, profile(), "2025-01-01");
+		expect(withProfile.entries[0].outcome).toMatchObject({ kind: "ok", softWarn: true });
+	});
+
+	it("carries the marker's id and reason on a blocked field, alongside the date's own validation", () => {
+		const alt = marker({ id: "alt", name: "ALT", unit: "U/L" });
+		const { entries, errors } = evaluateVisitFields([alt], fields({ alt: { raw: "not-a-number", unit: "U/L" } }), undefined, "");
+
+		expect(errors).toEqual([
+			{ markerId: "", reason: "Date is required." },
+			{ markerId: "alt", reason: '"not-a-number" is not a number.' },
+		]);
+		expect(entries[0].outcome).toEqual({ kind: "blocked", reason: '"not-a-number" is not a number.' });
 	});
 });
 

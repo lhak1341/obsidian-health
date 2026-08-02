@@ -3,26 +3,26 @@ import {
 	buildPreSaveSummary,
 	buildVisitValues,
 	checkDuplicateMarkerId,
-	evaluateNumericField,
-	evaluateQualitativeField,
+	evaluateVisitFields,
 	findVisit,
 	groupMarkersByPanel,
 	pairMarkerNotes,
 	resolveBandForEntry,
 	unitOptions,
-	validateDate,
-	type FieldEvaluation,
+	type FieldState,
+	type VisitFieldError,
 } from "../core/entry";
 import type { MarkerKind, MarkerNote, ProfileNote } from "../core/types";
 import type { VaultPaths, VaultSnapshot } from "../vault/reader";
 import { saveNewMarkerNote, saveVisitNote } from "../vault/writer";
 
-interface FieldState {
-	raw: string;
-	unit: string;
-}
-
 const OTHER_OPTION = "__other__";
+
+/** Prefixes a field error with its marker's name; a blank markerId (the date check) has no marker to name. */
+function formatVisitError(error: VisitFieldError, markersById: Map<string, MarkerNote>): string {
+	if (!error.markerId) return error.reason;
+	return `${markersById.get(error.markerId)!.name}: ${error.reason}`;
+}
 
 export class AddVisitModal extends Modal {
 	private markers: MarkerNote[];
@@ -268,34 +268,13 @@ export class AddVisitModal extends Modal {
 		this.render();
 	}
 
-	private evaluateAllFields(): { entries: FieldEvaluation[]; errors: string[] } {
-		const entries: FieldEvaluation[] = [];
-		const errors: string[] = [];
-		const profile = this.currentProfile();
-
-		const dateError = validateDate(this.date);
-		if (dateError) errors.push(dateError);
-
-		for (const marker of this.markers) {
-			if (marker.type === "derived") continue;
-			const state = this.fields.get(marker.id);
-			if (!state) continue;
-
-			const outcome =
-				marker.type === "qualitative"
-					? evaluateQualitativeField(state.raw)
-					: evaluateNumericField(state.raw, state.unit, marker, profile ? resolveBandForEntry(marker, profile, this.date) : {});
-
-			if (outcome.kind === "blocked") errors.push(`${marker.name}: ${outcome.reason}`);
-			entries.push({ markerId: marker.id, raw: state.raw, outcome });
-		}
-
-		return { entries, errors };
+	private markersById(): Map<string, MarkerNote> {
+		return new Map(this.markers.map((m) => [m.id, m]));
 	}
 
 	private buildSummary(root: HTMLElement): void {
-		const { entries } = this.evaluateAllFields();
-		const markersById = new Map(this.markers.map((m) => [m.id, m]));
+		const { entries } = evaluateVisitFields(this.markers, this.fields, this.currentProfile(), this.date);
+		const markersById = this.markersById();
 		const summary = buildPreSaveSummary(markersById, entries);
 
 		root.createEl("h4", { text: "Review before saving" });
@@ -335,8 +314,9 @@ export class AddVisitModal extends Modal {
 				.setButtonText("Review")
 				.setCta()
 				.onClick(() => {
-					const { errors } = this.evaluateAllFields();
-					this.errors = errors;
+					const { errors } = evaluateVisitFields(this.markers, this.fields, this.currentProfile(), this.date);
+					const markersById = this.markersById();
+					this.errors = errors.map((e) => formatVisitError(e, markersById));
 					if (errors.length > 0) {
 						this.render();
 						return;
@@ -348,9 +328,9 @@ export class AddVisitModal extends Modal {
 	}
 
 	private async save(): Promise<void> {
-		const { entries, errors } = this.evaluateAllFields();
+		const { entries, errors } = evaluateVisitFields(this.markers, this.fields, this.currentProfile(), this.date);
 		if (errors.length > 0) {
-			this.errors = errors;
+			this.errors = errors.map((e) => formatVisitError(e, this.markersById()));
 			this.reviewing = false;
 			this.render();
 			return;

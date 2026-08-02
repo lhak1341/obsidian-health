@@ -112,6 +112,49 @@ export interface FieldEntry {
 /** A field entry with its raw user input retained, for review/summary display. */
 export type FieldEvaluation = FieldEntry & { raw: string };
 
+export interface FieldState {
+	raw: string;
+	unit: string;
+}
+
+export interface VisitFieldError {
+	markerId: string;
+	reason: string;
+}
+
+/** Orchestrates a whole visit form's worth of fields: skips derived markers (computed, never entered)
+ *  and markers with no field state, dispatches numeric vs qualitative evaluation, resolves the
+ *  profile's personal band when a profile is present, and folds the date's own validity into the
+ *  same error list every caller needs to decide "is this visit save-able". */
+export function evaluateVisitFields(
+	markers: MarkerNote[],
+	fields: Map<string, FieldState>,
+	profile: ProfileNote | undefined,
+	date: string,
+): { entries: FieldEvaluation[]; errors: VisitFieldError[] } {
+	const entries: FieldEvaluation[] = [];
+	const errors: VisitFieldError[] = [];
+
+	const dateError = validateDate(date);
+	if (dateError) errors.push({ markerId: "", reason: dateError });
+
+	for (const marker of markers) {
+		if (marker.type === "derived") continue;
+		const state = fields.get(marker.id);
+		if (!state) continue;
+
+		const outcome =
+			marker.type === "qualitative"
+				? evaluateQualitativeField(state.raw)
+				: evaluateNumericField(state.raw, state.unit, marker, profile ? resolveBandForEntry(marker, profile, date) : {});
+
+		if (outcome.kind === "blocked") errors.push({ markerId: marker.id, reason: outcome.reason });
+		entries.push({ markerId: marker.id, raw: state.raw, outcome });
+	}
+
+	return { entries, errors };
+}
+
 /** Assembles the values map that becomes the visit note body: omitted/blocked fields drop their key entirely. */
 export function buildVisitValues(entries: FieldEntry[]): Record<string, number | string> {
 	const values: Record<string, number | string> = {};

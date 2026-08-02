@@ -6,6 +6,8 @@ Obsidian plugin (`health`, see `docs/PRD.md` and `tickets.md`).
 
 Dev loop: `bun run deploy` (builds + copies `manifest.json`/`main.js`/`styles.css` into the real vault's plugin folder) then `obsidian-cli plugin:reload id=health`.
 
+Use `./node_modules/.bin/tsc --noEmit` (or `bun run build`), not bare `npx tsc` — `npx` can resolve a different, newer global TypeScript that throws unrelated errors (e.g. a `baseUrl` deprecation warning) the pinned project version doesn't.
+
 `obsidian-cli` (at `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli`) drives the running app — `eval code=<js>` runs JS with `app` in scope, `plugin:reload id=<id>` hot-reloads a plugin, `plugin id=<id>` shows enabled state.
 
 `dev:screenshot path=<file>` captures the window; `dev:errors` shows captured console errors (`clear` to reset); `dev:console` shows captured console messages (filter by `level=`). Use these instead of eyeballing.
@@ -27,6 +29,8 @@ Confirm the active leaf/tab title (visible in the screenshot itself) before trus
 A leaf not currently visible is lazy-loaded (`leaf.isDeferred`) — `leaf.view` is a stub placeholder until revealed, so `app.workspace.getLeavesOfType(...)[0].view.refresh()` fails with a misleading `refresh is not a function`. Force-load it first (`plugin.activateView()` / `workspace.revealLeaf(leaf)`), then `.view.refresh()` works.
 
 When scripting form fields via `eval`, scope the query to the specific control (e.g. its `.setting-item` by label text), not a bare `.value ===` match across the whole modal — duplicate values across fields make a broad match silently edit the wrong one.
+
+The same trap applies to repeated per-item accordion sections (e.g. one "Rename concern" block per concern in Row order) — a document-wide `querySelectorAll` first-match can silently grab a DIFFERENT, closed `<details>`'s controls (closed accordions still render their content in the DOM, just visually collapsed). Scope to the specific `<details>` found by its own `summary` text, not the first match.
 
 To call plugin internals from `obsidian-cli eval`, expose them on the plugin instance (`app.plugins.plugins.health.foo(...)`) — `require()`-ing the built `main.js` directly fails, Obsidian's plugin loader isn't in Node's `require.cache`.
 
@@ -80,6 +84,10 @@ Same specificity mechanism bites icons: `svg.hlth-ic`'s base rule (`display: blo
 
 `app.vault.getMarkdownFiles()` returns files in arbitrary cache/filesystem order, NOT alphabetical — never rely on it for display order; sort explicitly (by name, a frontmatter `order` field, etc.).
 
+## Obsidian metadataCache write-lag gotcha
+
+`app.metadataCache.getFileCache(file)` can still return the PRE-write frontmatter for a beat after `app.fileManager.processFrontMatter()`'s own promise resolves (confirmed via direct repro: write, then immediate read-back with zero manual delay, returned the stale value) — its re-index runs on a separate, unawaited pass. Don't chain an immediate re-scan (`scanVault`/`reload()`) right after a batch of frontmatter writes and trust it reflects them; if you already know what changed, patch the in-memory snapshot directly instead (see `saveConcernOrder`/`saveProfileOrder`/`renameConcern` in `settings-tab.ts`).
+
 ## Data authoring gotcha
 
 Quote frontmatter values starting with `%`, `@`, `|`, `>`, etc. — unquoted, Obsidian's parser silently drops the WHOLE note's frontmatter, no error surfaced anywhere.
@@ -89,6 +97,14 @@ When writing frontmatter from plugin code, use `app.fileManager.processFrontMatt
 New marker notes default to `curated: false` (hidden until "Show all") and no `direction` (trend arrow stays neutral gray) unless set explicitly — easy to forget both when authoring a new marker.
 
 Marker `panel` (drives the Add Visit form's grouping, mirrors the physical lab report's sections) and `concern` (drives dashboard column grouping, clinical/thematic) are intentionally separate axes over the same markers — don't collapse them.
+
+## Testing vault code
+
+`src/vault/fixtures/fake-app.ts` — minimal in-memory Obsidian `App` fake (just the `vault`/`metadataCache`/`fileManager` subset `reader.ts`/`writer.ts` call) for testing vault code without a DOM/jsdom harness; supports injecting a write failure mid-batch via a `failOn` predicate. Reuse for future vault-write characterization tests rather than rebuilding.
+
+## Architecture reviews
+
+`/improve-codebase-architecture` reports save to this project's own `temp/` folder (not OS tmp) by default.
 
 ## Ticket tracking
 
