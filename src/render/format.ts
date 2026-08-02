@@ -32,12 +32,12 @@ export function arrowGlyph(direction: ArrowDirection): string {
 		case "down":
 			return "▼";
 		case "flat":
-			return "·";
+			return "–";
 	}
 }
 
 export function formatArrow(arrow: Arrow | undefined): { glyph: string; color: string } {
-	if (!arrow) return { glyph: "·", color: "var(--text-faint)" };
+	if (!arrow) return { glyph: "", color: "var(--text-faint)" };
 	return { glyph: arrowGlyph(arrow.direction), color: arrowColor(arrow.tone) };
 }
 

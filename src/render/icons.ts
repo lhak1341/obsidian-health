@@ -21,6 +21,7 @@ export function iconFor(name: string): SVGSVGElement {
 	return svg;
 }
 
-export function iconForConcern(concern: string): SVGSVGElement {
-	return iconFor(CONCERN_ICON[concern.toLowerCase()] ?? "activity");
+export function iconForConcern(concern: string, overrides: Record<string, string> = {}): SVGSVGElement {
+	const key = concern.toLowerCase();
+	return iconFor(overrides[concern] ?? overrides[key] ?? CONCERN_ICON[key] ?? "activity");
 }

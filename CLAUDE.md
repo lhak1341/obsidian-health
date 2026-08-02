@@ -16,6 +16,8 @@ A click that triggers a CSS transition (e.g. an accordion) can screenshot mid-an
 
 `plugin:reload`/`disablePlugin`+`enablePlugin` alone don't guarantee an already-open leaf picks up new code — force it: `app.workspace.getLeavesOfType(id).forEach(l=>l.detach())` then reopen, before trusting any live check.
 
+Reloading `health` does NOT refresh an already-mounted widget living inside another plugin's view (e.g. the `lhak-dashboard` widget) — that DOM instance was built by the old code and stays stale. Detach+reopen the HOST's leaf (`app.workspace.getLeavesOfType('lhak-dashboard').forEach(l=>l.detach())` then re-execute its open command), not just `health`.
+
 After a multi-site `replace_all` edit, grep the deployed bundle for the exact expected pattern near each call site — `replace_all` matches by exact indentation and silently skips occurrences that don't match, with no error.
 
 To verify a spacing/alignment fix, measure the actual glyph (`Range.selectNodeContents(el).getBoundingClientRect()`), not the container's box — box edges can shift via margin while right-aligned/flex-end content stays pinned to the track boundary and never visibly moves.
@@ -33,6 +35,8 @@ Don't try to force dark mode by mutating `document.body.classList` in `eval` —
 Real vault (for live checks): `/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel`, health notes under `09 about-me/{markers,profiles,health/labs/<person>}`.
 
 The vault is itself a git repo — after manually testing a feature that writes to it, `git status`/`git diff` there catches any accidental drift from test writes, and `git checkout -- <file>` reverts it cleanly.
+
+Plugin settings (`data.json`) can end up persisted mid-test even without an explicit `saveSettings()` call in your own script (some other code path autosaves) — after live-testing a settings toggle, diff/inspect `data.json` directly rather than trusting an in-memory revert; fix by editing the file (or re-saving) if it stuck.
 
 Testing a feature by writing new files directly into the vault (not through Obsidian's own write path) won't show up in an already-open view — opening the dashboard via command just reveals the existing leaf, it doesn't rescan. Force it with `leaf.view.refresh()` via `eval` (`app.workspace.getLeavesOfType("health-dashboard")[0].view.refresh()`). New files created this way are untracked, so clean up with `rm`, not `git checkout --`.
 
@@ -56,13 +60,21 @@ Build a `PluginSettingTab` section as `new Setting(containerEl).setName("X").set
 
 The `--hlth-*` custom CSS tokens (`.health-dashboard-outer` block in `styles.css`) are scoped to the dashboard view — a widget mounted elsewhere (e.g. into a host plugin's container) can't see them. Use raw Obsidian vars directly (`--text-normal`, `--color-red`, etc.), not `var(--hlth-*)`, in anything mounted outside the dashboard view.
 
+The CSS `zoom` property (e.g. `.hlth-widget { zoom: 0.9 }` to scale a whole card) is safe and intentional here, not an oversight to "fix" — Obsidian only runs on Electron/Chromium, so `zoom`'s lack of Firefox/Safari support doesn't matter.
+
 A `mountX(container, opts) → handle{ destroy }` entry point that does async setup (e.g. scanning the vault) must guard each `await` with a destroyed-check before touching `root` — the host can call `destroy()` before the promise resolves.
 
-Reference for `mountX(container, ...) → handle{ destroy }` host-handshake APIs: `obsidian-linear-calendar/src/main.ts` (`mountMonthStrip`, plugin side) + `obsidian-lhak-dashboard/src/panels/CalendarPanel.ts` (host side — looks the plugin up via `app.plugins.plugins[id]`, owns placement, destroys the handle on close).
+Reference for `mountX(container, ...) → handle{ destroy }` host-handshake APIs: `obsidian-linear-calendar/src/main.ts` (`mountMonthStrip`, plugin side) + `obsidian-lhak-dashboard/src/panels/CalendarPanel.ts` (host side — looks the plugin up via `app.plugins.plugins[id]`, owns placement, destroys the handle on close). Second example of the same handshake: `main.ts`'s `mountHealthWidget` (plugin side) + `obsidian-lhak-dashboard/src/panels/HealthPanel.ts` (host side).
+
+Font/color mapping for anything mounted into a host (e.g. `lhak-dashboard`) belongs in the HOST's own stylesheet, reaching into the guest's class names — never in the guest plugin's own CSS. The guest may mount elsewhere someday (or have its own standalone view, like linear-calendar does) where the host's tokens wouldn't exist.
+
+`IconSuggest` (`AbstractInputSuggest` over Obsidian's `getIconIds()`, with a live preview) already exists at `src/render/icon-suggest.ts`, ported from `obsidian-linear-calendar/src/IconSuggest.ts` — reuse it for any future Lucide-icon-name text field rather than a plain text input.
 
 ## Obsidian button styling gotcha
 
 Obsidian's theme ships a default `<button>` skin (solid `--interactive-normal` fill) that beats a bare single-class selector like `.my-btn` on specificity, silently overriding `background: transparent` and border-color with no visible error. Source CSS looking correct doesn't mean it's applying — verify with `getComputedStyle(el).backgroundColor` via `eval`. Fix by scoping the selector under a parent class (e.g. `.hlth-dash .my-btn`) for two-class specificity.
+
+Same specificity mechanism bites icons: `svg.hlth-ic`'s base rule (`display: block`, set by `iconFor()`) has an element+class selector, so a class-only override (`.my-icon-class { display: inline-block }`) loses and block still wins — forces an unwanted line break when the icon sits inline in text. Match the `svg.` qualifier in the override selector to actually beat it.
 
 ## Obsidian vault ordering gotcha
 

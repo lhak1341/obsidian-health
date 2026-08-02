@@ -49,6 +49,26 @@ svg.hlth-ic {
 	flex: none;
 }
 
+.hlth-icon-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	color: var(--text-muted);
+	margin-right: 8px;
+}
+
+.hlth-icon-suggest-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.hlth-icon-suggest-icon {
+	display: inline-flex;
+	align-items: center;
+}
+
 .hlth-lbl {
 	font-family: var(--hlth-fh);
 	font-size: 12px;
@@ -261,6 +281,21 @@ svg.hlth-ic {
 	border-left: 1px solid var(--hlth-border);
 }
 
+/* Breathing room around the divider lines between columns -- matches `.hlth-groups`'s own
+   10px margin-top (the gap above the whole 3-column row), not applied to the outer edges. */
+.hlth-col:first-child {
+	padding-right: 10px;
+}
+
+.hlth-col:not(:first-child):not(:last-child) {
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+.hlth-col:last-child:not(:first-child) {
+	padding-left: 10px;
+}
+
 .hlth-grp {
 	margin-bottom: 18px;
 	padding: 0 4px;
@@ -324,13 +359,13 @@ svg.hlth-ic {
 /* ── Marker row ──────────────────────────────────────────────────────────── */
 .hlth-row {
 	display: grid;
-	/* chevron | name | sparkline | arrow | value | unit -- each its own fixed track (name is the
+	/* name | sparkline | arrow | value | unit -- each its own fixed track (name is the
 	   only flexible one) so every column lines up row to row. Trade-off, explicitly chosen:
 	   `.hlth-value`'s box is fixed-width (measured against "Negative", the actual widest value
 	   in the dataset -- see dashboard-view.ts), right-aligned within it, so the visible gap
 	   between the arrow and a short value's digits ("0.38") is bigger than for a long one
 	   ("453.56"). Alignment wins over that variance here. */
-	grid-template-columns: 14px minmax(40px, 1fr) 56px 12px 58px 44px;
+	grid-template-columns: minmax(40px, 1fr) 56px 12px 58px 44px;
 	align-items: center;
 	gap: 8px;
 	/* `.hlth-attn` draws its border directly on the padded container, so the border sits at the
@@ -357,18 +392,6 @@ svg.hlth-ic {
 	display: grid;
 }
 
-.hlth-chevron {
-	color: var(--hlth-fg4);
-	font-size: 13px;
-	transition: transform 0.15s ease;
-	display: flex;
-}
-
-.hlth-row.hlth-open .hlth-chevron {
-	transform: rotate(90deg);
-	color: var(--hlth-fg2);
-}
-
 .hlth-name {
 	position: relative;
 	min-width: 0;
@@ -393,8 +416,9 @@ svg.hlth-ic {
 .hlth-tip {
 	position: fixed;
 	width: 220px;
-	background: var(--text-normal, #1f1f1f);
-	color: var(--background-primary, #ffffff);
+	background: var(--background-secondary, #eee);
+	color: var(--text-normal, #1f1f1f);
+	border: 1px solid var(--background-modifier-border, transparent);
 	font-family: "Iosevka Charon", var(--font-text), Georgia, serif;
 	font-size: 13px;
 	line-height: 1.5;
@@ -434,7 +458,8 @@ svg.hlth-spk {
 	width: 12px;
 	text-align: center;
 	display: flex;
-	justify-content: flex-end;
+	justify-content: center;
+	align-items: center;
 }
 
 .hlth-value {
@@ -672,32 +697,96 @@ svg.hlth-chart {
 	color: var(--text-normal);
 }
 
-/* ── lhak-dashboard widget ────────────────────────────────────────────────── */
+/* ── lhak-dashboard widget ────────────────────────────────────────────────────────────────
+   Matches `.scratch/health-dashboard/prototypes/widget-mockup.html`'s "size ladder" card --
+   mounted outside `.health-dashboard-outer` (see CLAUDE.md's "widget/embed mounting" gotcha),
+   so every rule here uses raw Obsidian vars, never `var(--hlth-*)`. */
 .hlth-widget {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
+	width: fit-content;
+	max-width: 280px;
+	zoom: 0.9;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 11px 12px 5px;
+	background-image: radial-gradient(color-mix(in srgb, var(--text-faint) 14%, transparent) 1px, transparent 1px);
+	background-size: 14px 14px;
+	background-position: -1px -1px;
 	font-family: var(--font-interface);
 	font-size: 13.5px;
 	color: var(--text-normal);
+	box-sizing: border-box;
 }
 
-.hlth-widget-header {
-	align-self: flex-start;
+/* Two-class specificity beats Obsidian's default <button> skin (solid fill + its own
+   min-height) -- a bare `.hlth-widget-header` loses that fight silently. Same fix as
+   `.hlth-dash .my-btn` elsewhere in this file. */
+.hlth-widget .hlth-widget-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	height: auto;
+	min-height: 0;
 	background: transparent;
 	border: none;
+	box-shadow: none;
 	padding: 0;
-	margin: 0;
+	margin: 0 0 7px;
+	line-height: 1;
+	cursor: pointer;
+	color: inherit;
+	font-family: inherit;
+}
+
+.hlth-widget-heart {
+	width: 15px;
+	height: 15px;
+	flex: none;
+	color: var(--color-red);
+}
+
+.hlth-widget-heart.hlth-widget-heart-ok {
+	color: var(--color-green);
+}
+
+.hlth-widget-lbl {
+	font-family: var(--font-interface);
 	font-weight: 700;
 	font-size: 12px;
 	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--text-faint);
-	cursor: pointer;
+	letter-spacing: 0.12em;
+	color: var(--text-muted);
 }
 
-.hlth-widget-header:hover {
-	color: var(--text-muted);
+.hlth-widget-count {
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	color: var(--text-faint);
+	margin-left: auto;
+}
+
+/* `svg.hlth-ic`'s base rule is `display: block` (fine for flex-row icons elsewhere) -- these two
+   sit inline inside plain text, so a class-only override loses the specificity fight (element+
+   class beats class-only) and block still wins, forcing a line break. Match the `svg.` qualifier
+   to actually override it. */
+svg.hlth-widget-count-flag,
+svg.hlth-widget-chip-unit-flag {
+	display: inline-block;
+	vertical-align: -1px;
+	width: 1em;
+	height: 1em;
+}
+
+.hlth-widget-chevron {
+	width: 13px;
+	height: 13px;
+	flex: none;
+	color: var(--text-faint);
+}
+
+.hlth-widget-header:hover .hlth-widget-lbl {
+	color: var(--text-normal);
 }
 
 .hlth-widget-empty,
@@ -708,60 +797,101 @@ svg.hlth-chart {
 	color: var(--text-muted);
 }
 
-.hlth-widget-chip {
+.hlth-widget-chip-root {
 	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	width: fit-content;
-	padding: 3px 8px;
-	border-radius: 999px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
 }
 
-.hlth-widget-chip-clear {
-	color: var(--text-muted);
+/* Two-class specificity beats Obsidian's default <button> skin -- see the identical comment on
+   `.hlth-widget .hlth-widget-header` above. */
+.hlth-widget-chip-root .hlth-widget-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 30px;
+	min-height: 0;
+	padding: 0 12px;
+	margin: 0;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: none;
+	border-radius: 999px;
+	color: var(--text-normal);
+	font-family: inherit;
+	cursor: pointer;
 }
 
 .hlth-widget-chip-count {
-	font-weight: 600;
+	font-family: var(--font-interface);
+	font-weight: 700;
+	font-size: 14px;
+}
+
+.hlth-widget-chip-count-ok {
+	color: var(--color-green);
+}
+
+.hlth-widget-chip-unit {
+	font-family: var(--font-monospace);
+	font-size: 10px;
+	color: var(--text-faint);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
 }
 
 .hlth-widget-chip-pips {
 	display: inline-flex;
 	align-items: center;
 	gap: 3px;
+	margin-left: 2px;
 }
 
 .hlth-widget-list {
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
 }
 
-.hlth-widget-row {
-	display: flex;
+.hlth-widget .hlth-widget-row {
+	display: grid;
+	/* Value gets a fixed track (right-aligned within it) instead of auto, same trade-off as the
+	   main dashboard's `.hlth-value` -- otherwise its width varies with each row's own digit
+	   count ("453.56" vs "3.05"), which throws off every column after the name, including the
+	   sparkline. */
+	grid-template-columns: 8px 1fr 30px 46px auto;
 	align-items: center;
-	gap: 8px;
+	gap: 9px;
 	width: 100%;
+	height: auto;
+	min-height: 0;
 	background: transparent;
 	border: none;
-	padding: 3px 0;
+	box-shadow: none;
+	border-top: 1px solid var(--background-modifier-border);
+	padding: 4px 3px;
 	margin: 0;
 	font-family: inherit;
-	font-size: inherit;
+	font-size: 14px;
+	line-height: 1.3;
 	color: inherit;
 	text-align: left;
 	cursor: pointer;
 	border-radius: 4px;
 }
 
-.hlth-widget-row:hover {
+.hlth-widget .hlth-widget-row:hover {
 	background: var(--background-modifier-hover);
 }
 
+.hlth-widget-row .hlth-dot {
+	justify-self: center;
+}
+
+.hlth-widget-row svg.hlth-spk {
+	width: 30px;
+	height: 14px;
+}
+
 .hlth-widget-row-name {
-	flex: 1 1 auto;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -769,23 +899,30 @@ svg.hlth-chart {
 
 .hlth-widget-row-value {
 	font-family: var(--font-monospace);
-	font-weight: 600;
-	flex: none;
+	font-weight: 700;
+	justify-self: end;
 }
 
-.hlth-widget-more {
-	align-self: flex-start;
+.hlth-widget .hlth-widget-more {
+	width: 100%;
+	height: auto;
+	min-height: 0;
 	background: transparent;
 	border: none;
-	padding: 2px 0;
+	box-shadow: none;
+	border-top: 1px solid var(--background-modifier-border);
+	padding: 5px 3px 3px;
 	margin: 0;
-	font-size: 12.5px;
+	line-height: 1.3;
+	font-family: var(--font-monospace);
+	font-size: 10px;
 	color: var(--text-faint);
 	cursor: pointer;
+	text-align: left;
 }
 
-.hlth-widget-more:hover {
-	color: var(--text-muted);
+.hlth-widget .hlth-widget-more:hover {
+	color: var(--text-normal);
 }
 
 /* ── Planner surface ─────────────────────────────────────────────────────── */

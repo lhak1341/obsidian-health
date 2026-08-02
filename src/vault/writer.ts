@@ -1,6 +1,6 @@
 import type { App, TFile } from "obsidian";
 import { buildVisitFrontmatter } from "../core/entry";
-import type { MarkerKind, PersonSex } from "../core/types";
+import type { MarkerKind, MarkerNote, PersonSex } from "../core/types";
 import { filesUnder, type VaultPaths } from "./reader";
 
 function personVisitsFolder(paths: VaultPaths, person: string): string {
@@ -84,6 +84,21 @@ export async function saveMarkerOrder(app: App, paths: VaultPaths, id: string, o
 	});
 }
 
+/** Renames a concern id across every marker note that references it in its `concern:` array --
+ *  the id is the single source of truth for the dashboard column header, so this is a real
+ *  rewrite, not a display-only overlay. De-dupes if `newConcern` is already one of the entries. */
+export async function renameConcern(app: App, paths: VaultPaths, markers: MarkerNote[], oldConcern: string, newConcern: string): Promise<void> {
+	for (const marker of markers) {
+		if (!marker.concern.includes(oldConcern)) continue;
+		const file = findMarkerFile(app, paths, marker.id);
+		if (!file) continue;
+		await app.fileManager.processFrontMatter(file, (frontmatter) => {
+			const concern = Array.isArray(frontmatter.concern) ? (frontmatter.concern as string[]) : [];
+			frontmatter.concern = [...new Set(concern.map((c) => (c === oldConcern ? newConcern : c)))];
+		});
+	}
+}
+
 export interface ProfileInput {
 	sex: PersonSex;
 	dob?: string;
@@ -107,4 +122,30 @@ export async function saveProfileNote(app: App, paths: VaultPaths, person: strin
 		setOrDeleteKey(frontmatter, "blood_type", input.bloodType);
 		setOrDeleteKey(frontmatter, "allergies", input.allergies);
 	});
+}
+
+/** Renames a profile id: the profile note file, its labs subfolder, and the `person:` field on
+ *  every visit/plan note that references it. Uses `renameFile` (not raw `vault.rename`) so any
+ *  wikilinks pointing at the profile note or a visit note get fixed up too. Throws if `newPerson`
+ *  would collide with an existing profile note or labs folder. */
+export async function renameProfile(app: App, paths: VaultPaths, oldPerson: string, newPerson: string): Promise<void> {
+	if (findProfileFile(app, paths, newPerson) || app.vault.getAbstractFileByPath(personVisitsFolder(paths, newPerson))) {
+		throw new Error(`"${newPerson}" already exists.`);
+	}
+
+	const profileFile = findProfileFile(app, paths, oldPerson);
+	if (profileFile) await app.fileManager.renameFile(profileFile, `${paths.profilesFolder}/${newPerson}.md`);
+
+	const labsFolder = app.vault.getAbstractFileByPath(personVisitsFolder(paths, oldPerson));
+	if (labsFolder) await app.fileManager.renameFile(labsFolder, personVisitsFolder(paths, newPerson));
+
+	for (const file of filesUnder(app, personVisitsFolder(paths, newPerson))) {
+		const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+		if (fm?.person === oldPerson) await app.fileManager.processFrontMatter(file, (frontmatter) => (frontmatter.person = newPerson));
+	}
+
+	for (const file of filesUnder(app, paths.plansFolder)) {
+		const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+		if (fm?.person === oldPerson) await app.fileManager.processFrontMatter(file, (frontmatter) => (frontmatter.person = newPerson));
+	}
 }

@@ -2,8 +2,15 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { parseAllergies, validateProfileInput } from "./core/entry";
 import type { MarkerNote, PersonSex, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
+import { IconSuggest } from "./render/icon-suggest";
+import { iconForConcern } from "./render/icons";
 import type { VaultSnapshot } from "./vault/reader";
-import { saveMarkerOrder, saveProfileNote } from "./vault/writer";
+import {
+	renameConcern as renameConcernInVault,
+	renameProfile as renameProfileInVault,
+	saveMarkerOrder,
+	saveProfileNote,
+} from "./vault/writer";
 import type { WidgetTier } from "./settings";
 
 interface NewProfileDraft {
@@ -222,6 +229,32 @@ export class HealthSettingTab extends PluginSettingTab {
 			);
 	}
 
+	private async renameConcern(oldConcern: string, newConcernRaw: string): Promise<void> {
+		const newConcern = newConcernRaw.trim();
+		if (!newConcern || newConcern === oldConcern) {
+			new Notice("Enter a different name.");
+			return;
+		}
+
+		await renameConcernInVault(this.app, this.plugin.settings, this.snapshot?.markers ?? [], oldConcern, newConcern);
+
+		const overrides = this.plugin.settings.concernBaseOverrides;
+		if (overrides[oldConcern] !== undefined) {
+			overrides[newConcern] = overrides[oldConcern];
+			delete overrides[oldConcern];
+		}
+		const icons = this.plugin.settings.concernIcons;
+		if (icons[oldConcern] !== undefined) {
+			icons[newConcern] = icons[oldConcern];
+			delete icons[oldConcern];
+		}
+
+		await this.save();
+		this.dirty = true;
+		new Notice(`Renamed "${oldConcern}" to "${newConcern}".`);
+		await this.reload();
+	}
+
 	private renderRowOrder(root: HTMLElement): void {
 		new Setting(root).setName("Row order").setHeading();
 		root.createEl("p", {
@@ -254,6 +287,34 @@ export class HealthSettingTab extends PluginSettingTab {
 	private renderConcernOrderList(root: HTMLElement, concern: string, markers: MarkerNote[]): void {
 		const details = root.createEl("details", { cls: "hlth-settings-details" });
 		details.createEl("summary", { text: `${concern} (${markers.length})` });
+
+		let renameTo = "";
+		new Setting(details.createDiv())
+			.setName("Rename concern")
+			.setDesc("Rewrites concern: on every marker note in this group -- a real rename, not a display override. Carries over the Base override above and the icon below, if either is set.")
+			.addText((text) => text.setPlaceholder(concern).onChange((value) => (renameTo = value)))
+			.addButton((btn) => btn.setButtonText("Rename").onClick(() => void this.renameConcern(concern, renameTo)));
+
+		const icons = this.plugin.settings.concernIcons;
+		const iconSetting = new Setting(details.createDiv())
+			.setName("Icon")
+			.setDesc('Lucide icon name (e.g. "activity", "droplet") shown next to this column\'s header. Leave blank for the built-in default.');
+		const preview = iconSetting.controlEl.createSpan({ cls: "hlth-icon-preview" });
+		preview.appendChild(iconForConcern(concern, icons));
+		iconSetting.addText((text) => {
+			new IconSuggest(this.app, text.inputEl);
+			text.setPlaceholder("(default)")
+				.setValue(icons[concern] ?? "")
+				.onChange((value) => {
+					if (value.trim()) icons[concern] = value.trim();
+					else delete icons[concern];
+					preview.empty();
+					preview.appendChild(iconForConcern(concern, icons));
+					this.dirty = true;
+					void this.save();
+				});
+		});
+
 		const list = details.createDiv({ cls: "hlth-order-list" });
 
 		const order = [...markers];
@@ -322,6 +383,15 @@ export class HealthSettingTab extends PluginSettingTab {
 		const details = root.createEl("details", { cls: "hlth-settings-details" });
 		details.createEl("summary", { text: profile.person });
 		const body = details.createDiv();
+
+		let renameTo = "";
+		new Setting(body)
+			.setName("Rename profile")
+			.setDesc("Renames the profile note, its labs subfolder, and person: on every visit/plan note that references it.")
+			.addText((text) => text.setPlaceholder(profile.person).onChange((value) => (renameTo = value)))
+			.addButton((btn) =>
+				btn.setButtonText("Rename").onClick(() => void this.renameProfile(profile.person, renameTo)),
+			);
 
 		let sex: PersonSex = profile.sex;
 		let dob = profile.dob ?? "";
@@ -417,5 +487,26 @@ export class HealthSettingTab extends PluginSettingTab {
 		await this.saveProfile(person, draft.sex, draft.dob, draft.bloodType, draft.allergies);
 		this.newProfile = { person: "", sex: "m", dob: "", bloodType: "", allergies: "" };
 		new Notice(`Added profile for ${person}.`);
+	}
+
+	private async renameProfile(oldPerson: string, newPersonRaw: string): Promise<void> {
+		const newPerson = newPersonRaw.trim();
+		if (!newPerson || newPerson === oldPerson) {
+			new Notice("Enter a different name.");
+			return;
+		}
+
+		try {
+			await renameProfileInVault(this.app, this.plugin.settings, oldPerson, newPerson);
+		} catch (err) {
+			new Notice(err instanceof Error ? err.message : String(err));
+			return;
+		}
+
+		if (this.plugin.settings.defaultProfile === oldPerson) this.plugin.settings.defaultProfile = newPerson;
+		await this.save();
+		this.dirty = true;
+		new Notice(`Renamed profile "${oldPerson}" to "${newPerson}".`);
+		await this.reload();
 	}
 }

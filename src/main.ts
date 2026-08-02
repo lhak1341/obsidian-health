@@ -28,6 +28,7 @@ export default class HealthPlugin extends Plugin {
 		// Object.assign only shallow-copies; nested-object fields (e.g. concernBaseOverrides)
 		// would otherwise stay reference-shared with the DEFAULT_SETTINGS module constant.
 		this.settings.concernBaseOverrides = { ...DEFAULT_SETTINGS.concernBaseOverrides, ...saved?.concernBaseOverrides };
+		this.settings.concernIcons = { ...DEFAULT_SETTINGS.concernIcons, ...saved?.concernIcons };
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
 		this.registerView(HEALTH_PLANNER_VIEW_TYPE, (leaf) => new HealthPlannerView(leaf, this));

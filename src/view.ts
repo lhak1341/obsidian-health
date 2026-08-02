@@ -78,6 +78,7 @@ export class HealthView extends ItemView {
 			},
 			profile,
 			lastVisitDate,
+			concernIcons: this.plugin.settings.concernIcons,
 		});
 	}
 

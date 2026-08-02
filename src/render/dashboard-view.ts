@@ -17,6 +17,7 @@ export interface DashboardRenderOptions {
 	onSwitchProfile: (person: string) => void;
 	profile: ProfileNote;
 	lastVisitDate?: string;
+	concernIcons: Record<string, string>;
 }
 
 interface RowRef {
@@ -283,7 +284,7 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 
 	const wrap = document.createElement("div");
 	wrap.className = "hlth-grp";
-	const head = buildGroupHeader(group, hiddenCount, opts.showAll);
+	const head = buildGroupHeader(group, hiddenCount, opts.showAll, opts.concernIcons);
 	head.addEventListener("click", () => {
 		void Promise.resolve(opts.onOpenConcern(group.concern)).then((opened) => {
 			if (!opened) wrap.classList.toggle("hlth-grp-expanded");
@@ -304,11 +305,11 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 	return wrap;
 }
 
-function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boolean): HTMLElement {
+function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boolean, concernIcons: Record<string, string>): HTMLElement {
 	const head = document.createElement("div");
 	head.className = "hlth-grp-head";
 
-	const icon = iconForConcern(group.concern);
+	const icon = iconForConcern(group.concern, concernIcons);
 	icon.classList.add("hlth-grp-icon");
 	head.appendChild(icon);
 
@@ -344,11 +345,6 @@ function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail
 	const header = document.createElement("div");
 	header.className = "hlth-row";
 	if (hidden) header.classList.add("hlth-hidden");
-
-	const chevron = document.createElement("span");
-	chevron.className = "hlth-chevron";
-	chevron.appendChild(iconFor("chevron-right"));
-	header.appendChild(chevron);
 
 	header.appendChild(buildNameCell(primary));
 

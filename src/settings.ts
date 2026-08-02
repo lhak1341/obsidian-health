@@ -9,6 +9,9 @@ export interface HealthPluginSettings extends VaultPaths {
 	widgetShowSparkline: boolean;
 	showAllDefault: boolean;
 	concernBaseOverrides: Record<string, string>;
+	/** Icon override per concern id, for concerns not in the hardcoded CONCERN_ICON map (icons.ts)
+	 *  -- e.g. after renaming a concern, or a wholly new one. Purely cosmetic, no vault write. */
+	concernIcons: Record<string, string>;
 	defaultProfile?: string;
 }
 
@@ -20,5 +23,6 @@ export const DEFAULT_SETTINGS: HealthPluginSettings = {
 	widgetShowSparkline: true,
 	showAllDefault: false,
 	concernBaseOverrides: {},
+	concernIcons: {},
 	defaultProfile: undefined,
 };

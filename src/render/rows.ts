@@ -68,7 +68,12 @@ export function formatRowValue(primary: MarkerStatusInfo, secondary?: MarkerStat
 }
 
 /** Fills a status dot, name, optional sparkline, value, and arrow into `el` — the compact row shape shared by the widget and the Bases view. */
-export function fillMarkerRowContent(el: HTMLElement, primary: MarkerStatusInfo, secondary: MarkerStatusInfo | undefined, opts: { showSparkline: boolean }): void {
+export function fillMarkerRowContent(
+	el: HTMLElement,
+	primary: MarkerStatusInfo,
+	secondary: MarkerStatusInfo | undefined,
+	opts: { showSparkline: boolean; colorValue?: boolean },
+): void {
 	const dot = document.createElement("span");
 	dot.className = "hlth-dot";
 	dot.style.background = statusColor(primary.status);
@@ -83,7 +88,7 @@ export function fillMarkerRowContent(el: HTMLElement, primary: MarkerStatusInfo,
 
 	const value = document.createElement("span");
 	value.className = "hlth-widget-row-value";
-	value.style.color = statusColor(primary.status);
+	if (opts.colorValue ?? true) value.style.color = statusColor(primary.status);
 	value.textContent = formatRowValue(primary, secondary);
 	el.appendChild(value);
 
