@@ -1,6 +1,7 @@
 import { Notice, Setting } from "obsidian";
-import { groupByConcern } from "./core/dashboard";
+import { groupByConcern, normalizeConcernKey } from "./core/dashboard";
 import type { MarkerNote } from "./core/types";
+import { labelForConcern } from "./render/concern-registry";
 import { renderDragReorderList } from "./render/drag-reorder";
 import { IconSuggest } from "./render/icon-suggest";
 import { iconForConcern } from "./render/icons";
@@ -31,11 +32,11 @@ export class ConcernSection {
 
 		for (const concern of Object.keys(overrides)) {
 			new Setting(items)
-				.setName(concern)
+				.setName(labelForConcern(concern))
 				.addText((text) =>
 					text.setValue(overrides[concern]).onChange((value) => {
 						overrides[concern] = value;
-						void this.ctx.save();
+						void this.ctx.saveQuiet();
 					}),
 				)
 				.addExtraButton((btn) =>
@@ -44,7 +45,7 @@ export class ConcernSection {
 						.setTooltip("Remove override")
 						.onClick(() => {
 							delete overrides[concern];
-							void this.ctx.save();
+							void this.ctx.saveQuiet();
 							this.ctx.rerender();
 						}),
 				);
@@ -58,13 +59,13 @@ export class ConcernSection {
 			.addText((text) => text.setPlaceholder("Base file path").onChange((value) => (newBase = value)))
 			.addButton((btn) =>
 				btn.setButtonText("Add").onClick(() => {
-					const concern = newConcern.trim();
-					if (!concern || !newBase.trim()) {
+					const key = normalizeConcernKey(newConcern);
+					if (!key || !newBase.trim()) {
 						new Notice("Both concern and Base path are required.");
 						return;
 					}
-					overrides[concern] = newBase.trim();
-					void this.ctx.save();
+					overrides[key] = newBase.trim();
+					void this.ctx.saveQuiet();
 					this.ctx.rerender();
 				}),
 			);
@@ -84,11 +85,10 @@ export class ConcernSection {
 		// (its own re-index runs on a separate, unawaited pass), so an immediate re-scan risks reading
 		// stale concern values right back for the very markers we just wrote.
 		for (const marker of snapshot?.markers ?? []) {
-			marker.concern = marker.concern.map((c) => (c === oldConcern ? newConcern : c));
+			marker.concern = marker.concern.map((c) => (normalizeConcernKey(c) === oldConcern ? newConcern : c));
 		}
 
 		await this.ctx.save();
-		this.ctx.markDirty();
 		new Notice(`Renamed "${oldConcern}" to "${newConcern}".`);
 		this.ctx.rerender();
 	}
@@ -104,7 +104,7 @@ export class ConcernSection {
 		});
 		const items = root.createDiv("setting-group").createDiv("setting-items");
 
-		const byConcern = groupByConcern(snapshot?.markers ?? [], (marker) => marker.concern);
+		const byConcern = groupByConcern(snapshot?.markers ?? [], (marker) => marker.concern.map(normalizeConcernKey));
 
 		const concerns = [...byConcern.keys()].sort((a, b) => a.localeCompare(b));
 		if (concerns.length === 0) {
@@ -120,13 +120,13 @@ export class ConcernSection {
 
 	private renderConcernOrderList(root: HTMLElement, concern: string, markers: MarkerNote[], snapshot: VaultSnapshot | undefined): void {
 		const details = root.createEl("details", { cls: "hlth-settings-details" });
-		details.createEl("summary", { text: `${concern} (${markers.length})` });
+		details.createEl("summary", { text: `${labelForConcern(concern)} (${markers.length})` });
 
 		let renameTo = "";
 		new Setting(details.createDiv())
 			.setName("Rename concern")
 			.setDesc("Rewrites concern: on every marker note in this group -- a real rename, not a display override. Carries over the Base override above and the icon below, if either is set.")
-			.addText((text) => text.setPlaceholder(concern).onChange((value) => (renameTo = value)))
+			.addText((text) => text.setPlaceholder(labelForConcern(concern)).onChange((value) => (renameTo = value)))
 			.addButton((btn) => btn.setButtonText("Rename").onClick(() => void this.renameConcern(snapshot, concern, renameTo)));
 
 		const icons = this.ctx.plugin.settings.concernIcons;
@@ -144,7 +144,6 @@ export class ConcernSection {
 					else delete icons[concern];
 					preview.empty();
 					preview.appendChild(iconForConcern(concern, icons));
-					this.ctx.markDirty();
 					void this.ctx.save();
 				});
 		});

@@ -29,6 +29,8 @@ export interface MarkerStatusInfo {
 }
 
 export interface ConcernGroup {
+	/** Normalized identity key (dashboard.ts's normalizeConcernKey), not raw frontmatter text --
+	 *  render/concern-registry.ts's labelForConcern resolves this to display text. */
 	concern: string;
 	status: Status;
 	markers: MarkerStatusInfo[];

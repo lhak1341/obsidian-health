@@ -55,6 +55,13 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 			getMarkdownFiles: () => [...notes.keys()].map(toFakeFile),
 			getAbstractFileByPath,
 			cachedRead: async (file: FakeFile) => notes.get(file.path)?.body ?? "",
+			create: async (path: string, content: string): Promise<FakeFile> => {
+				notes.set(path, { frontmatter: {}, body: content });
+				return toFakeFile(path);
+			},
+			// No-op: folders are inferred from file path prefixes (see getAbstractFileByPath above),
+			// so a folder "exists" the moment a note is created under it.
+			createFolder: async (_path: string): Promise<void> => {},
 		},
 		metadataCache: {
 			getFileCache: (file: FakeFile) => {

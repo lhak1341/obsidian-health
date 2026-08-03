@@ -17,14 +17,17 @@ export interface HealthPluginSettings extends VaultPaths {
 }
 
 /** Renames a concern's key in both settings maps -- the settings-side half of a concern rename
- *  (the vault-side half, rewriting marker `concern:` frontmatter, is renameConcern in vault/writer.ts). */
+ *  (the vault-side half, rewriting marker `concern:` frontmatter, is renameConcern in vault/writer.ts).
+ *  `oldConcern` is already a normalized key; `newConcern` is the raw text the user typed, so it's
+ *  re-normalized here to keep both maps keyed by identity, not display casing. */
 export function renameConcernInSettings(settings: HealthPluginSettings, oldConcern: string, newConcern: string): void {
+	const newKey = newConcern.trim().toLowerCase();
 	if (settings.concernBaseOverrides[oldConcern] !== undefined) {
-		settings.concernBaseOverrides[newConcern] = settings.concernBaseOverrides[oldConcern];
+		settings.concernBaseOverrides[newKey] = settings.concernBaseOverrides[oldConcern];
 		delete settings.concernBaseOverrides[oldConcern];
 	}
 	if (settings.concernIcons[oldConcern] !== undefined) {
-		settings.concernIcons[newConcern] = settings.concernIcons[oldConcern];
+		settings.concernIcons[newKey] = settings.concernIcons[oldConcern];
 		delete settings.concernIcons[oldConcern];
 	}
 }

@@ -77,6 +77,19 @@ describe("pairMarkerNotes", () => {
 
 		expect(rows).toEqual([{ primary: expect.objectContaining({ id: "alt" }) }]);
 	});
+
+	it("falls back to a solo row for a 3rd marker sharing the same pair id, instead of duplicating an already-paired one", () => {
+		const a = marker({ id: "a", pair: "p" });
+		const b = marker({ id: "b", pair: "p" });
+		const c = marker({ id: "c", pair: "p" });
+
+		const rows = pairMarkerNotes([a, b, c]);
+
+		expect(rows).toHaveLength(2);
+		expect(rows[0].primary.id).toBe("a");
+		expect(rows[0].secondary?.id).toBe("b");
+		expect(rows[1]).toEqual({ primary: expect.objectContaining({ id: "c" }) });
+	});
 });
 
 describe("findVisit", () => {

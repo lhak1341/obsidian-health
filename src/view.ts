@@ -69,7 +69,7 @@ export class HealthView extends ItemView {
 			},
 			onAddVisit: () => void this.plugin.openAddVisitModal(),
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
-			onOpenConcern: (concern) => this.openConcernBase(concern),
+			onOpenConcern: (key, label) => this.openConcernBase(key, label),
 			profiles: snapshot.profiles.map((p) => p.person),
 			activePerson: profile.person,
 			onSwitchProfile: (person) => {
@@ -82,11 +82,11 @@ export class HealthView extends ItemView {
 		});
 	}
 
-	/** By convention a concern header opens `<basesFolder>/<concern>.base`, or the per-concern override path. Returns false if the file doesn't exist so the caller can degrade to in-plugin expand. */
-	private openConcernBase(concern: string): boolean {
+	/** By convention a concern header opens `<basesFolder>/<label>.base`, or the per-concern override path (keyed by the normalized identity, not the display label). Returns false if the file doesn't exist so the caller can degrade to in-plugin expand. */
+	private openConcernBase(key: string, label: string): boolean {
 		const settings = this.plugin.settings;
-		const override = settings.concernBaseOverrides[concern]?.trim();
-		const path = override || `${settings.basesFolder}/${concern}.base`;
+		const override = settings.concernBaseOverrides[key]?.trim();
+		const path = override || `${settings.basesFolder}/${label}.base`;
 
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return false;

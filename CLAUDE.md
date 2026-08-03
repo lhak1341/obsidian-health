@@ -8,7 +8,7 @@ Dev loop: `bun run deploy` (builds + copies `manifest.json`/`main.js`/`styles.cs
 
 Use `./node_modules/.bin/tsc --noEmit` (or `bun run build`), not bare `npx tsc` — `npx` can resolve a different, newer global TypeScript that throws unrelated errors (e.g. a `baseUrl` deprecation warning) the pinned project version doesn't.
 
-`bun test` (Bun's native runner) auto-discovers every `*.test.ts` in the repo and ignores `vitest.config.ts`'s `include` scoping entirely — only `bun run test` (vitest) respects it. Verify any test-scoping change with `bun run test`, not `bun test`.
+`bun test` (Bun's native runner) auto-discovers every `*.test.ts` in the repo and ignores `vitest.config.ts`'s `include` scoping entirely — only `bun run test` (vitest) respects it. Verify any test-scoping change with `bun run test`, not `bun test`. The `include` list only covers `src/core|vault|render/**` by default — a new test file at repo root (e.g. `src/settings-*.test.ts`) needs a pattern added or it's silently skipped by `bun run test`.
 
 `obsidian-cli` (at `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli`) drives the running app — `eval code=<js>` runs JS with `app` in scope, `plugin:reload id=<id>` hot-reloads a plugin, `plugin id=<id>` shows enabled state.
 
@@ -42,7 +42,7 @@ Don't try to force dark mode by mutating `document.body.classList` in `eval` —
 
 Real vault (for live checks): `/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel`, health notes under `09 about-me/{markers,profiles,health/labs/<person>}`.
 
-The vault is itself a git repo — after manually testing a feature that writes to it, `git status`/`git diff` there catches any accidental drift from test writes, and `git checkout -- <file>` reverts it cleanly.
+The vault is itself a git repo — `git status`/`git diff` there after *any* live `obsidian-cli` verification session (not just ones you believe write) catches accidental drift; `git checkout -- <file>` reverts it cleanly. `processFrontMatter` re-serializes a file's entire frontmatter block into Obsidian's block-YAML style, not just the field touched — a note showing reformatted-but-logically-unrelated frontmatter is a signature that some `processFrontMatter` call touched it.
 
 Plugin settings (`data.json`) can end up persisted mid-test even without an explicit `saveSettings()` call in your own script (some other code path autosaves) — after live-testing a settings toggle, diff/inspect `data.json` directly rather than trusting an in-memory revert; fix by editing the file (or re-saving) if it stuck.
 
@@ -107,6 +107,8 @@ Marker `panel` (drives the Add Visit form's grouping, mirrors the physical lab r
 ## Testing vault code
 
 `src/vault/fixtures/fake-app.ts` — minimal in-memory Obsidian `App` fake (just the `vault`/`metadataCache`/`fileManager` subset `reader.ts`/`writer.ts` call) for testing vault code without a DOM/jsdom harness; supports injecting a write failure mid-batch via a `failOn` predicate. Reuse for future vault-write characterization tests rather than rebuilding.
+
+`obsidian` is a types-only npm package (`"main": ""`) — `Setting`/`PluginSettingTab`/`Notice` have no runtime implementation, so a class built on them (e.g. `settings-tab.ts`, `settings-*-section.ts`) can't be instantiated in a vitest test without building fake UI shims. When such a class needs test coverage, extract the Obsidian-free decision logic into its own plain class/function and test that instead (see `SettingsDirtyTracker` in `settings-dirty-tracker.ts`, tested with zero DOM/Obsidian imports).
 
 `src/core/fixtures/real-vault.ts` is a small anonymized sample, not the full real vault — when refactoring code keyed on frontmatter values (e.g. `concern` ids), grep the real vault's frontmatter (`09 about-me/markers/*.md`) to enumerate actual values before hardcoding a lookup/registry keyed on them. The fixture alone missed the literal `Blood Count` concern id and broke column placement for every marker in that group.
 

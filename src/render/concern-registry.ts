@@ -9,29 +9,40 @@
 export interface ConcernConfig {
 	icon: string;
 	column: 0 | 1 | 2;
+	/** Canonical display text -- overrides whatever casing a marker's frontmatter happens to use. */
+	label: string;
 }
 
 const DEFAULT_ICON = "activity";
 const DEFAULT_COLUMN: 0 | 1 | 2 = 2;
 
+/** Keyed by normalizeConcernKey's output (core/dashboard.ts) -- every accessor here expects an
+ *  already-normalized key, not raw frontmatter text. */
 export const CONCERN_CONFIG: Record<string, ConcernConfig> = {
-	vitals: { icon: "heart-pulse", column: 0 },
-	cardiometabolic: { icon: "activity", column: 0 },
-	cancer: { icon: "shield", column: 0 },
-	immunity: { icon: "shield", column: 0 },
-	cbc: { icon: "droplets", column: 1 },
-	blood: { icon: "droplets", column: 1 },
-	"blood count": { icon: "droplets", column: 1 },
-	urine: { icon: "flask-conical", column: 2 },
-	metabolic: { icon: "activity", column: 2 },
-	kidney: { icon: "droplet", column: 2 },
-	liver: { icon: "flask-conical", column: 2 },
+	vitals: { icon: "heart-pulse", column: 0, label: "Vitals" },
+	cardiometabolic: { icon: "activity", column: 0, label: "Cardiometabolic" },
+	cancer: { icon: "shield", column: 0, label: "Cancer" },
+	immunity: { icon: "shield", column: 0, label: "Immunity" },
+	cbc: { icon: "droplets", column: 1, label: "CBC" },
+	blood: { icon: "droplets", column: 1, label: "Blood" },
+	"blood count": { icon: "droplets", column: 1, label: "Blood Count" },
+	urine: { icon: "flask-conical", column: 2, label: "Urine" },
+	metabolic: { icon: "activity", column: 2, label: "Metabolic" },
+	kidney: { icon: "droplet", column: 2, label: "Kidney" },
+	liver: { icon: "flask-conical", column: 2, label: "Liver" },
 };
 
-export function iconNameForConcern(concern: string): string {
-	return CONCERN_CONFIG[concern.toLowerCase()]?.icon ?? DEFAULT_ICON;
+export function iconNameForConcern(key: string): string {
+	return CONCERN_CONFIG[key]?.icon ?? DEFAULT_ICON;
 }
 
-export function columnForConcern(concern: string): 0 | 1 | 2 {
-	return CONCERN_CONFIG[concern.toLowerCase()]?.column ?? DEFAULT_COLUMN;
+export function columnForConcern(key: string): 0 | 1 | 2 {
+	return CONCERN_CONFIG[key]?.column ?? DEFAULT_COLUMN;
+}
+
+/** Canonical display text for a normalized concern key -- the registry's authored label for known
+ *  concerns, else the key itself (already lowercase; unregistered concerns show lowercase until
+ *  they're added here or renamed). */
+export function labelForConcern(key: string): string {
+	return CONCERN_CONFIG[key]?.label ?? key;
 }

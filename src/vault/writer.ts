@@ -90,14 +90,17 @@ export async function saveMarkerOrder(app: App, paths: VaultPaths, id: string, o
  *  halves so a future caller can't rewrite the notes and forget the settings, or vice versa. The id
  *  is the single source of truth for the dashboard column header, so the note side is a real
  *  rewrite, not a display-only overlay. De-dupes if `newConcern` is already one of the entries. */
+/** `oldConcern` is a normalized identity key (see core/dashboard.ts's normalizeConcernKey); matching
+ *  case-insensitively against raw frontmatter means a rename also self-heals any casing drift across
+ *  markers that share the same concern identity but were authored with different casing. */
 export async function renameConcern(app: App, settings: HealthPluginSettings, markers: MarkerNote[], oldConcern: string, newConcern: string): Promise<void> {
 	for (const marker of markers) {
-		if (!marker.concern.includes(oldConcern)) continue;
+		if (!marker.concern.some((c) => c.trim().toLowerCase() === oldConcern)) continue;
 		const file = findMarkerFile(app, settings, marker.id);
 		if (!file) continue;
 		await app.fileManager.processFrontMatter(file, (frontmatter) => {
 			const concern = Array.isArray(frontmatter.concern) ? (frontmatter.concern as string[]) : [];
-			frontmatter.concern = [...new Set(concern.map((c) => (c === oldConcern ? newConcern : c)))];
+			frontmatter.concern = [...new Set(concern.map((c) => (c.trim().toLowerCase() === oldConcern ? newConcern : c)))];
 		});
 	}
 	renameConcernInSettings(settings, oldConcern, newConcern);

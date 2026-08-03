@@ -1,7 +1,7 @@
 import type { ConcernGroup, DashboardModel, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
-import { columnForConcern } from "./concern-registry";
+import { columnForConcern, labelForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
@@ -12,8 +12,10 @@ export interface DashboardRenderOptions {
 	onToggleShowAll: () => void;
 	onAddVisit: () => void;
 	onOpenPlanner: () => void;
-	/** Tries to open the concern's filtered Base view; resolves false when none exists (caller degrades to in-plugin expand). */
-	onOpenConcern: (concern: string) => boolean | Promise<boolean>;
+	/** Tries to open the concern's filtered Base view (key = normalized identity for override lookup,
+	 *  label = display text for the default `<basesFolder>/<label>.base` path convention); resolves
+	 *  false when none exists (caller degrades to in-plugin expand). */
+	onOpenConcern: (key: string, label: string) => boolean | Promise<boolean>;
 	profiles: string[];
 	activePerson: string;
 	onSwitchProfile: (person: string) => void;
@@ -270,7 +272,7 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 	wrap.className = "hlth-grp";
 	const head = buildGroupHeader(group, hiddenCount, opts.showAll, opts.concernIcons);
 	head.addEventListener("click", () => {
-		void Promise.resolve(opts.onOpenConcern(group.concern)).then((opened) => {
+		void Promise.resolve(opts.onOpenConcern(group.concern, labelForConcern(group.concern))).then((opened) => {
 			if (!opened) wrap.classList.toggle("hlth-grp-expanded");
 		});
 	});
@@ -299,7 +301,7 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 
 	const label = document.createElement("span");
 	label.className = "hlth-lbl hlth-grp-label";
-	label.textContent = group.concern;
+	label.textContent = labelForConcern(group.concern);
 	head.appendChild(label);
 
 	const dot = document.createElement("span");

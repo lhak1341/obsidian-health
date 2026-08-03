@@ -9,7 +9,8 @@ export function iconFor(name: string): SVGSVGElement {
 	return svg;
 }
 
-export function iconForConcern(concern: string, overrides: Record<string, string> = {}): SVGSVGElement {
-	const key = concern.toLowerCase();
-	return iconFor(overrides[concern] ?? overrides[key] ?? iconNameForConcern(concern));
+/** `key` must already be a normalized concern key (dashboard.ts's normalizeConcernKey) --
+ *  `overrides` is keyed the same way, so this is a plain exact lookup. */
+export function iconForConcern(key: string, overrides: Record<string, string> = {}): SVGSVGElement {
+	return iconFor(overrides[key] ?? iconNameForConcern(key));
 }

@@ -47,7 +47,11 @@ export function pairByPartner<T>(
 		consumed.add(id);
 
 		const pairKey = getPair(item);
-		const partner = pairKey ? items.find((other) => getId(other) !== id && getPair(other) === pairKey) : undefined;
+		// Excludes already-consumed candidates (which, since `id` is already in `consumed` at this
+		// point, also excludes self-matching): without this, a 3rd+ item sharing the same pair id
+		// (a plausible typo since `pair` is unvalidated free text) could re-match an already-paired
+		// item, producing two rows that both contain it instead of one item falling back to solo.
+		const partner = pairKey ? items.find((other) => !consumed.has(getId(other)) && getPair(other) === pairKey) : undefined;
 
 		if (partner) {
 			consumed.add(getId(partner));

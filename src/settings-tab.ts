@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import type HealthPlugin from "./main";
 import { ConcernSection } from "./settings-concern-section";
 import type { SettingsSectionContext } from "./settings-context";
+import { SettingsDirtyTracker } from "./settings-dirty-tracker";
 import { ProfileSection } from "./settings-profile-section";
 import type { WidgetTier } from "./settings";
 import type { VaultSnapshot } from "./vault/reader";
@@ -10,7 +11,7 @@ export class HealthSettingTab extends PluginSettingTab {
 	private snapshot?: VaultSnapshot;
 	// The settings modal is an overlay -- an open dashboard behind it can't be seen anyway, so
 	// there's no point refreshing it after every single drag. Batch to one rescan on tab close.
-	private dirty = false;
+	private readonly tracker: SettingsDirtyTracker;
 
 	private readonly concernSection: ConcernSection;
 	private readonly profileSection: ProfileSection;
@@ -20,13 +21,18 @@ export class HealthSettingTab extends PluginSettingTab {
 		private readonly plugin: HealthPlugin,
 	) {
 		super(app, plugin);
+		this.tracker = new SettingsDirtyTracker(
+			() => this.plugin.saveSettings(),
+			() => this.scanAndRender(),
+		);
 		const ctx: SettingsSectionContext = {
 			app: this.app,
 			plugin: this.plugin,
-			markDirty: () => (this.dirty = true),
-			save: () => this.save(),
+			markDirty: () => this.tracker.markDirty(),
+			save: () => this.tracker.save(),
+			saveQuiet: () => this.tracker.saveQuiet(),
 			rerender: () => this.renderContent(),
-			reload: () => this.reload(),
+			reload: () => this.tracker.reload(),
 		};
 		this.concernSection = new ConcernSection(ctx);
 		this.profileSection = new ProfileSection(ctx);
@@ -35,23 +41,24 @@ export class HealthSettingTab extends PluginSettingTab {
 	display(): void {
 		this.containerEl.empty();
 		this.containerEl.createDiv({ text: "Loading…" });
-		void this.reload();
+		void this.scanAndRender();
 	}
 
 	hide(): void {
-		if (this.dirty) {
-			this.plugin.refreshOpenViews();
-			this.dirty = false;
-		}
+		if (this.tracker.consumeDirty()) this.plugin.refreshOpenViews();
 	}
 
-	private async reload(): Promise<void> {
+	private async scanAndRender(): Promise<void> {
 		this.snapshot = await this.plugin.scanVault(this.plugin.settings);
 		this.renderContent();
 	}
 
 	private async save(): Promise<void> {
-		await this.plugin.saveSettings();
+		await this.tracker.save();
+	}
+
+	private async reload(): Promise<void> {
+		await this.tracker.reload();
 	}
 
 	private renderContent(): void {

@@ -1,8 +1,24 @@
 import type { App, TFile } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { createFakeApp } from "./fixtures/fake-app";
+import type { MarkerNote } from "../core/types";
 import { DEFAULT_SETTINGS, type HealthPluginSettings } from "../settings";
-import { renameProfile } from "./writer";
+import {
+	findMarkerFile,
+	findProfileFile,
+	findVisitFile,
+	renameConcern,
+	renameProfile,
+	saveMarkerOrder,
+	saveNewMarkerNote,
+	saveProfileNote,
+	saveProfileOrder,
+	saveVisitNote,
+} from "./writer";
+
+function markerNote(overrides: Partial<MarkerNote> = {}): MarkerNote {
+	return { id: "test", name: "Test", aliases: [], type: "numeric", panel: "biochemical", concern: [], curated: false, blurb: "", ...overrides };
+}
 
 const paths: HealthPluginSettings = {
 	...DEFAULT_SETTINGS,
@@ -91,5 +107,224 @@ describe("renameProfile", () => {
 		const plan = file(app, "plans/alice-2024.md");
 		expect(app.metadataCache.getFileCache(visit2)?.frontmatter?.person).toBe("alice");
 		expect(app.metadataCache.getFileCache(plan)?.frontmatter?.person).toBe("alice");
+	});
+});
+
+describe("findVisitFile", () => {
+	it("finds a visit note by person and date", () => {
+		const app = aliceVault();
+		expect(findVisitFile(app, paths, "alice", "2024-01-01")?.path).toBe("visits/alice/2024-01-01.md");
+	});
+
+	it("returns null when no visit matches", () => {
+		const app = aliceVault();
+		expect(findVisitFile(app, paths, "alice", "2099-01-01")).toBeNull();
+	});
+
+	it("ignores notes that aren't lab-visit type", () => {
+		const app = createFakeApp([{ path: "visits/alice/note.md", frontmatter: { type: "plan", person: "alice", date: "2024-01-01" } }]);
+		expect(findVisitFile(app, paths, "alice", "2024-01-01")).toBeNull();
+	});
+});
+
+describe("saveVisitNote", () => {
+	it("creates a new visit note with the given values", async () => {
+		const app = createFakeApp([]);
+
+		await saveVisitNote(app, paths, "alice", "2024-03-01", { alt: 31.3, ast: "high" });
+
+		const f = file(app, "visits/alice/2024-03-01.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({
+			type: "lab-visit",
+			person: "alice",
+			date: "2024-03-01",
+			alt: 31.3,
+			ast: "high",
+		});
+	});
+
+	it("overwrites an existing visit note's frontmatter wholesale, not merging", async () => {
+		const app = createFakeApp([
+			{ path: "visits/alice/2024-01-01.md", frontmatter: { type: "lab-visit", person: "alice", date: "2024-01-01", oldField: "stale" } },
+		]);
+
+		await saveVisitNote(app, paths, "alice", "2024-01-01", { alt: 31.3 });
+
+		const f = file(app, "visits/alice/2024-01-01.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({ type: "lab-visit", person: "alice", date: "2024-01-01", alt: 31.3 });
+	});
+});
+
+describe("saveNewMarkerNote", () => {
+	it("creates a marker note with the given fields", async () => {
+		const app = createFakeApp([]);
+
+		await saveNewMarkerNote(app, paths, { id: "alt", name: "ALT", type: "numeric", unit: "U/L", panel: "liver", concern: ["liver"], curated: true });
+
+		const f = file(app, "markers/alt.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({
+			name: "ALT",
+			type: "numeric",
+			unit: "U/L",
+			panel: "liver",
+			concern: ["liver"],
+			curated: true,
+		});
+	});
+
+	it("omits unit when not provided", async () => {
+		const app = createFakeApp([]);
+
+		await saveNewMarkerNote(app, paths, { id: "qual", name: "Qual Marker", type: "qualitative", panel: "urine", concern: [], curated: false });
+
+		const f = file(app, "markers/qual.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.unit).toBeUndefined();
+	});
+});
+
+describe("findMarkerFile", () => {
+	it("finds a marker note by id", () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT" } }]);
+		expect(findMarkerFile(app, paths, "alt")?.path).toBe("markers/alt.md");
+	});
+
+	it("returns null when no marker matches", () => {
+		const app = createFakeApp([]);
+		expect(findMarkerFile(app, paths, "missing")).toBeNull();
+	});
+});
+
+describe("saveMarkerOrder", () => {
+	it("sets order: on the marker note", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT" } }]);
+
+		await saveMarkerOrder(app, paths, "alt", 30);
+
+		const f = file(app, "markers/alt.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.order).toBe(30);
+	});
+
+	it("is a no-op when the marker file doesn't exist", async () => {
+		const app = createFakeApp([]);
+		await expect(saveMarkerOrder(app, paths, "missing", 30)).resolves.toBeUndefined();
+	});
+});
+
+describe("renameConcern", () => {
+	it("rewrites concern: on every marker note that references it, case-insensitively", async () => {
+		const app = createFakeApp([
+			{ path: "markers/alt.md", frontmatter: { concern: ["Liver"] } },
+			{ path: "markers/ast.md", frontmatter: { concern: ["liver"] } },
+			{ path: "markers/hdl.md", frontmatter: { concern: ["lipids"] } },
+		]);
+		const markers = [
+			markerNote({ id: "alt", concern: ["Liver"] }),
+			markerNote({ id: "ast", concern: ["liver"] }),
+			markerNote({ id: "hdl", concern: ["lipids"] }),
+		];
+		const settings: HealthPluginSettings = { ...paths, concernBaseOverrides: {}, concernIcons: {} };
+
+		await renameConcern(app, settings, markers, "liver", "Liver Panel");
+
+		expect(app.metadataCache.getFileCache(file(app, "markers/alt.md"))?.frontmatter?.concern).toEqual(["Liver Panel"]);
+		expect(app.metadataCache.getFileCache(file(app, "markers/ast.md"))?.frontmatter?.concern).toEqual(["Liver Panel"]);
+		expect(app.metadataCache.getFileCache(file(app, "markers/hdl.md"))?.frontmatter?.concern).toEqual(["lipids"]);
+	});
+
+	it("de-dupes when a marker already carries the new concern alongside the old one", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { concern: ["liver", "Liver Panel"] } }]);
+		const markers = [markerNote({ id: "alt", concern: ["liver", "Liver Panel"] })];
+		const settings: HealthPluginSettings = { ...paths, concernBaseOverrides: {}, concernIcons: {} };
+
+		await renameConcern(app, settings, markers, "liver", "Liver Panel");
+
+		expect(app.metadataCache.getFileCache(file(app, "markers/alt.md"))?.frontmatter?.concern).toEqual(["Liver Panel"]);
+	});
+
+	it("renames the matching key in concernBaseOverrides and concernIcons", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { concern: ["liver"] } }]);
+		const markers = [markerNote({ id: "alt", concern: ["liver"] })];
+		const settings: HealthPluginSettings = {
+			...paths,
+			concernBaseOverrides: { liver: "Bases/Liver.base" },
+			concernIcons: { liver: "flask-conical" },
+		};
+
+		await renameConcern(app, settings, markers, "liver", "Liver Panel");
+
+		expect(settings.concernBaseOverrides).toEqual({ "liver panel": "Bases/Liver.base" });
+		expect(settings.concernIcons).toEqual({ "liver panel": "flask-conical" });
+	});
+
+	it("leaves markers that don't reference the concern untouched", async () => {
+		const app = createFakeApp([{ path: "markers/hdl.md", frontmatter: { concern: ["lipids"] } }]);
+		const markers = [markerNote({ id: "hdl", concern: ["lipids"] })];
+		const settings: HealthPluginSettings = { ...paths, concernBaseOverrides: {}, concernIcons: {} };
+
+		await renameConcern(app, settings, markers, "liver", "Liver Panel");
+
+		expect(app.metadataCache.getFileCache(file(app, "markers/hdl.md"))?.frontmatter?.concern).toEqual(["lipids"]);
+	});
+});
+
+describe("findProfileFile", () => {
+	it("finds a profile note by person", () => {
+		const app = aliceVault();
+		expect(findProfileFile(app, paths, "alice")?.path).toBe("profiles/alice.md");
+	});
+
+	it("returns null when no profile matches", () => {
+		const app = createFakeApp([]);
+		expect(findProfileFile(app, paths, "missing")).toBeNull();
+	});
+});
+
+describe("saveProfileNote", () => {
+	it("creates a new profile note with the given fields", async () => {
+		const app = createFakeApp([]);
+
+		await saveProfileNote(app, paths, "carol", { sex: "f", dob: "1990-01-01", bloodType: "O+", allergies: ["penicillin"] });
+
+		const f = file(app, "profiles/carol.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({
+			sex: "f",
+			dob: "1990-01-01",
+			blood_type: "O+",
+			allergies: ["penicillin"],
+		});
+	});
+
+	it("omits optional fields left blank", async () => {
+		const app = createFakeApp([]);
+
+		await saveProfileNote(app, paths, "carol", { sex: "f" });
+
+		const f = file(app, "profiles/carol.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({ sex: "f" });
+	});
+
+	it("edits an existing profile note, removing a field that's now blank", async () => {
+		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f", blood_type: "A+" } }]);
+
+		await saveProfileNote(app, paths, "alice", { sex: "f" });
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.blood_type).toBeUndefined();
+	});
+});
+
+describe("saveProfileOrder", () => {
+	it("sets order: on the profile note", async () => {
+		const app = aliceVault();
+
+		await saveProfileOrder(app, paths, "alice", 20);
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.order).toBe(20);
+	});
+
+	it("is a no-op when the profile file doesn't exist", async () => {
+		const app = createFakeApp([]);
+		await expect(saveProfileOrder(app, paths, "missing", 20)).resolves.toBeUndefined();
 	});
 });

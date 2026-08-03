@@ -20,23 +20,29 @@ export function computeDashboardModel(
 	const sortedVisits = visits.filter((v) => v.person === profile.person).sort((a, b) => a.date.localeCompare(b.date));
 
 	const markerInfos: MarkerStatusInfo[] = [];
+	// attentionOrder's sort needs each marker's out-of-range magnitude as a tie-breaker below
+	// statusTier; deriveStatus already computes it alongside status, so it's captured here by
+	// object identity instead of re-deriving it a second time per marker during the sort.
+	const magnitudeByInfo = new Map<MarkerStatusInfo, number>();
 	for (const marker of markers) {
 		const series = buildSeries(marker, sortedVisits);
 		if (series.length === 0) continue;
 
 		const latest = series[series.length - 1];
 		const band = marker.type === "numeric" ? resolve(marker, profile, latest.date) : {};
-		const { status } = deriveStatus(marker, band, latest);
+		const { status, excess } = deriveStatus(marker, band, latest);
 		const arrow = deriveArrow(marker, series, settings);
 
-		markerInfos.push({ marker, status, band, series, latest, arrow });
+		const info: MarkerStatusInfo = { marker, status, band, series, latest, arrow };
+		markerInfos.push(info);
+		magnitudeByInfo.set(info, marker.type === "qualitative" ? (status === "good" ? 0 : Number.POSITIVE_INFINITY) : excess);
 	}
 
 	const attentionOrder = [...markerInfos]
 		.sort(
 			(a, b) =>
 				statusTier(a.status) - statusTier(b.status) ||
-				attentionMagnitude(b) - attentionMagnitude(a) ||
+				magnitudeByInfo.get(b)! - magnitudeByInfo.get(a)! ||
 				trendWeight(b) - trendWeight(a),
 		)
 		.map((info) => info.marker.id);
@@ -55,6 +61,13 @@ export function computeDashboardModel(
 	};
 }
 
+/** Folds a raw frontmatter concern string to its identity key -- the single definition of "same
+ *  concern" regardless of authored casing/whitespace. Display text is a presentation concern
+ *  (render/concern-registry.ts's labelForConcern), kept separate so this stays Obsidian-free. */
+export function normalizeConcernKey(raw: string): string {
+	return raw.trim().toLowerCase();
+}
+
 /** Groups items by every concern id they carry (multi-membership: an item with 2 concerns lands
  *  in 2 groups) -- shared by the domain core's concern grouping and the settings tab's row-order UI. */
 export function groupByConcern<T>(items: T[], getConcern: (item: T) => string[]): Map<string, T[]> {
@@ -70,7 +83,7 @@ export function groupByConcern<T>(items: T[], getConcern: (item: T) => string[])
 }
 
 function buildConcernGroups(markerInfos: MarkerStatusInfo[]): ConcernGroup[] {
-	const byConcern = groupByConcern(markerInfos, (info) => info.marker.concern);
+	const byConcern = groupByConcern(markerInfos, (info) => info.marker.concern.map(normalizeConcernKey));
 
 	return [...byConcern.entries()].map(([concern, members]) => ({
 		concern,
@@ -80,15 +93,6 @@ function buildConcernGroups(markerInfos: MarkerStatusInfo[]): ConcernGroup[] {
 		),
 		markers: members,
 	}));
-}
-
-function attentionMagnitude(info: MarkerStatusInfo): number {
-	const { marker, status, band, latest } = info;
-
-	if (marker.type === "qualitative") return status === "good" ? 0 : Number.POSITIVE_INFINITY;
-	if (latest === undefined) return 0;
-
-	return deriveStatus(marker, band, latest).excess;
 }
 
 function trendWeight(info: MarkerStatusInfo): number {

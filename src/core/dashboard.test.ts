@@ -395,6 +395,21 @@ describe("computeDashboardModel — concern groups", () => {
 
 		expect(model.concernGroups.map((g) => g.concern).sort()).toEqual(["liver", "metabolic"]);
 	});
+
+	it("folds mismatched concern casing into one group instead of splitting it", () => {
+		const titleCased = marker({ id: "alt", concern: ["Liver"], ranges: [{ sex: "any", low: 0, high: 10 }] });
+		const lowerCased = marker({ id: "ast", concern: ["liver"], ranges: [{ sex: "any", low: 0, high: 10 }] });
+
+		const model = computeDashboardModel(
+			[titleCased, lowerCased],
+			[visit("2025-01-01", { alt: 5, ast: 5 })],
+			profile(),
+			settings,
+		);
+
+		expect(model.concernGroups.map((g) => g.concern)).toEqual(["liver"]);
+		expect(model.concernGroups[0].markers.map((m) => m.marker.id).sort()).toEqual(["alt", "ast"]);
+	});
 });
 
 describe("computeDashboardModel — curated selection", () => {

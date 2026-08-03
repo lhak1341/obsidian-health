@@ -10,6 +10,9 @@ export interface SettingsSectionContext {
 	plugin: HealthPlugin;
 	markDirty(): void;
 	save(): Promise<void>;
+	/** Persists without marking dirty -- only for mutations that don't affect the open dashboard
+	 *  (e.g. Concern -> Base override CRUD, which only changes a header's clicked-through link). */
+	saveQuiet(): Promise<void>;
 	/** Re-render the tab from the currently-cached snapshot -- no vault rescan. */
 	rerender(): void;
 	/** Rescan the vault, then re-render. Needed after a write whose effect on the snapshot isn't

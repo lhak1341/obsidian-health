@@ -179,7 +179,6 @@ export class ProfileSection {
 		}
 
 		await this.ctx.save();
-		this.ctx.markDirty();
 		new Notice(`Renamed profile "${oldPerson}" to "${newPerson}".`);
 		await this.ctx.reload();
 	}
