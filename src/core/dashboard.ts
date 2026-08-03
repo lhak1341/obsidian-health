@@ -55,15 +55,22 @@ export function computeDashboardModel(
 	};
 }
 
-function buildConcernGroups(markerInfos: MarkerStatusInfo[]): ConcernGroup[] {
-	const byConcern = new Map<string, MarkerStatusInfo[]>();
-	for (const info of markerInfos) {
-		for (const concern of info.marker.concern) {
+/** Groups items by every concern id they carry (multi-membership: an item with 2 concerns lands
+ *  in 2 groups) -- shared by the domain core's concern grouping and the settings tab's row-order UI. */
+export function groupByConcern<T>(items: T[], getConcern: (item: T) => string[]): Map<string, T[]> {
+	const byConcern = new Map<string, T[]>();
+	for (const item of items) {
+		for (const concern of getConcern(item)) {
 			const group = byConcern.get(concern) ?? [];
-			group.push(info);
+			group.push(item);
 			byConcern.set(concern, group);
 		}
 	}
+	return byConcern;
+}
+
+function buildConcernGroups(markerInfos: MarkerStatusInfo[]): ConcernGroup[] {
+	const byConcern = groupByConcern(markerInfos, (info) => info.marker.concern);
 
 	return [...byConcern.entries()].map(([concern, members]) => ({
 		concern,

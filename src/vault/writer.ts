@@ -1,6 +1,7 @@
 import type { App, TFile } from "obsidian";
 import { buildVisitFrontmatter } from "../core/entry";
 import type { MarkerKind, MarkerNote, PersonSex } from "../core/types";
+import { renameConcernInSettings, type HealthPluginSettings } from "../settings";
 import { filesUnder, type VaultPaths } from "./reader";
 
 function personVisitsFolder(paths: VaultPaths, person: string): string {
@@ -84,19 +85,22 @@ export async function saveMarkerOrder(app: App, paths: VaultPaths, id: string, o
 	});
 }
 
-/** Renames a concern id across every marker note that references it in its `concern:` array --
- *  the id is the single source of truth for the dashboard column header, so this is a real
+/** Renames a concern id across every marker note that references it in its `concern:` array, and
+ *  the settings-side pointers that key off it (Base overrides, icon override) -- one call for both
+ *  halves so a future caller can't rewrite the notes and forget the settings, or vice versa. The id
+ *  is the single source of truth for the dashboard column header, so the note side is a real
  *  rewrite, not a display-only overlay. De-dupes if `newConcern` is already one of the entries. */
-export async function renameConcern(app: App, paths: VaultPaths, markers: MarkerNote[], oldConcern: string, newConcern: string): Promise<void> {
+export async function renameConcern(app: App, settings: HealthPluginSettings, markers: MarkerNote[], oldConcern: string, newConcern: string): Promise<void> {
 	for (const marker of markers) {
 		if (!marker.concern.includes(oldConcern)) continue;
-		const file = findMarkerFile(app, paths, marker.id);
+		const file = findMarkerFile(app, settings, marker.id);
 		if (!file) continue;
 		await app.fileManager.processFrontMatter(file, (frontmatter) => {
 			const concern = Array.isArray(frontmatter.concern) ? (frontmatter.concern as string[]) : [];
 			frontmatter.concern = [...new Set(concern.map((c) => (c === oldConcern ? newConcern : c)))];
 		});
 	}
+	renameConcernInSettings(settings, oldConcern, newConcern);
 }
 
 export interface ProfileInput {
@@ -133,28 +137,32 @@ export async function saveProfileOrder(app: App, paths: VaultPaths, person: stri
 	});
 }
 
-/** Renames a profile id: the profile note file, its labs subfolder, and the `person:` field on
- *  every visit/plan note that references it. Uses `renameFile` (not raw `vault.rename`) so any
- *  wikilinks pointing at the profile note or a visit note get fixed up too. Throws if `newPerson`
- *  would collide with an existing profile note or labs folder. */
-export async function renameProfile(app: App, paths: VaultPaths, oldPerson: string, newPerson: string): Promise<void> {
-	if (findProfileFile(app, paths, newPerson) || app.vault.getAbstractFileByPath(personVisitsFolder(paths, newPerson))) {
+/** Renames a profile id: the profile note file, its labs subfolder, the `person:` field on every
+ *  visit/plan note that references it, and `settings.defaultProfile` if it pointed at the old name
+ *  -- one call for all of it so a future caller can't rename the vault side and leave the default
+ *  profile pointer stale. Uses `renameFile` (not raw `vault.rename`) so any wikilinks pointing at
+ *  the profile note or a visit note get fixed up too. Throws if `newPerson` would collide with an
+ *  existing profile note or labs folder. */
+export async function renameProfile(app: App, settings: HealthPluginSettings, oldPerson: string, newPerson: string): Promise<void> {
+	if (findProfileFile(app, settings, newPerson) || app.vault.getAbstractFileByPath(personVisitsFolder(settings, newPerson))) {
 		throw new Error(`"${newPerson}" already exists.`);
 	}
 
-	const profileFile = findProfileFile(app, paths, oldPerson);
-	if (profileFile) await app.fileManager.renameFile(profileFile, `${paths.profilesFolder}/${newPerson}.md`);
+	const profileFile = findProfileFile(app, settings, oldPerson);
+	if (profileFile) await app.fileManager.renameFile(profileFile, `${settings.profilesFolder}/${newPerson}.md`);
 
-	const labsFolder = app.vault.getAbstractFileByPath(personVisitsFolder(paths, oldPerson));
-	if (labsFolder) await app.fileManager.renameFile(labsFolder, personVisitsFolder(paths, newPerson));
+	const labsFolder = app.vault.getAbstractFileByPath(personVisitsFolder(settings, oldPerson));
+	if (labsFolder) await app.fileManager.renameFile(labsFolder, personVisitsFolder(settings, newPerson));
 
-	for (const file of filesUnder(app, personVisitsFolder(paths, newPerson))) {
+	for (const file of filesUnder(app, personVisitsFolder(settings, newPerson))) {
 		const fm = app.metadataCache.getFileCache(file)?.frontmatter;
 		if (fm?.person === oldPerson) await app.fileManager.processFrontMatter(file, (frontmatter) => (frontmatter.person = newPerson));
 	}
 
-	for (const file of filesUnder(app, paths.plansFolder)) {
+	for (const file of filesUnder(app, settings.plansFolder)) {
 		const fm = app.metadataCache.getFileCache(file)?.frontmatter;
 		if (fm?.person === oldPerson) await app.fileManager.processFrontMatter(file, (frontmatter) => (frontmatter.person = newPerson));
 	}
+
+	if (settings.defaultProfile === oldPerson) settings.defaultProfile = newPerson;
 }

@@ -1,3 +1,4 @@
+import { pairByPartner } from "../core/entry";
 import type { DashboardModel, MarkerStatusInfo } from "../core/model";
 import { buildSparkline } from "./charts";
 import { formatArrow, formatRawValue, statusColor } from "./format";
@@ -8,26 +9,12 @@ export interface RowEntry {
 }
 
 function pairEntries(markers: MarkerStatusInfo[]): RowEntry[] {
-	const consumed = new Set<string>();
-	const rows: RowEntry[] = [];
-
-	for (const info of markers) {
-		if (consumed.has(info.marker.id)) continue;
-		consumed.add(info.marker.id);
-
-		const partner = info.marker.pair ? markers.find((other) => other.marker.id !== info.marker.id && other.marker.pair === info.marker.pair) : undefined;
-
-		if (partner) {
-			consumed.add(partner.marker.id);
-			const infoOrder = info.marker.order ?? 0;
-			const partnerOrder = partner.marker.order ?? 1;
-			rows.push(infoOrder <= partnerOrder ? { primary: info, secondary: partner } : { primary: partner, secondary: info });
-		} else {
-			rows.push({ primary: info });
-		}
-	}
-
-	return rows;
+	return pairByPartner(
+		markers,
+		(info) => info.marker.id,
+		(info) => info.marker.pair,
+		(info) => info.marker.order,
+	);
 }
 
 export function indexPairs(markers: MarkerStatusInfo[]): Map<string, RowEntry> {

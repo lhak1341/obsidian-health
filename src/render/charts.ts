@@ -13,18 +13,18 @@ function numericPoints(series: SeriesPoint[]): { date: string; value: number }[]
 	return series.filter((point): point is { date: string; value: number } => typeof point.value === "number");
 }
 
-function paddedDomain(values: number[], ratio: number): [number, number] {
+export function paddedDomain(values: number[], ratio: number): [number, number] {
 	const min = Math.min(...values);
 	const max = Math.max(...values);
 	const pad = (max - min) * ratio || 1;
 	return [min - pad, max + pad];
 }
 
-function scaleX(count: number, x0: number, x1: number): (i: number) => number {
+export function scaleX(count: number, x0: number, x1: number): (i: number) => number {
 	return (i: number) => x0 + (i * (x1 - x0)) / Math.max(1, count - 1);
 }
 
-function scaleY(min: number, max: number, bottom: number, top: number): (v: number) => number {
+export function scaleY(min: number, max: number, bottom: number, top: number): (v: number) => number {
 	const span = max - min || 1;
 	return (v: number) => bottom - ((v - min) / span) * (bottom - top);
 }

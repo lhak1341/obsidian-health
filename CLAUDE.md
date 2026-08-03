@@ -8,9 +8,13 @@ Dev loop: `bun run deploy` (builds + copies `manifest.json`/`main.js`/`styles.cs
 
 Use `./node_modules/.bin/tsc --noEmit` (or `bun run build`), not bare `npx tsc` — `npx` can resolve a different, newer global TypeScript that throws unrelated errors (e.g. a `baseUrl` deprecation warning) the pinned project version doesn't.
 
+`bun test` (Bun's native runner) auto-discovers every `*.test.ts` in the repo and ignores `vitest.config.ts`'s `include` scoping entirely — only `bun run test` (vitest) respects it. Verify any test-scoping change with `bun run test`, not `bun test`.
+
 `obsidian-cli` (at `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli`) drives the running app — `eval code=<js>` runs JS with `app` in scope, `plugin:reload id=<id>` hot-reloads a plugin, `plugin id=<id>` shows enabled state.
 
 `dev:screenshot path=<file>` captures the window; `dev:errors` shows captured console errors (`clear` to reset); `dev:console` shows captured console messages (filter by `level=`). Use these instead of eyeballing.
+
+Command ids for `app.commands.executeCommandById(...)` (prefix `health:`): `open-health-dashboard`, `open-health-planner`, `add-lab-visit` — the id isn't a slug of the display name ("Open dashboard" → `open-health-dashboard`, not `open-dashboard`).
 
 A click that triggers a CSS transition (e.g. an accordion) can screenshot mid-animation if you shoot immediately after an `eval`-driven `.click()` — check `classList`/computed style first, or screenshot again, before trusting what you see.
 
@@ -24,7 +28,7 @@ After a multi-site `replace_all` edit, grep the deployed bundle for the exact ex
 
 To verify a spacing/alignment fix, measure the actual glyph (`Range.selectNodeContents(el).getBoundingClientRect()`), not the container's box — box edges can shift via margin while right-aligned/flex-end content stays pinned to the track boundary and never visibly moves.
 
-Confirm the active leaf/tab title (visible in the screenshot itself) before trusting `dev:screenshot` — this vault has dozens of unrelated tabs open, and it captures whatever's frontmost, not necessarily `health`.
+Confirm the active leaf/tab title (visible in the screenshot itself) before trusting `dev:screenshot` — this vault has dozens of unrelated tabs open, and it captures whatever's frontmost, not necessarily `health`. Fix by forcing the leaf forward: `const l=app.workspace.getLeavesOfType(id)[0]; if(l) app.workspace.revealLeaf(l)`.
 
 A leaf not currently visible is lazy-loaded (`leaf.isDeferred`) — `leaf.view` is a stub placeholder until revealed, so `app.workspace.getLeavesOfType(...)[0].view.refresh()` fails with a misleading `refresh is not a function`. Force-load it first (`plugin.activateView()` / `workspace.revealLeaf(leaf)`), then `.view.refresh()` works.
 
@@ -53,6 +57,8 @@ To test drag-and-drop via `eval`: dispatch real events sharing one `DataTransfer
 ## Obsidian view rendering gotcha
 
 Never put layout padding directly on an `ItemView`'s `contentEl` — it already carries Obsidian's `view-content` class, and themes often force `div.view-content { padding: 0 !important }` there, beating any rule regardless of specificity. Nest a child div for padding/layout; keep only sizing/CSS-variable-token declarations on `contentEl` itself.
+
+A new settings-tab section (its own drag-reorder/rename/CRUD block) follows the `SettingsSectionContext` + stateful section-class pattern (`settings-context.ts` + `settings-concern-section.ts`/`settings-profile-section.ts`) — don't grow `settings-tab.ts` directly.
 
 ## Obsidian settings tab gotcha
 
@@ -101,6 +107,8 @@ Marker `panel` (drives the Add Visit form's grouping, mirrors the physical lab r
 ## Testing vault code
 
 `src/vault/fixtures/fake-app.ts` — minimal in-memory Obsidian `App` fake (just the `vault`/`metadataCache`/`fileManager` subset `reader.ts`/`writer.ts` call) for testing vault code without a DOM/jsdom harness; supports injecting a write failure mid-batch via a `failOn` predicate. Reuse for future vault-write characterization tests rather than rebuilding.
+
+`src/core/fixtures/real-vault.ts` is a small anonymized sample, not the full real vault — when refactoring code keyed on frontmatter values (e.g. `concern` ids), grep the real vault's frontmatter (`09 about-me/markers/*.md`) to enumerate actual values before hardcoding a lookup/registry keyed on them. The fixture alone missed the literal `Blood Count` concern id and broke column placement for every marker in that group.
 
 ## Architecture reviews
 

@@ -1,10 +1,11 @@
 import type { App, TFile } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { createFakeApp } from "./fixtures/fake-app";
-import type { VaultPaths } from "./reader";
+import { DEFAULT_SETTINGS, type HealthPluginSettings } from "../settings";
 import { renameProfile } from "./writer";
 
-const paths: VaultPaths = {
+const paths: HealthPluginSettings = {
+	...DEFAULT_SETTINGS,
 	markersFolder: "markers",
 	profilesFolder: "profiles",
 	plansFolder: "plans",
@@ -44,6 +45,24 @@ describe("renameProfile", () => {
 		expect(app.metadataCache.getFileCache(visit1)?.frontmatter?.person).toBe("bob");
 		expect(app.metadataCache.getFileCache(visit2)?.frontmatter?.person).toBe("bob");
 		expect(app.metadataCache.getFileCache(plan)?.frontmatter?.person).toBe("bob");
+	});
+
+	it("updates settings.defaultProfile when it pointed at the renamed person", async () => {
+		const app = aliceVault();
+		const settings: HealthPluginSettings = { ...paths, defaultProfile: "alice" };
+
+		await renameProfile(app, settings, "alice", "bob");
+
+		expect(settings.defaultProfile).toBe("bob");
+	});
+
+	it("leaves settings.defaultProfile untouched when it pointed at someone else", async () => {
+		const app = aliceVault();
+		const settings: HealthPluginSettings = { ...paths, defaultProfile: "carol" };
+
+		await renameProfile(app, settings, "alice", "bob");
+
+		expect(settings.defaultProfile).toBe("carol");
 	});
 
 	it("throws before any writes when newPerson already exists", async () => {

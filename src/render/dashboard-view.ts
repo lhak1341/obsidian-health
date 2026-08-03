@@ -1,9 +1,11 @@
 import type { ConcernGroup, DashboardModel, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
+import { columnForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
+import { hideTooltip, showTooltip } from "./tooltip";
 
 export interface DashboardRenderOptions {
 	showAll: boolean;
@@ -217,19 +219,6 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 	return bar;
 }
 
-// Column placement is pinned by concern, not by attention urgency -- Vitals/Cardiometabolic
-// always read left, Blood Count (cbc) always reads center, everything else always reads right.
-// Keeps muscle memory for where a concern lives even as flagged markers come and go.
-const LEFT_CONCERNS = new Set(["vitals", "cardiometabolic", "cancer", "immunity"]);
-const CENTER_CONCERNS = new Set(["cbc", "blood", "blood count"]);
-
-function columnForConcern(concern: string): 0 | 1 | 2 {
-	const key = concern.toLowerCase();
-	if (LEFT_CONCERNS.has(key)) return 0;
-	if (CENTER_CONCERNS.has(key)) return 1;
-	return 2;
-}
-
 function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
 	const container = document.createElement("div");
 	container.className = "hlth-groups";
@@ -385,45 +374,6 @@ function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 	cell.addEventListener("mouseleave", hideTooltip);
 
 	return cell;
-}
-
-// Obsidian's own workspace chrome applies a CSS transform up the tree (pane/tab transitions),
-// which breaks naive `position: fixed` math for anything nested inside it -- and `.hlth-dash`'s
-// `overflow-y: auto` clips a same-container absolutely-positioned tooltip for rows near the top.
-// A single tooltip appended directly to `document.body` sidesteps both: no transformed ancestor,
-// no clipping container.
-let sharedTooltip: HTMLElement | undefined;
-
-function getSharedTooltip(): HTMLElement {
-	if (sharedTooltip?.isConnected) return sharedTooltip;
-	const tip = document.createElement("div");
-	tip.className = "hlth-tip";
-	const meaning = document.createElement("span");
-	meaning.className = "hlth-tip-meaning";
-	const range = document.createElement("span");
-	range.className = "hlth-tip-range";
-	tip.append(meaning, range);
-	document.body.appendChild(tip);
-	sharedTooltip = tip;
-	return tip;
-}
-
-function showTooltip(anchor: HTMLElement, meaning: string, rangeText: string): void {
-	const tip = getSharedTooltip();
-	tip.querySelector(".hlth-tip-meaning")!.textContent = meaning;
-	tip.querySelector(".hlth-tip-range")!.textContent = rangeText;
-	tip.classList.add("hlth-open");
-
-	const anchorRect = anchor.getBoundingClientRect();
-	const tipHeight = tip.offsetHeight;
-	const tipWidth = tip.offsetWidth;
-	const opensUp = anchorRect.top - tipHeight - 8 > 0;
-	tip.style.top = opensUp ? `${anchorRect.top - tipHeight - 8}px` : `${anchorRect.bottom + 8}px`;
-	tip.style.left = `${Math.min(Math.max(anchorRect.left, 8), window.innerWidth - tipWidth - 8)}px`;
-}
-
-function hideTooltip(): void {
-	sharedTooltip?.classList.remove("hlth-open");
 }
 
 function buildValueOnlyCell(row: RowEntry): HTMLElement {

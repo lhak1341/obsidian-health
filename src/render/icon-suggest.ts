@@ -1,7 +1,7 @@
 import { AbstractInputSuggest, App, getIconIds, setIcon } from "obsidian";
 
 // Obsidian's icon resolver accepts both "lucide-cake" and the bare "cake" for built-in Lucide
-// icons -- the bare form is what iconFor()/CONCERN_ICON already expect, so strip it for display
+// icons -- the bare form is what iconFor()/CONCERN_CONFIG already expect, so strip it for display
 // and for the value written into the input.
 const stripLucidePrefix = (id: string) => (id.startsWith("lucide-") ? id.slice("lucide-".length) : id);
 

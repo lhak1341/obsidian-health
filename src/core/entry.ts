@@ -29,28 +29,47 @@ export interface MarkerRow {
 	secondary?: MarkerNote;
 }
 
-/** Pairs markers sharing a `pair` id (e.g. BP systolic/diastolic) into one form row, ordered by `order`. */
-export function pairMarkerNotes(markers: MarkerNote[]): MarkerRow[] {
+/** Pairs items sharing a partner key (e.g. BP systolic/diastolic sharing a `pair` id) into one row,
+ *  ordered by `getOrder` (missing order treated as primary=0/secondary=1). Shared by the entry
+ *  form's marker pairing and the render layer's row pairing -- same algorithm, different types. */
+export function pairByPartner<T>(
+	items: T[],
+	getId: (item: T) => string,
+	getPair: (item: T) => string | undefined,
+	getOrder: (item: T) => number | undefined,
+): { primary: T; secondary?: T }[] {
 	const consumed = new Set<string>();
-	const rows: MarkerRow[] = [];
+	const rows: { primary: T; secondary?: T }[] = [];
 
-	for (const marker of markers) {
-		if (consumed.has(marker.id)) continue;
-		consumed.add(marker.id);
+	for (const item of items) {
+		const id = getId(item);
+		if (consumed.has(id)) continue;
+		consumed.add(id);
 
-		const partner = marker.pair ? markers.find((other) => other.id !== marker.id && other.pair === marker.pair) : undefined;
+		const pairKey = getPair(item);
+		const partner = pairKey ? items.find((other) => getId(other) !== id && getPair(other) === pairKey) : undefined;
 
 		if (partner) {
-			consumed.add(partner.id);
-			const markerOrder = marker.order ?? 0;
-			const partnerOrder = partner.order ?? 1;
-			rows.push(markerOrder <= partnerOrder ? { primary: marker, secondary: partner } : { primary: partner, secondary: marker });
+			consumed.add(getId(partner));
+			const order = getOrder(item) ?? 0;
+			const partnerOrder = getOrder(partner) ?? 1;
+			rows.push(order <= partnerOrder ? { primary: item, secondary: partner } : { primary: partner, secondary: item });
 		} else {
-			rows.push({ primary: marker });
+			rows.push({ primary: item });
 		}
 	}
 
 	return rows;
+}
+
+/** Pairs markers sharing a `pair` id (e.g. BP systolic/diastolic) into one form row, ordered by `order`. */
+export function pairMarkerNotes(markers: MarkerNote[]): MarkerRow[] {
+	return pairByPartner(
+		markers,
+		(m) => m.id,
+		(m) => m.pair,
+		(m) => m.order,
+	);
 }
 
 /** Create-or-edit lookup: an existing visit for this person+date, if any. */

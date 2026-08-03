@@ -1,17 +1,5 @@
 import { getIcon } from "obsidian";
-
-const CONCERN_ICON: Record<string, string> = {
-	cbc: "droplets",
-	blood: "droplets",
-	urine: "flask-conical",
-	metabolic: "activity",
-	cardiometabolic: "activity",
-	cancer: "shield",
-	immunity: "shield",
-	kidney: "droplet",
-	liver: "flask-conical",
-	vitals: "heart-pulse",
-};
+import { iconNameForConcern } from "./concern-registry";
 
 /** Obsidian's bundled Lucide set (`getIcon` from "obsidian") -- keeps stroke weight/theming consistent with the rest of the app's chrome instead of hand-copied SVG paths. */
 export function iconFor(name: string): SVGSVGElement {
@@ -23,5 +11,5 @@ export function iconFor(name: string): SVGSVGElement {
 
 export function iconForConcern(concern: string, overrides: Record<string, string> = {}): SVGSVGElement {
 	const key = concern.toLowerCase();
-	return iconFor(overrides[concern] ?? overrides[key] ?? CONCERN_ICON[key] ?? "activity");
+	return iconFor(overrides[concern] ?? overrides[key] ?? iconNameForConcern(concern));
 }
