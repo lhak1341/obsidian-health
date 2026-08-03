@@ -26,7 +26,6 @@ const paths: HealthPluginSettings = {
 	profilesFolder: "profiles",
 	plansFolder: "plans",
 	visitsFolder: "visits",
-	basesFolder: "bases",
 };
 
 /** The fake's files are `TFile`-shaped but typed loosely so the fixture stays Obsidian-free; assert it back for callers that need the real type. */
@@ -222,7 +221,7 @@ describe("renameConcern", () => {
 			markerNote({ id: "ast", concern: ["liver"] }),
 			markerNote({ id: "hdl", concern: ["lipids"] }),
 		];
-		const settings: HealthPluginSettings = { ...paths, concernBaseOverrides: {}, concernIcons: {} };
+		const settings: HealthPluginSettings = { ...paths, concernViewOverrides: {}, concernIcons: {} };
 
 		await renameConcern(app, settings, markers, "liver", "Liver Panel");
 
@@ -234,32 +233,32 @@ describe("renameConcern", () => {
 	it("de-dupes when a marker already carries the new concern alongside the old one", async () => {
 		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { concern: ["liver", "Liver Panel"] } }]);
 		const markers = [markerNote({ id: "alt", concern: ["liver", "Liver Panel"] })];
-		const settings: HealthPluginSettings = { ...paths, concernBaseOverrides: {}, concernIcons: {} };
+		const settings: HealthPluginSettings = { ...paths, concernViewOverrides: {}, concernIcons: {} };
 
 		await renameConcern(app, settings, markers, "liver", "Liver Panel");
 
 		expect(app.metadataCache.getFileCache(file(app, "markers/alt.md"))?.frontmatter?.concern).toEqual(["Liver Panel"]);
 	});
 
-	it("renames the matching key in concernBaseOverrides and concernIcons", async () => {
+	it("renames the matching key in concernViewOverrides and concernIcons", async () => {
 		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { concern: ["liver"] } }]);
 		const markers = [markerNote({ id: "alt", concern: ["liver"] })];
 		const settings: HealthPluginSettings = {
 			...paths,
-			concernBaseOverrides: { liver: "Bases/Liver.base" },
+			concernViewOverrides: { liver: "Bases/Liver.base" },
 			concernIcons: { liver: "flask-conical" },
 		};
 
 		await renameConcern(app, settings, markers, "liver", "Liver Panel");
 
-		expect(settings.concernBaseOverrides).toEqual({ "liver panel": "Bases/Liver.base" });
+		expect(settings.concernViewOverrides).toEqual({ "liver panel": "Bases/Liver.base" });
 		expect(settings.concernIcons).toEqual({ "liver panel": "flask-conical" });
 	});
 
 	it("leaves markers that don't reference the concern untouched", async () => {
 		const app = createFakeApp([{ path: "markers/hdl.md", frontmatter: { concern: ["lipids"] } }]);
 		const markers = [markerNote({ id: "hdl", concern: ["lipids"] })];
-		const settings: HealthPluginSettings = { ...paths, concernBaseOverrides: {}, concernIcons: {} };
+		const settings: HealthPluginSettings = { ...paths, concernViewOverrides: {}, concernIcons: {} };
 
 		await renameConcern(app, settings, markers, "liver", "Liver Panel");
 

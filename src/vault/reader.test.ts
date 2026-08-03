@@ -7,7 +7,6 @@ const paths: VaultPaths = {
 	profilesFolder: "profiles",
 	plansFolder: "plans",
 	visitsFolder: "visits",
-	basesFolder: "bases",
 };
 
 describe("scanVault marker parsing", () => {

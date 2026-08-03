@@ -435,6 +435,16 @@ svg.hlth-ic {
 	display: block;
 }
 
+/* Outside `.health-dashboard-outer`'s scope like the rest of `.hlth-tip` (see comment above) --
+   raw Obsidian vars, not `--hlth-*` aliases. */
+.hlth-tip-meaning code {
+	font-family: var(--font-monospace, "SF Mono", Menlo, monospace);
+	font-size: 11px;
+	background: var(--background-primary, rgba(0, 0, 0, 0.08));
+	border-radius: 3px;
+	padding: 1px 4px;
+}
+
 .hlth-tip-range {
 	display: block;
 	margin-top: 6px;
@@ -527,6 +537,14 @@ svg.hlth-spk {
 	color: var(--hlth-fg2);
 	line-height: 1.45;
 	max-width: 72%;
+}
+
+.hlth-detail-meaning code {
+	font-family: var(--font-monospace, "SF Mono", Menlo, monospace);
+	font-size: 11px;
+	background: var(--hlth-bg2, rgba(0, 0, 0, 0.08));
+	border-radius: 3px;
+	padding: 1px 4px;
 }
 
 .hlth-detail-now {

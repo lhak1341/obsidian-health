@@ -1,3 +1,5 @@
+import { renderInlineMarkdown } from "./rich-text";
+
 // Obsidian's own workspace chrome applies a CSS transform up the tree (pane/tab transitions),
 // which breaks naive `position: fixed` math for anything nested inside it -- and `.hlth-dash`'s
 // `overflow-y: auto` clips a same-container absolutely-positioned tooltip for rows near the top.
@@ -21,7 +23,7 @@ function getSharedTooltip(): HTMLElement {
 
 export function showTooltip(anchor: HTMLElement, meaning: string, rangeText: string): void {
 	const tip = getSharedTooltip();
-	tip.querySelector(".hlth-tip-meaning")!.textContent = meaning;
+	renderInlineMarkdown(tip.querySelector(".hlth-tip-meaning")! as HTMLElement, meaning);
 	tip.querySelector(".hlth-tip-range")!.textContent = rangeText;
 	tip.classList.add("hlth-open");
 

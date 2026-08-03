@@ -18,7 +18,6 @@ export interface VaultPaths {
 	profilesFolder: string;
 	plansFolder: string;
 	visitsFolder: string;
-	basesFolder: string;
 }
 
 export const DEFAULT_VAULT_PATHS: VaultPaths = {
@@ -26,7 +25,6 @@ export const DEFAULT_VAULT_PATHS: VaultPaths = {
 	profilesFolder: "09 about-me/profiles",
 	plansFolder: "09 about-me/health/plans",
 	visitsFolder: "09 about-me/health/labs",
-	basesFolder: "09 about-me/health/bases",
 };
 
 export interface VaultSnapshot {

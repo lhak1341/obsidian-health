@@ -82,16 +82,28 @@ export class HealthView extends ItemView {
 		});
 	}
 
-	/** By convention a concern header opens `<basesFolder>/<label>.base`, or the per-concern override path (keyed by the normalized identity, not the display label). Returns false if the file doesn't exist so the caller can degrade to in-plugin expand. */
+	/** A concern header opens the single configured Base file (settings.basePath), switching to the
+	 *  view named after the concern's label -- or the per-concern override (keyed by the normalized
+	 *  identity, not the display label) when the view name differs. Returns false if the Base file
+	 *  doesn't exist so the caller can degrade to in-plugin expand. */
 	private openConcernBase(key: string, label: string): boolean {
 		const settings = this.plugin.settings;
-		const override = settings.concernBaseOverrides[key]?.trim();
-		const path = override || `${settings.basesFolder}/${label}.base`;
+		const viewName = settings.concernViewOverrides[key]?.trim() || label;
 
-		const file = this.app.vault.getAbstractFileByPath(path);
+		const file = this.app.vault.getAbstractFileByPath(settings.basePath);
 		if (!(file instanceof TFile)) return false;
 
-		void this.app.workspace.getLeaf(true).openFile(file);
+		void this.switchToBaseView(file, viewName);
 		return true;
+	}
+
+	/** Two-step by necessity: `openFile(file, { state: { viewName } })` in a single call gets
+	 *  overridden back to the Base's last-used view once it finishes loading -- confirmed live.
+	 *  `setViewState` after the file has loaded is what actually sticks. */
+	private async switchToBaseView(file: TFile, viewName: string): Promise<void> {
+		const leaf = this.app.workspace.getLeaf(true);
+		await leaf.openFile(file);
+		const viewState = leaf.getViewState();
+		await leaf.setViewState({ ...viewState, state: { ...viewState.state, viewName } });
 	}
 }

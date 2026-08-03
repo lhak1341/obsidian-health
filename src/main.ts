@@ -25,9 +25,9 @@ export default class HealthPlugin extends Plugin {
 	async onload(): Promise<void> {
 		const saved = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-		// Object.assign only shallow-copies; nested-object fields (e.g. concernBaseOverrides)
+		// Object.assign only shallow-copies; nested-object fields (e.g. concernViewOverrides)
 		// would otherwise stay reference-shared with the DEFAULT_SETTINGS module constant.
-		this.settings.concernBaseOverrides = { ...DEFAULT_SETTINGS.concernBaseOverrides, ...saved?.concernBaseOverrides };
+		this.settings.concernViewOverrides = { ...DEFAULT_SETTINGS.concernViewOverrides, ...saved?.concernViewOverrides };
 		this.settings.concernIcons = { ...DEFAULT_SETTINGS.concernIcons, ...saved?.concernIcons };
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));

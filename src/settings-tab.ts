@@ -77,7 +77,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		const items = root.createDiv("setting-group").createDiv("setting-items");
 
 		const settings = this.plugin.settings;
-		const pathField = (name: string, key: "markersFolder" | "profilesFolder" | "plansFolder" | "visitsFolder" | "basesFolder") => {
+		const pathField = (name: string, key: "markersFolder" | "profilesFolder" | "plansFolder" | "visitsFolder") => {
 			new Setting(items).setName(name).addText((text) => {
 				text.setValue(settings[key]).onChange((value) => {
 					settings[key] = value.trim();
@@ -93,7 +93,16 @@ export class HealthSettingTab extends PluginSettingTab {
 		pathField("Profiles folder", "profilesFolder");
 		pathField("Plans folder", "plansFolder");
 		pathField("Visits folder", "visitsFolder");
-		pathField("Bases folder", "basesFolder");
+
+		new Setting(items)
+			.setName("Base file path")
+			.setDesc("Single .base file a concern header switches views on -- not a folder. Doesn't affect vault scanning, so no rescan needed on change.")
+			.addText((text) =>
+				text.setValue(settings.basePath).onChange((value) => {
+					settings.basePath = value.trim();
+					void this.save();
+				}),
+			);
 	}
 
 	private renderDashboardSettings(root: HTMLElement): void {

@@ -5,6 +5,7 @@ import { columnForConcern, labelForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
+import { renderInlineMarkdown } from "./rich-text";
 import { hideTooltip, showTooltip } from "./tooltip";
 
 export interface DashboardRenderOptions {
@@ -12,9 +13,9 @@ export interface DashboardRenderOptions {
 	onToggleShowAll: () => void;
 	onAddVisit: () => void;
 	onOpenPlanner: () => void;
-	/** Tries to open the concern's filtered Base view (key = normalized identity for override lookup,
-	 *  label = display text for the default `<basesFolder>/<label>.base` path convention); resolves
-	 *  false when none exists (caller degrades to in-plugin expand). */
+	/** Tries to switch the single configured Base file to the concern's view (key = normalized identity
+	 *  for override lookup, label = display text and default view name); resolves false when the Base
+	 *  file doesn't exist (caller degrades to in-plugin expand). */
 	onOpenConcern: (key: string, label: string) => boolean | Promise<boolean>;
 	profiles: string[];
 	activePerson: string;
@@ -405,7 +406,7 @@ function buildDetailContent(row: RowEntry): HTMLElement {
 	cap.className = "hlth-detail-cap";
 	const meaning = document.createElement("span");
 	meaning.className = "hlth-detail-meaning";
-	meaning.textContent = marker.blurb;
+	renderInlineMarkdown(meaning, marker.blurb);
 	cap.appendChild(meaning);
 
 	const now = document.createElement("span");

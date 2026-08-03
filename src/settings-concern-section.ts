@@ -20,15 +20,15 @@ export class ConcernSection {
 	}
 
 	private renderConcernOverrides(root: HTMLElement): void {
-		new Setting(root).setName("Concern → Base overrides").setHeading();
+		new Setting(root).setName("Concern → Base view overrides").setHeading();
 		root.createEl("p", {
 			cls: "setting-item-description",
-			text: "By convention a concern header opens a .base file named after the concern. Override the target here when the name differs.",
+			text: "A concern header switches the configured Base file (see Base file path above) to the view named after the concern. Override the view name here when it differs.",
 		});
 		const items = root.createDiv("setting-group").createDiv("setting-items");
 
 		const settings = this.ctx.plugin.settings;
-		const overrides = settings.concernBaseOverrides;
+		const overrides = settings.concernViewOverrides;
 
 		for (const concern of Object.keys(overrides)) {
 			new Setting(items)
@@ -52,19 +52,19 @@ export class ConcernSection {
 		}
 
 		let newConcern = "";
-		let newBase = "";
+		let newViewName = "";
 		new Setting(items)
 			.setName("Add override")
 			.addText((text) => text.setPlaceholder("concern").onChange((value) => (newConcern = value)))
-			.addText((text) => text.setPlaceholder("Base file path").onChange((value) => (newBase = value)))
+			.addText((text) => text.setPlaceholder("View name").onChange((value) => (newViewName = value)))
 			.addButton((btn) =>
 				btn.setButtonText("Add").onClick(() => {
 					const key = normalizeConcernKey(newConcern);
-					if (!key || !newBase.trim()) {
-						new Notice("Both concern and Base path are required.");
+					if (!key || !newViewName.trim()) {
+						new Notice("Both concern and view name are required.");
 						return;
 					}
-					overrides[key] = newBase.trim();
+					overrides[key] = newViewName.trim();
 					void this.ctx.saveQuiet();
 					this.ctx.rerender();
 				}),
