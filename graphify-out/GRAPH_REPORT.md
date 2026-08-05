@@ -1,12 +1,18 @@
-# Graph Report - .  (2026-08-05)
+# Graph Report - obsidian-health  (2026-08-05)
 
 ## Corpus Check
-- Corpus is ~22,284 words - fits in a single context window. You may not need a graph.
+- 41 files · ~22,746 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 467 nodes · 1038 edges · 47 communities (21 shown, 26 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.82)
-- Token cost: 0 input · 103,203 output
+- 501 nodes · 1014 edges · 103 communities (18 shown, 85 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.7)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `74559141`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Chart Rendering
@@ -54,6 +60,62 @@
 - PRD Prior Art
 - PRD Problem Statement
 - PRD Wayfinder Map
+- Health
+- 0001-no-shared-rename-helper-in-settings-sections.md
+- fake-app.ts In-Memory Obsidian App Test Fixture
+- Host-Owns-Styling Rule for Mounted Widgets
+- Frontmatter Special-Character Quoting Gotcha
+- --hlth-* CSS Token Scoping Gotcha
+- IconSuggest Component (src/render/icon-suggest.ts)
+- ItemView contentEl Padding Override Gotcha
+- lhak-dashboard Widget Stale DOM Instance Gotcha
+- metadataCache Write-Lag After processFrontMatter Gotcha
+- mountX(container, opts) -> handle{destroy} Host Handshake Pattern
+- Panel vs Concern Independent Axes Note
+- PluginSettingTab setting-group/setting-items Structure Pattern
+- processFrontMatter Full Block Reserialization Behavior
+- real-vault.ts Fixture Limitation (Blood Count Bug)
+- Setting onChange/blur Deferral Pattern
+- app.setting.open() Circular JSON Serialization Error
+- Scripting the Settings Tab via eval
+- SettingsDirtyTracker Class (settings-dirty-tracker.ts)
+- SettingsSectionContext + Stateful Section-Class Pattern
+- SVG Icon Specificity Gotcha (iconFor)
+- Vault Git Drift Check After Live Testing Gotcha
+- getMarkdownFiles() Arbitrary Order Gotcha
+- Adapter (glossary term)
+- Concern (glossary term)
+- Concern Registry (glossary term)
+- Domain Core (glossary term)
+- Marker (glossary term)
+- Panel (glossary term)
+- Profile (glossary term)
+- Visit (glossary term)
+- Build Follow-ups From Migration (data hand-refinement)
+- computeDashboardModel Domain Core Function
+- Add Lab Visit Data Entry Pipeline
+- Design Assets / Mockups (visual source of truth)
+- Flagging & Arrows Logic (status precedence, deadband)
+- lhak-dashboard Widget (Chip/List Tiers)
+- Marker Note (schema)
+- Historical Migration (Done & Verified Against Obsidian's Parser)
+- mountHealthWidget Entry Point
+- Multi-Profile Support (self + spouse)
+- Note Kinds Schema (frontmatter-first)
+- Overall Architecture: Domain Core + Thin Adapters
+- Plan Note (schema)
+- Planner Surface (candidate markers backlog)
+- Profile Note (schema)
+- Settings Boundary Decision (app prefs vs note meaning)
+- Suggested Build Order
+- Visit Note (schema)
+- Ticket: Add Lab Visit Modal (Create-or-Edit)
+- Ticket: Dashboard ItemView (Read-Only Render)
+- Ticket: Domain Core - Flags, Arrows, Ranking, Grouping
+- Ticket: Migration Data Hand-Refinement (In Progress)
+- Ticket: Planner Surface + Bases View
+- Ticket: Scaffold Plugin + Core Test Runner
+- Ticket: Settings Tab + Profile Add/Edit
 
 ## God Nodes (most connected - your core abstractions)
 1. `MarkerNote` - 24 edges
@@ -68,16 +130,16 @@
 10. `buildHistoryChart()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `processFrontMatter Full Block Reserialization Behavior` --semantically_similar_to--> `Historical Migration (Done & Verified Against Obsidian's Parser)`  [INFERRED] [semantically similar]
-  CLAUDE.md → docs/PRD.md
-- `metadataCache Write-Lag After processFrontMatter Gotcha` --semantically_similar_to--> `Historical Migration (Done & Verified Against Obsidian's Parser)`  [INFERRED] [semantically similar]
-  CLAUDE.md → docs/PRD.md
-- `fake-app.ts In-Memory Obsidian App Test Fixture` --conceptually_related_to--> `Ticket: Domain Types + Vault Reader`  [INFERRED]
-  CLAUDE.md → tickets.md
-- `lhak-dashboard Widget Stale DOM Instance Gotcha` --conceptually_related_to--> `lhak-dashboard Widget (Chip/List Tiers)`  [INFERRED]
-  CLAUDE.md → docs/PRD.md
-- `data.json Mid-Test Autosave Gotcha` --conceptually_related_to--> `Settings Boundary Decision (app prefs vs note meaning)`  [INFERRED]
-  CLAUDE.md → docs/PRD.md
+- `ProfileInput` --references--> `PersonSex`  [EXTRACTED]
+  src/vault/writer.ts → src/core/types.ts
+- `resolveBandForEntry()` --calls--> `resolve()`  [EXTRACTED]
+  src/core/entry.ts → src/core/dashboard.ts
+- `writeFrontmatter()` --calls--> `resolve()`  [EXTRACTED]
+  src/vault/writer.ts → src/core/dashboard.ts
+- `PanelGroup` --references--> `MarkerNote`  [EXTRACTED]
+  src/core/entry.ts → src/core/types.ts
+- `MarkerRow` --references--> `MarkerNote`  [EXTRACTED]
+  src/core/entry.ts → src/core/types.ts
 
 ## Import Cycles
 - 3-file cycle: `src/main.ts -> src/settings-tab.ts -> src/settings-context.ts -> src/main.ts`
@@ -89,35 +151,35 @@
 - **mountX Host-Handshake Pattern and Its Health-Plugin Instantiations** — claude_mountx_handshake_pattern, docs_prd_mounthealthwidget, docs_prd_lhak_dashboard_widget, claude_lhak_dashboard_widget_stale_gotcha [INFERRED 0.85]
 - **PRD Suggested Build Order Realized as the Ticket Dependency Chain** — docs_prd_suggested_build_order, tickets_scaffold_plugin, tickets_domain_types_vault_reader, tickets_domain_core, tickets_dashboard_itemview [EXTRACTED 1.00]
 
-## Communities (47 total, 26 thin omitted)
+## Communities (103 total, 85 thin omitted)
 
 ### Community 0 - "Chart Rendering"
 Cohesion: 0.10
-Nodes (51): pairByPartner(), MarkerStatusInfo, buildBandRect(), buildHistoryChart(), buildSecondaryPath(), buildSparkline(), HistoryChartOptions, numericPoints() (+43 more)
+Nodes (48): pairByPartner(), MarkerStatusInfo, columnForConcern(), CONCERN_CONFIG, ConcernConfig, iconNameForConcern(), labelForConcern(), attentionReason() (+40 more)
 
 ### Community 1 - "Planner Backlog Logic"
-Cohesion: 0.08
-Nodes (36): computePlannerBacklog(), latestPlanNote(), PRIORITY_RANK, priorityRank(), CandidateStatus, Direction, MarkerRange, PlanNote (+28 more)
+Cohesion: 0.14
+Nodes (28): PRIORITY_RANK, CandidateStatus, Direction, MarkerRange, PersonSex, PlanNote, Priority, ProfileNote (+20 more)
 
 ### Community 2 - "Visit Entry Validation"
-Cohesion: 0.10
-Nodes (27): convert(), isSoftWarn(), buildPreSaveSummary(), buildVisitValues(), checkDuplicateMarkerId(), evaluateNumericField(), evaluateQualitativeField(), evaluateVisitFields() (+19 more)
+Cohesion: 0.11
+Nodes (26): convert(), isSoftWarn(), buildPreSaveSummary(), buildVisitValues(), checkDuplicateMarkerId(), evaluateNumericField(), evaluateQualitativeField(), evaluateVisitFields() (+18 more)
 
 ### Community 3 - "Concern Grouping & Registry"
-Cohesion: 0.10
-Nodes (18): buildConcernGroups(), groupByConcern(), normalizeConcernKey(), parseAllergies(), validateProfileInput(), PersonSex, ProfileNote, CONCERN_CONFIG (+10 more)
+Cohesion: 0.08
+Nodes (11): parseAllergies(), validateProfileInput(), renderDragReorderList(), IconSuggest, stripLucidePrefix(), ConcernSection, saveOrder(), SettingsSectionContext (+3 more)
 
 ### Community 4 - "Bases View & Dashboard Model"
 Cohesion: 0.12
-Nodes (25): HealthBasesView, ageAt(), arrowTone(), buildSeries(), computeDashboardModel(), deriveArrow(), deriveStatus(), rangeScore() (+17 more)
+Nodes (24): HealthBasesView, ageAt(), arrowTone(), buildConcernGroups(), buildSeries(), computeDashboardModel(), deriveArrow(), deriveStatus() (+16 more)
 
 ### Community 5 - "Health Widget (main.ts side)"
-Cohesion: 0.12
-Nodes (18): HealthWidgetHandle, HealthWidgetOptions, iconFor(), buildChip(), buildHeader(), buildHeart(), buildInlineIcon(), buildList() (+10 more)
+Cohesion: 0.28
+Nodes (13): HealthWidgetHandle, HealthWidgetOptions, buildChip(), buildHeader(), buildHeart(), buildInlineIcon(), buildList(), buildListRow() (+5 more)
 
 ### Community 6 - "Plugin Lifecycle & Views"
 Cohesion: 0.12
-Nodes (3): HealthPlugin, HealthSettingTab, HealthView
+Nodes (3): HealthView, HealthPlugin, HealthSettingTab
 
 ### Community 7 - "Package Dependencies"
 Cohesion: 0.08
@@ -128,64 +190,52 @@ Cohesion: 0.10
 Nodes (19): DOM, ES2020, node, src/**/*.ts, compilerOptions, baseUrl, esModuleInterop, isolatedModules (+11 more)
 
 ### Community 9 - "Vault Reader/Writer"
-Cohesion: 0.19
-Nodes (19): buildVisitFrontmatter(), MarkerKind, renameConcernInSettings(), collect(), filesUnder(), ensureFolder(), findMarkerFile(), findProfileFile() (+11 more)
-
-### Community 10 - "Frontmatter & Cache Write-Lag Gotchas"
-Cohesion: 0.27
-Nodes (10): data.json Mid-Test Autosave Gotcha, Frontmatter Special-Character Quoting Gotcha, metadataCache Write-Lag After processFrontMatter Gotcha, processFrontMatter Full Block Reserialization Behavior, real-vault.ts Fixture Limitation (Blood Count Bug), Concern Registry (glossary term), Build Follow-ups From Migration (data hand-refinement), Historical Migration (Done & Verified Against Obsidian's Parser) (+2 more)
+Cohesion: 0.15
+Nodes (26): normalizeConcernKey(), buildVisitFrontmatter(), MarkerKind, DEFAULT_SETTINGS, HealthPluginSettings, renameConcernInSettings(), DEFAULT_VAULT_PATHS, filesUnder() (+18 more)
 
 ### Community 11 - "Concern/Panel Axes & Multi-Profile"
-Cohesion: 0.20
-Nodes (10): Panel vs Concern Independent Axes Note, getMarkdownFiles() Arbitrary Order Gotcha, Concern (glossary term), Panel (glossary term), Add Lab Visit Data Entry Pipeline, Flagging & Arrows Logic (status precedence, deadband), Multi-Profile Support (self + spouse), Ticket: Add Lab Visit Modal (Create-or-Edit) (+2 more)
+Cohesion: 0.17
+Nodes (11): Add lab visit modal (create-or-edit), Dashboard ItemView (read-only render), Domain core — flags, arrows, ranking, grouping, Domain types + vault reader, lhak-dashboard widget, Migration data hand-refinement, Multi-profile switcher, Planner surface + Bases view (+3 more)
 
 ### Community 12 - "Domain Core & Test Fixtures"
 Cohesion: 0.22
-Nodes (9): fake-app.ts In-Memory Obsidian App Test Fixture, ItemView contentEl Padding Override Gotcha, Adapter (glossary term), Domain Core (glossary term), computeDashboardModel Domain Core Function, Design Assets / Mockups (visual source of truth), Overall Architecture: Domain Core + Thin Adapters, Testing Decisions (domain core external behavior) (+1 more)
-
-### Community 13 - "lhak-dashboard Widget Host Integration"
-Cohesion: 0.32
-Nodes (8): CSS zoom Property for Widget Scaling, Host-Owns-Styling Rule for Mounted Widgets, --hlth-* CSS Token Scoping Gotcha, lhak-dashboard Widget Stale DOM Instance Gotcha, mountX(container, opts) -> handle{destroy} Host Handshake Pattern, lhak-dashboard Widget (Chip/List Tiers), mountHealthWidget Entry Point, Ticket: lhak-dashboard Widget
-
-### Community 14 - "Marker/Visit Note Schema"
-Cohesion: 0.25
-Nodes (8): New Marker Note Defaults Gotcha (curated/direction), Marker (glossary term), Visit (glossary term), Marker Note (schema), Note Kinds Schema (frontmatter-first), Plan Note (schema), Visit Note (schema), Ticket: Domain Types + Vault Reader
+Nodes (8): Further Notes, Health Dashboard — Obsidian plugin, Implementation Decisions, Out of Scope, Problem Statement, Solution, Testing Decisions, User Stories
 
 ### Community 15 - "Plugin Manifest"
 Cohesion: 0.25
 Nodes (7): author, description, id, isDesktopOnly, minAppVersion, name, version
 
-### Community 16 - "Settings Tab Architecture"
-Cohesion: 0.29
-Nodes (7): obsidian npm Package Types-Only Gotcha, app.setting.open() Circular JSON Serialization Error, Scripting the Settings Tab via eval, SettingsDirtyTracker Class (settings-dirty-tracker.ts), Profile (glossary term), Profile Note (schema), Ticket: Settings Tab + Profile Add/Edit
+### Community 17 - "Icon Suggest Component"
+Cohesion: 0.16
+Nodes (11): computePlannerBacklog(), latestPlanNote(), priorityRank(), HealthPlannerView, buildBacklog(), buildBacklogRow(), buildHeader(), buildPlanSection() (+3 more)
 
-### Community 18 - "Planner/Bases View Build Order"
-Cohesion: 0.33
-Nodes (6): health: Command IDs (open-health-dashboard, open-health-planner, add-lab-visit), Planner Surface (candidate markers backlog), Health Dashboard Plugin Solution, Suggested Build Order, Ticket: Planner Surface + Bases View, Ticket: Scaffold Plugin + Core Test Runner
+### Community 41 - "PRD Out of Scope"
+Cohesion: 0.15
+Nodes (12): Architecture reviews, Data authoring gotcha, Obsidian button styling gotcha, obsidian-health, Obsidian metadataCache write-lag gotcha, Obsidian settings tab gotcha, Obsidian vault ordering gotcha, Obsidian view rendering gotcha (+4 more)
 
-### Community 19 - "Settings Section Pattern & Drag-Drop Testing"
-Cohesion: 0.40
-Nodes (5): Testing Drag-and-Drop via Real DataTransfer Events, IconSuggest Component (src/render/icon-suggest.ts), PluginSettingTab setting-group/setting-items Structure Pattern, Setting onChange/blur Deferral Pattern, SettingsSectionContext + Stateful Section-Class Pattern
+### Community 43 - "PRD Problem Statement"
+Cohesion: 0.44
+Nodes (11): ResolvedRange, buildBandRect(), buildHistoryChart(), buildSecondaryPath(), buildSparkline(), HistoryChartOptions, numericPoints(), paddedDomain() (+3 more)
 
 ## Knowledge Gaps
-- **65 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+60 more)
+- **122 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+117 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **85 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MarkerNote` connect `Visit Entry Validation` to `Chart Rendering`, `Planner Backlog Logic`, `Concern Grouping & Registry`, `Bases View & Dashboard Model`, `Vault Reader/Writer`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
-- **Why does `VaultSnapshot` connect `Concern Grouping & Registry` to `Planner Backlog Logic`, `Visit Entry Validation`, `Health Widget (main.ts side)`, `Plugin Lifecycle & Views`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Why does `HealthSettingTab` connect `Plugin Lifecycle & Views` to `Concern Grouping & Registry`, `Health Widget (main.ts side)`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `MarkerNote` connect `Visit Entry Validation` to `Chart Rendering`, `Planner Backlog Logic`, `Concern Grouping & Registry`, `Bases View & Dashboard Model`, `Vault Reader/Writer`, `Icon Suggest Component`?**
+  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+- **Why does `VaultSnapshot` connect `Concern Grouping & Registry` to `Planner Backlog Logic`, `Visit Entry Validation`, `Health Widget (main.ts side)`, `Plugin Lifecycle & Views`, `Vault Reader/Writer`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `HealthPlugin` connect `Plugin Lifecycle & Views` to `Chart Rendering`, `Concern Grouping & Registry`, `Bases View & Dashboard Model`, `Health Widget (main.ts side)`, `Vault Reader/Writer`, `Icon Suggest Component`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **What connects `id`, `name`, `version` to the rest of the system?**
-  _65 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _122 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Chart Rendering` be split into smaller, more focused modules?**
-  _Cohesion score 0.09711779448621553 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09545454545454546 - nodes in this community are weakly interconnected._
 - **Should `Planner Backlog Logic` be split into smaller, more focused modules?**
-  _Cohesion score 0.08163265306122448 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1350806451612903 - nodes in this community are weakly interconnected._
 - **Should `Visit Entry Validation` be split into smaller, more focused modules?**
-  _Cohesion score 0.10453283996299723 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1072463768115942 - nodes in this community are weakly interconnected._

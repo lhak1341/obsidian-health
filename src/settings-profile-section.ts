@@ -2,7 +2,7 @@ import { Notice, Setting } from "obsidian";
 import { parseAllergies, validateProfileInput } from "./core/entry";
 import type { PersonSex, ProfileNote } from "./core/types";
 import { renderDragReorderList } from "./render/drag-reorder";
-import type { SettingsSectionContext } from "./settings-context";
+import { saveOrder, type SettingsSectionContext } from "./settings-context";
 import type { VaultSnapshot } from "./vault/reader";
 import { renameProfile as renameProfileInVault, saveProfileNote, saveProfileOrder as saveProfileOrderInVault } from "./vault/writer";
 
@@ -40,12 +40,9 @@ export class ProfileSection {
 		renderDragReorderList(list, profiles, { getId: (p) => p.person, getLabel: (p) => p.person }, (order) => void this.saveProfileOrder(order));
 	}
 
-	/** Writes sparse `order:` values (10, 20, 30…) for the full profile list, mirroring ConcernSection.saveConcernOrder. */
 	private async saveProfileOrder(order: ProfileNote[]): Promise<void> {
 		const paths = this.ctx.plugin.settings;
-		order.forEach((profile, i) => (profile.order = (i + 1) * 10));
-		await Promise.all(order.map((profile) => saveProfileOrderInVault(this.ctx.app, paths, profile.person, profile.order!)));
-		this.ctx.markDirty();
+		await saveOrder(this.ctx, order, (profile) => profile.person, (id, position) => saveProfileOrderInVault(this.ctx.app, paths, id, position));
 	}
 
 	private renderProfiles(root: HTMLElement, snapshot: VaultSnapshot | undefined): void {

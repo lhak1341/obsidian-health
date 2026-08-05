@@ -5,7 +5,7 @@ import { labelForConcern } from "./render/concern-registry";
 import { renderDragReorderList } from "./render/drag-reorder";
 import { IconSuggest } from "./render/icon-suggest";
 import { iconForConcern } from "./render/icons";
-import type { SettingsSectionContext } from "./settings-context";
+import { saveOrder, type SettingsSectionContext } from "./settings-context";
 import type { VaultSnapshot } from "./vault/reader";
 import { renameConcern as renameConcernInVault, saveMarkerOrder } from "./vault/writer";
 
@@ -80,17 +80,9 @@ export class ConcernSection {
 
 		await renameConcernInVault(this.ctx.app, this.ctx.plugin.settings, snapshot?.markers ?? [], oldConcern, newConcern);
 
-		// Patch the in-memory snapshot instead of `reload()`-ing: `app.metadataCache` can still be
-		// serving the pre-rename frontmatter for a beat after `processFrontMatter`'s promise resolves
-		// (its own re-index runs on a separate, unawaited pass), so an immediate re-scan risks reading
-		// stale concern values right back for the very markers we just wrote.
-		for (const marker of snapshot?.markers ?? []) {
-			marker.concern = marker.concern.map((c) => (normalizeConcernKey(c) === oldConcern ? newConcern : c));
-		}
-
 		await this.ctx.save();
 		new Notice(`Renamed "${oldConcern}" to "${newConcern}".`);
-		this.ctx.rerender();
+		await this.ctx.reload();
 	}
 
 	/** Which dashboard column (left/center/right) a concern lands in is NOT configurable here --
@@ -152,14 +144,8 @@ export class ConcernSection {
 		renderDragReorderList(list, markers, { getId: (m) => m.id, getLabel: (m) => m.name }, (order) => void this.saveConcernOrder(order));
 	}
 
-	/** Writes sparse `order:` values (10, 20, 30…) for a concern's full list so a future drag only
-	 *  ever needs to touch that one moved marker's file again, not renumber its neighbors.
-	 *  Updates the in-memory snapshot instead of a full `reload()` -- reloading re-scans the vault
-	 *  and rebuilds the whole tab, which would collapse every open `<details>` accordion mid-drag. */
 	private async saveConcernOrder(order: MarkerNote[]): Promise<void> {
 		const paths = this.ctx.plugin.settings;
-		order.forEach((marker, i) => (marker.order = (i + 1) * 10));
-		await Promise.all(order.map((marker) => saveMarkerOrder(this.ctx.app, paths, marker.id, marker.order!)));
-		this.ctx.markDirty();
+		await saveOrder(this.ctx, order, (marker) => marker.id, (id, position) => saveMarkerOrder(this.ctx.app, paths, id, position));
 	}
 }

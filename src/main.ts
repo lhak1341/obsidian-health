@@ -6,7 +6,7 @@ import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
 import { DEFAULT_SETTINGS, type HealthPluginSettings, type WidgetTier } from "./settings";
-import { HEALTH_VIEW_TYPE, HealthView } from "./view";
+import { HEALTH_VIEW_TYPE, HealthView } from "./dashboard-view";
 import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
 
 export interface HealthWidgetHandle {

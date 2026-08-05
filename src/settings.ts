@@ -1,3 +1,4 @@
+import { normalizeConcernKey } from "./core/dashboard";
 import { labelForConcern } from "./render/concern-registry";
 import { DEFAULT_VAULT_PATHS, type VaultPaths } from "./vault/reader";
 
@@ -10,10 +11,10 @@ export interface HealthPluginSettings extends VaultPaths {
 	widgetShowSparkline: boolean;
 	showAllDefault: boolean;
 	/** Path to the single Base file whose views a concern header click switches between --
-	 *  see `openConcernBase` in view.ts. */
+	 *  see `openConcernBase` in dashboard-view.ts. */
 	basePath: string;
 	/** Per-concern override of the Base *view name* to switch to, for when it differs from the
-	 *  concern's display label (view.ts falls back to the label when no override is set). */
+	 *  concern's display label (dashboard-view.ts falls back to the label when no override is set). */
 	concernViewOverrides: Record<string, string>;
 	/** Icon override per concern id, for concerns not in the hardcoded CONCERN_CONFIG map
 	 *  (render/concern-registry.ts) -- e.g. after renaming a concern, or a wholly new one.
@@ -27,7 +28,7 @@ export interface HealthPluginSettings extends VaultPaths {
  *  `oldConcern` is already a normalized key; `newConcern` is the raw text the user typed, so it's
  *  re-normalized here to keep both maps keyed by identity, not display casing. */
 export function renameConcernInSettings(settings: HealthPluginSettings, oldConcern: string, newConcern: string): void {
-	const newKey = newConcern.trim().toLowerCase();
+	const newKey = normalizeConcernKey(newConcern);
 	if (settings.concernViewOverrides[oldConcern] !== undefined) {
 		settings.concernViewOverrides[newKey] = settings.concernViewOverrides[oldConcern];
 		delete settings.concernViewOverrides[oldConcern];

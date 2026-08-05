@@ -14,6 +14,7 @@ import {
 	saveProfileNote,
 	saveProfileOrder,
 	saveVisitNote,
+	writeFrontmatter,
 } from "./writer";
 
 function markerNote(overrides: Partial<MarkerNote> = {}): MarkerNote {
@@ -44,6 +45,48 @@ function aliceVault(extra: Parameters<typeof createFakeApp>[1] = undefined) {
 		extra,
 	);
 }
+
+describe("writeFrontmatter", () => {
+	it("doesn't resolve until metadataCache's \"changed\" event fires for the written file", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT" } }], { deferIndexing: true });
+		const f = file(app, "markers/alt.md");
+
+		let resolved = false;
+		const write = writeFrontmatter(app, f, (frontmatter) => (frontmatter.order = 10)).then(() => (resolved = true));
+
+		// Committed already (processFrontMatter's own promise settles), but the cache hasn't caught up.
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(resolved).toBe(false);
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.order).toBeUndefined();
+
+		app.flushMetadataCache("markers/alt.md");
+		await write;
+
+		expect(resolved).toBe(true);
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.order).toBe(10);
+	});
+
+	it("resolves without waiting when the cache isn't deferred (default fixture behavior)", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT" } }]);
+		const f = file(app, "markers/alt.md");
+
+		await writeFrontmatter(app, f, (frontmatter) => (frontmatter.order = 10));
+
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.order).toBe(10);
+	});
+
+	it("falls back to resolving after the timeout when \"changed\" never fires", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT" } }], { deferIndexing: true });
+		const f = file(app, "markers/alt.md");
+
+		await expect(writeFrontmatter(app, f, (frontmatter) => (frontmatter.order = 10), 10)).resolves.toBeUndefined();
+
+		// The write itself committed even though the cache never caught up.
+		app.flushMetadataCache("markers/alt.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.order).toBe(10);
+	});
+});
 
 describe("renameProfile", () => {
 	it("renames the profile file, the labs folder, and every visit/plan note's person field", async () => {

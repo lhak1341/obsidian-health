@@ -19,3 +19,20 @@ export interface SettingsSectionContext {
 	 *  safe to hand-patch in memory (contrast ConcernSection.renameConcern, which patches). */
 	reload(): Promise<void>;
 }
+
+/** Writes sparse `order:` values (10, 20, 30…) for a full drag-reordered list, one vault write per
+ *  item via `persistOne`, then marks the tab dirty -- shared by ConcernSection.saveConcernOrder and
+ *  ProfileSection.saveProfileOrder, which otherwise duplicated this exact algorithm. Mutates each
+ *  item's `order` field in place, matching how both callers already read it back for re-rendering.
+ *  Deliberately calls `markDirty()`, not `reload()` -- a full reload would re-scan and rebuild the
+ *  whole tab mid-drag, collapsing every open `<details>` accordion. */
+export async function saveOrder<T extends { order?: number }>(
+	ctx: SettingsSectionContext,
+	order: T[],
+	getId: (item: T) => string,
+	persistOne: (id: string, order: number) => Promise<void>,
+): Promise<void> {
+	order.forEach((item, i) => (item.order = (i + 1) * 10));
+	await Promise.all(order.map((item) => persistOne(getId(item), item.order!)));
+	ctx.markDirty();
+}

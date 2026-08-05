@@ -1,4 +1,4 @@
-import type { App } from "obsidian";
+import type { App, EventRef } from "obsidian";
 
 export interface FakeNoteInput {
 	path: string;
@@ -13,13 +13,24 @@ interface FakeFile {
 	extension: string;
 }
 
+export interface FakeApp extends App {
+	/** Test-only: simulates `metadataCache`'s own re-index catching up with a committed write --
+	 *  syncs the cached/indexed frontmatter to the committed write and fires a "changed" event for
+	 *  the path. Only meaningful when `deferIndexing` is set; otherwise every write auto-flushes. */
+	flushMetadataCache(path: string): void;
+}
+
 /** Minimal in-memory stand-in for the slice of Obsidian's `App` that vault/reader.ts and
  *  vault/writer.ts actually call -- just enough to characterize scanVault and renameProfile
  *  without a real Obsidian runtime. Folders are inferred from file path prefixes, not stored
- *  separately. `failOn` lets a test simulate a write throwing partway through a batch rename. */
-export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (path: string) => boolean }): App {
-	const notes = new Map<string, { frontmatter: Record<string, unknown>; body: string }>();
-	for (const note of initialFiles) notes.set(note.path, { frontmatter: note.frontmatter, body: note.body ?? "" });
+ *  separately. `failOn` lets a test simulate a write throwing partway through a batch rename.
+ *  `deferIndexing` lets a test simulate `metadataCache`'s real-world re-index lag: a committed
+ *  write no longer auto-syncs to the cached/indexed read and fire "changed" -- the test must call
+ *  `flushMetadataCache` itself, so `writeFrontmatter`'s wait-for-"changed" behavior is directly
+ *  exercisable without real timers. */
+export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (path: string) => boolean; deferIndexing?: boolean }): FakeApp {
+	const notes = new Map<string, { committed: Record<string, unknown>; cached: Record<string, unknown>; body: string }>();
+	for (const note of initialFiles) notes.set(note.path, { committed: note.frontmatter, cached: { ...note.frontmatter }, body: note.body ?? "" });
 
 	const toFakeFile = (path: string): FakeFile => {
 		const basename = path.slice(path.lastIndexOf("/") + 1).replace(/\.md$/, "");
@@ -50,13 +61,25 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 		}
 	};
 
+	type ChangeListener = (file: FakeFile) => void;
+	const listeners = new Map<number, ChangeListener>();
+	let nextRefId = 0;
+
+	const flushMetadataCache = (path: string): void => {
+		const entry = notes.get(path);
+		if (!entry) return;
+		entry.cached = { ...entry.committed };
+		const file = toFakeFile(path);
+		for (const cb of listeners.values()) cb(file);
+	};
+
 	return {
 		vault: {
 			getMarkdownFiles: () => [...notes.keys()].map(toFakeFile),
 			getAbstractFileByPath,
 			cachedRead: async (file: FakeFile) => notes.get(file.path)?.body ?? "",
 			create: async (path: string, content: string): Promise<FakeFile> => {
-				notes.set(path, { frontmatter: {}, body: content });
+				notes.set(path, { committed: {}, cached: {}, body: content });
 				return toFakeFile(path);
 			},
 			// No-op: folders are inferred from file path prefixes (see getAbstractFileByPath above),
@@ -66,7 +89,15 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 		metadataCache: {
 			getFileCache: (file: FakeFile) => {
 				const entry = notes.get(file.path);
-				return entry ? { frontmatter: entry.frontmatter } : null;
+				return entry ? { frontmatter: entry.cached } : null;
+			},
+			on: (event: string, cb: ChangeListener): EventRef => {
+				const id = nextRefId++;
+				if (event === "changed") listeners.set(id, cb);
+				return { id } as unknown as EventRef;
+			},
+			offref: (ref: EventRef) => {
+				listeners.delete((ref as unknown as { id: number }).id);
 			},
 		},
 		fileManager: {
@@ -74,9 +105,11 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 				if (opts?.failOn?.(file.path)) throw new Error(`simulated failure writing ${file.path}`);
 				const entry = notes.get(file.path);
 				if (!entry) throw new Error(`no such file: ${file.path}`);
-				fn(entry.frontmatter);
+				fn(entry.committed);
+				if (!opts?.deferIndexing) flushMetadataCache(file.path);
 			},
 			renameFile: async (file: { path: string }, newPath: string) => renameEntry(file, newPath),
 		},
-	} as unknown as App;
+		flushMetadataCache,
+	} as unknown as FakeApp;
 }
