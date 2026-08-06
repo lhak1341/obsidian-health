@@ -102,7 +102,7 @@ export class ProfileSection {
 
 	private renderAddProfileForm(root: HTMLElement): void {
 		const details = root.createEl("details", { cls: "hlth-settings-details" });
-		details.createEl("summary", { text: "+ Add a profile" });
+		details.createEl("summary", { text: "+ add a profile" });
 		const body = details.createDiv();
 
 		const draft = this.newProfile;

@@ -20,10 +20,10 @@ export class ConcernSection {
 	}
 
 	private renderConcernOverrides(root: HTMLElement): void {
-		new Setting(root).setName("Concern → Base view overrides").setHeading();
+		new Setting(root).setName("Concern → base view overrides").setHeading();
 		root.createEl("p", {
 			cls: "setting-item-description",
-			text: "A concern header switches the configured Base file (see Base file path above) to the view named after the concern. Override the view name here when it differs.",
+			text: "A concern header switches the configured base file (see base file path above) to the view named after the concern. Override the view name here when it differs.",
 		});
 		const items = root.createDiv("setting-group").createDiv("setting-items");
 
@@ -55,7 +55,7 @@ export class ConcernSection {
 		let newViewName = "";
 		new Setting(items)
 			.setName("Add override")
-			.addText((text) => text.setPlaceholder("concern").onChange((value) => (newConcern = value)))
+			.addText((text) => text.setPlaceholder("Concern").onChange((value) => (newConcern = value)))
 			.addText((text) => text.setPlaceholder("View name").onChange((value) => (newViewName = value)))
 			.addButton((btn) =>
 				btn.setButtonText("Add").onClick(() => {
@@ -117,7 +117,7 @@ export class ConcernSection {
 		let renameTo = "";
 		new Setting(details.createDiv())
 			.setName("Rename concern")
-			.setDesc("Rewrites concern: on every marker note in this group -- a real rename, not a display override. Carries over the Base override above and the icon below, if either is set.")
+			.setDesc("Rewrites concern: on every marker note in this group -- a real rename, not a display override. Carries over the base override above and the icon below, if either is set.")
 			.addText((text) => text.setPlaceholder(labelForConcern(concern)).onChange((value) => (renameTo = value)))
 			.addButton((btn) => btn.setButtonText("Rename").onClick(() => void this.renameConcern(snapshot, concern, renameTo)));
 
@@ -129,7 +129,7 @@ export class ConcernSection {
 		preview.appendChild(iconForConcern(concern, icons));
 		iconSetting.addText((text) => {
 			new IconSuggest(this.ctx.app, text.inputEl);
-			text.setPlaceholder("(default)")
+			text.setPlaceholder("(Default)")
 				.setValue(icons[concern] ?? "")
 				.onChange((value) => {
 					if (value.trim()) icons[concern] = value.trim();

@@ -32,7 +32,7 @@ export function renderHealthWidget(root: HTMLElement, model: DashboardModel, opt
 export function renderHealthWidgetEmpty(root: HTMLElement, message: string): void {
 	root.textContent = "";
 	root.className = "hlth-widget";
-	const empty = document.createElement("div");
+	const empty = createDiv();
 	empty.className = "hlth-widget-empty";
 	empty.textContent = message;
 	root.appendChild(empty);
@@ -53,19 +53,19 @@ function buildInlineIcon(name: string, cls: string): SVGSVGElement {
 
 /** "Health" label + flagged/tracked count + chevron -- the whole row opens the full Dashboard. */
 function buildHeader(model: DashboardModel, flaggedCount: number, opts: WidgetRenderOptions): HTMLElement {
-	const head = document.createElement("button");
+	const head = createEl("button");
 	head.type = "button";
 	head.className = "hlth-widget-header";
 	head.addEventListener("click", () => opts.onOpenDashboard());
 
 	head.appendChild(buildHeart(flaggedCount === 0));
 
-	const label = document.createElement("span");
+	const label = createSpan();
 	label.className = "hlth-widget-lbl";
 	label.textContent = "Health";
 	head.appendChild(label);
 
-	const count = document.createElement("span");
+	const count = createSpan();
 	count.className = "hlth-widget-count";
 	if (flaggedCount > 0) {
 		count.appendChild(document.createTextNode(`${flaggedCount} `));
@@ -86,7 +86,7 @@ function buildHeader(model: DashboardModel, flaggedCount: number, opts: WidgetRe
 
 /** Appends a status dot + "All clear" text directly into `el` (a flex container providing the gap). */
 function fillAllClear(el: HTMLElement): void {
-	const dot = document.createElement("span");
+	const dot = createSpan();
 	dot.className = "hlth-dot";
 	dot.style.background = statusColor("good");
 	el.appendChild(dot);
@@ -94,7 +94,7 @@ function fillAllClear(el: HTMLElement): void {
 }
 
 function buildChip(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
-	const chip = document.createElement("button");
+	const chip = createEl("button");
 	chip.type = "button";
 	chip.className = "hlth-widget-chip";
 	chip.addEventListener("click", () => opts.onOpenDashboard());
@@ -102,23 +102,23 @@ function buildChip(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 	const ok = rows.length === 0;
 	chip.appendChild(buildHeart(ok));
 
-	const count = document.createElement("span");
+	const count = createSpan();
 	count.className = "hlth-widget-chip-count";
 	count.textContent = ok ? "✓" : String(rows.length);
 	if (ok) count.classList.add("hlth-widget-chip-count-ok");
 	chip.appendChild(count);
 
-	const unit = document.createElement("span");
+	const unit = createSpan();
 	unit.className = "hlth-widget-chip-unit";
-	if (ok) unit.textContent = "in range";
+	if (ok) unit.textContent = "In range";
 	else unit.appendChild(buildInlineIcon("flag", "hlth-widget-chip-unit-flag"));
 	chip.appendChild(unit);
 
 	if (!ok) {
-		const pips = document.createElement("span");
+		const pips = createSpan();
 		pips.className = "hlth-widget-chip-pips";
 		for (const row of rows) {
-			const pip = document.createElement("span");
+			const pip = createSpan();
 			pip.className = "hlth-dot";
 			pip.style.background = statusColor(row.primary.status);
 			pips.appendChild(pip);
@@ -130,11 +130,11 @@ function buildChip(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 }
 
 function buildList(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
-	const list = document.createElement("div");
+	const list = createDiv();
 	list.className = "hlth-widget-list";
 
 	if (rows.length === 0) {
-		const clear = document.createElement("div");
+		const clear = createDiv();
 		clear.className = "hlth-widget-clear";
 		fillAllClear(clear);
 		list.appendChild(clear);
@@ -146,7 +146,7 @@ function buildList(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 
 	const overflow = rows.length - shown.length;
 	if (overflow > 0) {
-		const more = document.createElement("button");
+		const more = createEl("button");
 		more.type = "button";
 		more.className = "hlth-widget-more";
 		more.textContent = `+${overflow} more · view all`;
@@ -160,7 +160,7 @@ function buildList(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 function buildListRow(row: RowEntry, opts: WidgetRenderOptions): HTMLElement {
 	const { primary, secondary } = row;
 
-	const el = document.createElement("button");
+	const el = createEl("button");
 	el.type = "button";
 	el.className = "hlth-widget-row";
 	el.addEventListener("click", () => opts.onOpenMarker?.(primary.marker.id));

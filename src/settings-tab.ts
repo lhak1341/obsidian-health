@@ -1,4 +1,5 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { normalizePath, PluginSettingTab, Setting } from "obsidian";
+import type { App } from "obsidian";
 import type HealthPlugin from "./main";
 import { ConcernSection } from "./settings-concern-section";
 import type { SettingsSectionContext } from "./settings-context";
@@ -80,7 +81,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		const pathField = (name: string, key: "markersFolder" | "profilesFolder" | "plansFolder" | "visitsFolder") => {
 			new Setting(items).setName(name).addText((text) => {
 				text.setValue(settings[key]).onChange((value) => {
-					settings[key] = value.trim();
+					settings[key] = normalizePath(value.trim());
 					void this.save();
 				});
 				// Re-scan on blur (not per-keystroke): the Profiles section and default-profile
@@ -99,7 +100,7 @@ export class HealthSettingTab extends PluginSettingTab {
 			.setDesc("Single .base file a concern header switches views on -- not a folder. Doesn't affect vault scanning, so no rescan needed on change.")
 			.addText((text) =>
 				text.setValue(settings.basePath).onChange((value) => {
-					settings.basePath = value.trim();
+					settings.basePath = normalizePath(value.trim());
 					void this.save();
 				}),
 			);
@@ -137,7 +138,7 @@ export class HealthSettingTab extends PluginSettingTab {
 			.setName("Default profile")
 			.setDesc("Profile the dashboard loads on open.")
 			.addDropdown((dropdown) => {
-				dropdown.addOption("", "(first profile)");
+				dropdown.addOption("", "(First profile)");
 				for (const profile of this.snapshot?.profiles ?? []) dropdown.addOption(profile.person, profile.person);
 				dropdown.setValue(settings.defaultProfile ?? "");
 				dropdown.onChange((value) => {
@@ -148,7 +149,7 @@ export class HealthSettingTab extends PluginSettingTab {
 	}
 
 	private renderWidgetSettings(root: HTMLElement): void {
-		new Setting(root).setName("lhak-dashboard widget").setHeading();
+		new Setting(root).setName("Lhak-dashboard widget").setHeading();
 		const items = root.createDiv("setting-group").createDiv("setting-items");
 		const settings = this.plugin.settings;
 
@@ -167,7 +168,7 @@ export class HealthSettingTab extends PluginSettingTab {
 
 		new Setting(items)
 			.setName("Max rows")
-			.setDesc("Applies to the List tier.")
+			.setDesc("Applies to the list tier.")
 			.addText((text) => {
 				text.inputEl.type = "number";
 				text.setValue(String(settings.widgetMaxRows));
@@ -180,7 +181,7 @@ export class HealthSettingTab extends PluginSettingTab {
 
 		new Setting(items)
 			.setName("Show sparkline")
-			.setDesc("Applies to the List tier.")
+			.setDesc("Applies to the list tier.")
 			.addToggle((toggle) =>
 				toggle.setValue(settings.widgetShowSparkline).onChange((value) => {
 					settings.widgetShowSparkline = value;

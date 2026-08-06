@@ -101,5 +101,6 @@
   "99": "Ticket: Migration Data Hand-Refinement (In Progress)",
   "100": "Ticket: Planner Surface + Bases View",
   "101": "Ticket: Scaffold Plugin + Core Test Runner",
-  "102": "Ticket: Settings Tab + Profile Add/Edit"
+  "102": "Ticket: Settings Tab + Profile Add/Edit",
+  "103": "eslint.config.mjs"
 }

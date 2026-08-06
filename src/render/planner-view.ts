@@ -11,7 +11,7 @@ export interface PlannerRenderOptions {
 export function renderPlanner(root: HTMLElement, opts: PlannerRenderOptions): void {
 	root.textContent = "";
 
-	const wrap = document.createElement("div");
+	const wrap = createDiv();
 	wrap.className = "hlth-planner";
 	root.appendChild(wrap);
 
@@ -21,15 +21,15 @@ export function renderPlanner(root: HTMLElement, opts: PlannerRenderOptions): vo
 }
 
 function buildHeader(opts: PlannerRenderOptions): HTMLElement {
-	const top = document.createElement("div");
+	const top = createDiv();
 	top.className = "hlth-top";
 
-	const title = document.createElement("span");
+	const title = createSpan();
 	title.className = "hlth-title";
 	title.textContent = "Planner";
 	top.appendChild(title);
 
-	const back = document.createElement("button");
+	const back = createEl("button");
 	back.type = "button";
 	back.className = "hlth-showall-btn";
 	back.textContent = "Health";
@@ -40,36 +40,36 @@ function buildHeader(opts: PlannerRenderOptions): HTMLElement {
 }
 
 function buildPlanSection(opts: PlannerRenderOptions): HTMLElement {
-	const section = document.createElement("div");
+	const section = createDiv();
 	section.className = "hlth-planner-plan";
 
-	const label = document.createElement("span");
+	const label = createSpan();
 	label.className = "hlth-lbl";
 	label.textContent = "Yearly package analysis";
 	section.appendChild(label);
 
 	if (!opts.plan) {
-		const empty = document.createElement("div");
+		const empty = createDiv();
 		empty.className = "hlth-planner-plan-empty";
 		empty.textContent = "No plan note yet.";
 		section.appendChild(empty);
 		return section;
 	}
 
-	const row = document.createElement("div");
+	const row = createDiv();
 	row.className = "hlth-planner-plan-row";
 
-	const year = document.createElement("span");
+	const year = createSpan();
 	year.className = "hlth-planner-plan-year";
 	year.textContent = String(opts.plan.year);
 	row.appendChild(year);
 
-	const preview = document.createElement("span");
+	const preview = createSpan();
 	preview.className = "hlth-planner-plan-preview";
 	preview.textContent = previewText(opts.plan.body);
 	row.appendChild(preview);
 
-	const open = document.createElement("button");
+	const open = createEl("button");
 	open.type = "button";
 	open.className = "hlth-showall-btn";
 	open.textContent = "Open note";
@@ -86,23 +86,23 @@ function previewText(body: string): string {
 }
 
 function buildBacklog(backlog: MarkerNote[]): HTMLElement {
-	const section = document.createElement("div");
+	const section = createDiv();
 	section.className = "hlth-planner-backlog";
 
-	const label = document.createElement("span");
+	const label = createSpan();
 	label.className = "hlth-lbl";
 	label.textContent = `Backlog${backlog.length > 0 ? ` · ${backlog.length}` : ""}`;
 	section.appendChild(label);
 
 	if (backlog.length === 0) {
-		const empty = document.createElement("div");
+		const empty = createDiv();
 		empty.className = "hlth-planner-plan-empty";
 		empty.textContent = "No candidate tests queued.";
 		section.appendChild(empty);
 		return section;
 	}
 
-	const list = document.createElement("div");
+	const list = createDiv();
 	list.className = "hlth-planner-list";
 	for (const marker of backlog) list.appendChild(buildBacklogRow(marker));
 	section.appendChild(list);
@@ -111,36 +111,36 @@ function buildBacklog(backlog: MarkerNote[]): HTMLElement {
 }
 
 function buildBacklogRow(marker: MarkerNote): HTMLElement {
-	const row = document.createElement("div");
+	const row = createDiv();
 	row.className = "hlth-planner-row";
 
-	const name = document.createElement("span");
+	const name = createSpan();
 	name.className = "hlth-planner-name";
 	name.textContent = marker.name;
 	row.appendChild(name);
 
-	const priority = document.createElement("span");
+	const priority = createSpan();
 	priority.className = `hlth-planner-priority hlth-planner-priority-${marker.priority ?? "unranked"}`;
 	priority.textContent = marker.priority ?? "unranked";
 	row.appendChild(priority);
 
-	const cost = document.createElement("span");
+	const cost = createSpan();
 	cost.className = "hlth-planner-cost";
 	cost.textContent = marker.cost !== undefined ? formatRawValue(marker.cost) : "—";
 	row.appendChild(cost);
 
-	const year = document.createElement("span");
+	const year = createSpan();
 	year.className = "hlth-planner-year";
 	year.textContent = marker.yearPlanned !== undefined ? String(marker.yearPlanned) : "";
 	row.appendChild(year);
 
 	if (marker.sourceUrl) {
-		const link = document.createElement("a");
+		const link = createEl("a");
 		link.className = "hlth-planner-link";
 		link.href = marker.sourceUrl;
 		link.target = "_blank";
 		link.rel = "noopener";
-		link.textContent = "source";
+		link.textContent = "Source";
 		row.appendChild(link);
 	}
 

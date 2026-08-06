@@ -23,7 +23,7 @@ export default class HealthPlugin extends Plugin {
 	settings: HealthPluginSettings = DEFAULT_SETTINGS;
 
 	async onload(): Promise<void> {
-		const saved = await this.loadData();
+		const saved = (await this.loadData()) as Partial<HealthPluginSettings> | undefined;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
 		// Object.assign only shallow-copies; nested-object fields (e.g. concernViewOverrides)
 		// would otherwise stay reference-shared with the DEFAULT_SETTINGS module constant.
@@ -86,7 +86,7 @@ export default class HealthPlugin extends Plugin {
 
 	/** Public API — mounts a compact widget (e.g. into the lhak-dashboard host). Recomputes on mount only. */
 	mountHealthWidget(container: HTMLElement, opts: HealthWidgetOptions = {}): HealthWidgetHandle {
-		const root = document.createElement("div");
+		const root = createDiv();
 		container.appendChild(root);
 
 		let destroyed = false;
@@ -136,7 +136,7 @@ export default class HealthPlugin extends Plugin {
 			await leaf.setViewState({ type: HEALTH_VIEW_TYPE, active: true });
 		}
 
-		workspace.revealLeaf(leaf);
+		await workspace.revealLeaf(leaf);
 	}
 
 	async activatePlannerView(): Promise<void> {
@@ -148,6 +148,6 @@ export default class HealthPlugin extends Plugin {
 			await leaf.setViewState({ type: HEALTH_PLANNER_VIEW_TYPE, active: true });
 		}
 
-		workspace.revealLeaf(leaf);
+		await workspace.revealLeaf(leaf);
 	}
 }

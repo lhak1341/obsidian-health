@@ -57,7 +57,7 @@ export function formatRowValue(primary: MarkerStatusInfo, secondary?: MarkerStat
 /** Builds the `hlth-arrow` span (glyph + color) shared by the widget row, the Bases row, and the dashboard's attention/table rows. */
 export function buildArrowCell(primary: MarkerStatusInfo): HTMLElement {
 	const arrow = formatArrow(primary.arrow);
-	const arrowEl = document.createElement("span");
+	const arrowEl = createSpan();
 	arrowEl.className = "hlth-arrow";
 	arrowEl.style.color = arrow.color;
 	arrowEl.textContent = arrow.glyph;
@@ -71,19 +71,19 @@ export function fillMarkerRowContent(
 	secondary: MarkerStatusInfo | undefined,
 	opts: { showSparkline: boolean; colorValue?: boolean },
 ): void {
-	const dot = document.createElement("span");
+	const dot = createSpan();
 	dot.className = "hlth-dot";
 	dot.style.background = statusColor(primary.status);
 	el.appendChild(dot);
 
-	const name = document.createElement("span");
+	const name = createSpan();
 	name.className = "hlth-widget-row-name";
 	name.textContent = primary.marker.name;
 	el.appendChild(name);
 
 	if (opts.showSparkline) el.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
 
-	const value = document.createElement("span");
+	const value = createSpan();
 	value.className = "hlth-widget-row-value";
 	if (opts.colorValue ?? true) value.style.color = statusColor(primary.status);
 	value.textContent = formatRowValue(primary, secondary);

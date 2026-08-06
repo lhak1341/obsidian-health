@@ -35,7 +35,7 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 
 	// A dedicated child carries layout/padding -- `root` is Obsidian's own `.view-content`
 	// element, and themes routinely pin `div.view-content { padding: 0 !important }`.
-	const dash = document.createElement("div");
+	const dash = createDiv();
 	dash.className = "hlth-dash";
 	root.appendChild(dash);
 
@@ -55,41 +55,41 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 }
 
 function buildEmptyState(): HTMLElement {
-	const empty = document.createElement("div");
+	const empty = createDiv();
 	empty.className = "hlth-empty";
 	empty.textContent = "No visits recorded yet. Add the first lab visit to see your dashboard.";
 	return empty;
 }
 
 function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLElement {
-	const top = document.createElement("div");
+	const top = createDiv();
 	top.className = "hlth-top";
 
-	const left = document.createElement("div");
+	const left = createDiv();
 	left.className = "hlth-top-left";
 	if (opts.profiles.length > 1) left.appendChild(buildProfileSwitcher(opts));
 	left.appendChild(buildProfileInfo(opts));
 	top.appendChild(left);
 
-	const actions = document.createElement("div");
+	const actions = createDiv();
 	actions.className = "hlth-top-actions";
 
-	const plannerButton = document.createElement("button");
+	const plannerButton = createEl("button");
 	plannerButton.type = "button";
 	plannerButton.className = "hlth-showall-btn";
 	plannerButton.textContent = "Planner";
 	plannerButton.addEventListener("click", () => opts.onOpenPlanner());
 	actions.appendChild(plannerButton);
 
-	const addButton = document.createElement("button");
+	const addButton = createEl("button");
 	addButton.type = "button";
 	addButton.className = "hlth-showall-btn";
-	addButton.textContent = "+ Add visit";
+	addButton.textContent = "+ add visit";
 	addButton.addEventListener("click", () => opts.onAddVisit());
 	actions.appendChild(addButton);
 
 	if (hasMarkers) {
-		const button = document.createElement("button");
+		const button = createEl("button");
 		button.type = "button";
 		button.className = "hlth-showall-btn";
 		if (opts.showAll) button.classList.add("hlth-btn-on");
@@ -105,10 +105,10 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 }
 
 function buildProfileSwitcher(opts: DashboardRenderOptions): HTMLElement {
-	const ppl = document.createElement("div");
+	const ppl = createDiv();
 	ppl.className = "hlth-ppl";
 	for (const person of opts.profiles) {
-		const pill = document.createElement("button");
+		const pill = createEl("button");
 		pill.type = "button";
 		pill.className = "hlth-pill";
 		if (person === opts.activePerson) pill.classList.add("hlth-pill-active");
@@ -120,7 +120,7 @@ function buildProfileSwitcher(opts: DashboardRenderOptions): HTMLElement {
 }
 
 function buildProfileInfo(opts: DashboardRenderOptions): HTMLElement {
-	const line = document.createElement("div");
+	const line = createDiv();
 	line.className = "hlth-profile-info";
 	line.appendChild(iconFor("droplet"));
 
@@ -129,7 +129,7 @@ function buildProfileInfo(opts: DashboardRenderOptions): HTMLElement {
 	bits.push(opts.profile.allergies?.length ? opts.profile.allergies.join(", ") : "No known allergies");
 	bits.push(opts.lastVisitDate ? `Last record: ${formatFullDate(opts.lastVisitDate)}` : "No records yet");
 
-	const text = document.createElement("span");
+	const text = createSpan();
 	text.textContent = bits.join(" · ");
 	line.appendChild(text);
 
@@ -152,17 +152,17 @@ function attentionReason(status: Status): string {
 function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>): HTMLElement {
 	const flagged = flaggedRows(model);
 
-	const bar = document.createElement("div");
+	const bar = createDiv();
 	bar.className = "hlth-attn";
 
-	const lead = document.createElement("div");
+	const lead = createDiv();
 	lead.className = "hlth-attn-lead";
-	const label = document.createElement("span");
+	const label = createSpan();
 	label.className = "hlth-lbl";
 	label.textContent = "Needs attention";
 	lead.appendChild(label);
 	if (flagged.length > 0) {
-		const count = document.createElement("span");
+		const count = createSpan();
 		count.className = "hlth-attn-count";
 		count.textContent = `${flagged.length} marker${flagged.length === 1 ? "" : "s"}`;
 		lead.appendChild(count);
@@ -170,7 +170,7 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 	bar.appendChild(lead);
 
 	if (flagged.length === 0) {
-		const empty = document.createElement("div");
+		const empty = createDiv();
 		empty.className = "hlth-attn-empty";
 		empty.appendChild(iconFor("heart"));
 		empty.appendChild(document.createTextNode("All clear this visit — nothing outside range or past a target."));
@@ -178,24 +178,24 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 		return bar;
 	}
 
-	const items = document.createElement("div");
+	const items = createDiv();
 	items.className = "hlth-attn-items";
 	for (const row of flagged) {
 		const { primary, secondary } = row;
-		const item = document.createElement("div");
+		const item = createDiv();
 		item.className = "hlth-attn-item";
 
-		const dot = document.createElement("span");
+		const dot = createSpan();
 		dot.className = "hlth-dot";
 		dot.style.background = statusColor(primary.status);
 		item.appendChild(dot);
 
-		const name = document.createElement("span");
+		const name = createSpan();
 		name.className = "hlth-attn-name";
 		name.textContent = primary.marker.name;
 		item.appendChild(name);
 
-		const value = document.createElement("span");
+		const value = createSpan();
 		value.className = "hlth-attn-value";
 		value.style.color = statusColor(primary.status);
 		value.textContent = formatRowValue(primary, secondary);
@@ -203,7 +203,7 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 
 		item.appendChild(buildArrowCell(primary));
 
-		const why = document.createElement("span");
+		const why = createSpan();
 		why.className = "hlth-attn-why";
 		why.textContent = attentionReason(primary.status);
 		item.appendChild(why);
@@ -223,7 +223,7 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 }
 
 function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
-	const container = document.createElement("div");
+	const container = createDiv();
 	container.className = "hlth-groups";
 
 	const rankIndex = new Map(model.attentionOrder.map((id, i) => [id, i]));
@@ -234,7 +234,7 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 	for (const group of sorted) columns[columnForConcern(group.concern)].push(group);
 
 	for (const columnGroups of columns) {
-		const col = document.createElement("div");
+		const col = createDiv();
 		col.className = "hlth-col";
 		for (const group of columnGroups) {
 			col.appendChild(buildGroup(group, opts, curated, rowByMarkerId, rowsById));
@@ -269,7 +269,7 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 
 	const hiddenCount = rows.filter((row) => !curated.has(row.primary.marker.id)).length;
 
-	const wrap = document.createElement("div");
+	const wrap = createDiv();
 	wrap.className = "hlth-grp";
 	const head = buildGroupHeader(group, hiddenCount, opts.showAll, opts.concernIcons);
 	head.addEventListener("click", () => {
@@ -293,31 +293,31 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 }
 
 function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boolean, concernIcons: Record<string, string>): HTMLElement {
-	const head = document.createElement("div");
+	const head = createDiv();
 	head.className = "hlth-grp-head";
 
 	const icon = iconForConcern(group.concern, concernIcons);
 	icon.classList.add("hlth-grp-icon");
 	head.appendChild(icon);
 
-	const label = document.createElement("span");
+	const label = createSpan();
 	label.className = "hlth-lbl hlth-grp-label";
 	label.textContent = labelForConcern(group.concern);
 	head.appendChild(label);
 
-	const dot = document.createElement("span");
+	const dot = createSpan();
 	dot.className = "hlth-dot";
 	dot.style.background = statusColor(group.status);
 	head.appendChild(dot);
 
-	const hint = document.createElement("span");
+	const hint = createSpan();
 	hint.className = "hlth-grp-hint";
 	hint.appendChild(iconFor("external-link"));
 	hint.appendChild(document.createTextNode("Base view"));
 	head.appendChild(hint);
 
 	if (!showAll && hiddenCount > 0) {
-		const tag = document.createElement("span");
+		const tag = createSpan();
 		tag.className = "hlth-grp-tag";
 		tag.textContent = `+${hiddenCount} hidden`;
 		head.appendChild(tag);
@@ -329,7 +329,7 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail: HTMLElement; open: () => void } {
 	const { primary, secondary } = row;
 
-	const header = document.createElement("div");
+	const header = createDiv();
 	header.className = "hlth-row";
 	if (hidden) header.classList.add("hlth-hidden");
 
@@ -347,7 +347,7 @@ function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail
 	header.appendChild(buildValueOnlyCell(row));
 	header.appendChild(buildUnitCell(primary));
 
-	const detail = document.createElement("div");
+	const detail = createDiv();
 	detail.className = "hlth-detail";
 	detail.appendChild(buildDetailContent(row));
 
@@ -362,10 +362,10 @@ function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail
 
 function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 	const marker = info.marker;
-	const cell = document.createElement("div");
+	const cell = createDiv();
 	cell.className = "hlth-name";
 
-	const text = document.createElement("span");
+	const text = createSpan();
 	text.className = "hlth-name-text";
 	text.textContent = marker.name;
 	cell.appendChild(text);
@@ -381,7 +381,7 @@ function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 
 function buildValueOnlyCell(row: RowEntry): HTMLElement {
 	const { primary, secondary } = row;
-	const value = document.createElement("span");
+	const value = createSpan();
 	value.className = "hlth-value";
 	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
@@ -390,7 +390,7 @@ function buildValueOnlyCell(row: RowEntry): HTMLElement {
 }
 
 function buildUnitCell(primary: MarkerStatusInfo): HTMLElement {
-	const unit = document.createElement("span");
+	const unit = createSpan();
 	unit.className = "hlth-unit";
 	unit.textContent = primary.marker.unit ?? "";
 	return unit;
@@ -399,22 +399,22 @@ function buildUnitCell(primary: MarkerStatusInfo): HTMLElement {
 function buildDetailContent(row: RowEntry): HTMLElement {
 	const { primary, secondary } = row;
 	const marker = primary.marker;
-	const wrap = document.createElement("div");
+	const wrap = createDiv();
 	wrap.className = "hlth-detail-in";
 
-	const cap = document.createElement("div");
+	const cap = createDiv();
 	cap.className = "hlth-detail-cap";
-	const meaning = document.createElement("span");
+	const meaning = createSpan();
 	meaning.className = "hlth-detail-meaning";
 	renderInlineMarkdown(meaning, marker.blurb);
 	cap.appendChild(meaning);
 
-	const now = document.createElement("span");
+	const now = createSpan();
 	now.className = "hlth-detail-now";
 	now.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
 	now.textContent = formatRowValue(primary, secondary);
 	if (marker.unit) {
-		const unit = document.createElement("span");
+		const unit = createSpan();
 		unit.className = "hlth-unit";
 		unit.textContent = ` ${marker.unit}`;
 		now.appendChild(unit);
@@ -429,7 +429,7 @@ function buildDetailContent(row: RowEntry): HTMLElement {
 
 	const numericCount = primary.series.filter((point) => typeof point.value === "number").length;
 	if (numericCount < 2) {
-		const note = document.createElement("div");
+		const note = createDiv();
 		note.className = "hlth-single-note";
 		const readings = primary.series.map((point) => `${formatYear(point.date)} · ${formatRawValue(point.value)}${marker.unit ? ` ${marker.unit}` : ""}`).join(", ");
 		note.textContent = `Single reading so far — ${readings}. Trend appears after the next visit.`;
@@ -452,20 +452,20 @@ function buildDetailContent(row: RowEntry): HTMLElement {
 }
 
 function buildQualitativeChips(marker: MarkerNote, series: SeriesPoint[]): HTMLElement {
-	const list = document.createElement("div");
+	const list = createDiv();
 	list.className = "hlth-qhist";
 
 	const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
 	for (const point of series) {
-		const chip = document.createElement("span");
+		const chip = createSpan();
 		const good = normal.includes(String(point.value));
 		chip.className = `hlth-qchip ${good ? "hlth-qchip-good" : "hlth-qchip-bad"}`;
 
-		const year = document.createElement("b");
+		const year = createEl("b");
 		year.textContent = formatYear(point.date);
 		chip.appendChild(year);
 
-		const value = document.createElement("span");
+		const value = createSpan();
 		value.textContent = String(point.value);
 		chip.appendChild(value);
 

@@ -130,14 +130,14 @@ export async function renameConcern(app: App, settings: HealthPluginSettings, ma
 	await Promise.all(
 		markers
 			.filter((marker) => marker.concern.some((c) => normalizeConcernKey(c) === oldConcern))
-			.map((marker) => {
-				const file = findMarkerFile(app, settings, marker.id);
-				if (!file) return;
-				return writeFrontmatter(app, file, (frontmatter) => {
+			.map((marker) => findMarkerFile(app, settings, marker.id))
+			.filter((file): file is TFile => file !== null)
+			.map((file) =>
+				writeFrontmatter(app, file, (frontmatter) => {
 					const concern = Array.isArray(frontmatter.concern) ? (frontmatter.concern as string[]) : [];
 					frontmatter.concern = [...new Set(concern.map((c) => (normalizeConcernKey(c) === oldConcern ? newConcern : c)))];
-				});
-			}),
+				}),
+			),
 	);
 	renameConcernInSettings(settings, oldConcern, newConcern);
 }

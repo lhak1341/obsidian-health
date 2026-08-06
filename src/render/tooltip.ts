@@ -9,11 +9,11 @@ let sharedTooltip: HTMLElement | undefined;
 
 function getSharedTooltip(): HTMLElement {
 	if (sharedTooltip?.isConnected) return sharedTooltip;
-	const tip = document.createElement("div");
+	const tip = createDiv();
 	tip.className = "hlth-tip";
-	const meaning = document.createElement("span");
+	const meaning = createSpan();
 	meaning.className = "hlth-tip-meaning";
-	const range = document.createElement("span");
+	const range = createSpan();
 	range.className = "hlth-tip-range";
 	tip.append(meaning, range);
 	document.body.appendChild(tip);
@@ -23,7 +23,7 @@ function getSharedTooltip(): HTMLElement {
 
 export function showTooltip(anchor: HTMLElement, meaning: string, rangeText: string): void {
 	const tip = getSharedTooltip();
-	renderInlineMarkdown(tip.querySelector(".hlth-tip-meaning")! as HTMLElement, meaning);
+	renderInlineMarkdown(tip.querySelector(".hlth-tip-meaning")!, meaning);
 	tip.querySelector(".hlth-tip-range")!.textContent = rangeText;
 	tip.classList.add("hlth-open");
 

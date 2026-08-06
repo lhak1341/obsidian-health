@@ -7,7 +7,7 @@ export function renderBasesMarkers(container: HTMLElement, model: DashboardModel
 	container.className = "hlth-widget";
 
 	if (model.markers.length === 0) {
-		const empty = document.createElement("div");
+		const empty = createDiv();
 		empty.className = "hlth-widget-empty";
 		empty.textContent = "No readings yet for these markers.";
 		container.appendChild(empty);
@@ -17,14 +17,14 @@ export function renderBasesMarkers(container: HTMLElement, model: DashboardModel
 	const rankIndex = new Map(model.attentionOrder.map((id, i) => [id, i]));
 	const sorted = [...model.markers].sort((a, b) => (rankIndex.get(a.marker.id) ?? Number.POSITIVE_INFINITY) - (rankIndex.get(b.marker.id) ?? Number.POSITIVE_INFINITY));
 
-	const list = document.createElement("div");
+	const list = createDiv();
 	list.className = "hlth-widget-list";
 	for (const info of sorted) list.appendChild(buildRow(info));
 	container.appendChild(list);
 }
 
 function buildRow(info: MarkerStatusInfo): HTMLElement {
-	const el = document.createElement("div");
+	const el = createDiv();
 	el.className = "hlth-widget-row";
 	fillMarkerRowContent(el, info, undefined, { showSparkline: true });
 	return el;

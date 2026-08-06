@@ -4,7 +4,7 @@ import { formatRawValue, formatYear } from "./format";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function svgEl<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}): SVGElementTagNameMap[K] {
-	const el = document.createElementNS(SVG_NS, tag) as SVGElementTagNameMap[K];
+	const el = document.createElementNS(SVG_NS, tag);
 	for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
 	return el;
 }

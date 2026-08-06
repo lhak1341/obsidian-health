@@ -13,6 +13,11 @@ interface FakeFile {
 	extension: string;
 }
 
+interface FakeFolder {
+	path: string;
+	children: (FakeFile | FakeFolder)[];
+}
+
 export interface FakeApp extends App {
 	/** Test-only: simulates `metadataCache`'s own re-index catching up with a committed write --
 	 *  syncs the cached/indexed frontmatter to the committed write and fires a "changed" event for
@@ -37,10 +42,30 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 		return { path, basename, extension: "md" };
 	};
 
-	const getAbstractFileByPath = (path: string): FakeFile | { path: string } | null => {
+	// Builds a folder's immediate children on demand from the flat `notes` map (grouping descendant
+	// paths by their next path segment, recursing into `filesUnder`'s `.children` walk for subfolders
+	// like a visits folder's per-person subfolders) -- matches how `getAbstractFileByPath` already
+	// infers folder existence from path prefixes rather than storing folders separately.
+	const folderChildren = (folderPath: string): (FakeFile | FakeFolder)[] => {
+		const prefix = `${folderPath}/`;
+		const segments = new Map<string, boolean>();
+		for (const notePath of notes.keys()) {
+			if (!notePath.startsWith(prefix)) continue;
+			const rest = notePath.slice(prefix.length);
+			const slash = rest.indexOf("/");
+			if (slash === -1) segments.set(rest, true);
+			else segments.set(rest.slice(0, slash), false);
+		}
+		return [...segments.entries()].map(([segment, isFile]) => {
+			const childPath = `${folderPath}/${segment}`;
+			return isFile ? toFakeFile(childPath) : { path: childPath, children: folderChildren(childPath) };
+		});
+	};
+
+	const getAbstractFileByPath = (path: string): FakeFile | FakeFolder | null => {
 		if (notes.has(path)) return toFakeFile(path);
 		const folderPrefix = `${path}/`;
-		if ([...notes.keys()].some((p) => p.startsWith(folderPrefix))) return { path };
+		if ([...notes.keys()].some((p) => p.startsWith(folderPrefix))) return { path, children: folderChildren(path) };
 		return null;
 	};
 
@@ -94,7 +119,7 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 			on: (event: string, cb: ChangeListener): EventRef => {
 				const id = nextRefId++;
 				if (event === "changed") listeners.set(id, cb);
-				return { id } as unknown as EventRef;
+				return { id };
 			},
 			offref: (ref: EventRef) => {
 				listeners.delete((ref as unknown as { id: number }).id);

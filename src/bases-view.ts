@@ -34,7 +34,7 @@ export class HealthBasesView extends BasesView {
 
 		this.containerEl.textContent = "";
 		if (!profile) {
-			const empty = document.createElement("div");
+			const empty = createDiv();
 			empty.className = "hlth-widget-empty";
 			empty.textContent = "No profile configured yet.";
 			this.containerEl.appendChild(empty);

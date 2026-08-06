@@ -1,11 +1,9 @@
 import type { App, TFile } from "obsidian";
 import type {
-	CandidateStatus,
 	Direction,
 	MarkerKind,
 	MarkerNote,
 	MarkerRange,
-	PersonSex,
 	PlanNote,
 	Priority,
 	ProfileNote,
@@ -66,9 +64,25 @@ async function collect<T>(
 	return results;
 }
 
+/** Walks down from the folder node itself instead of scanning every markdown file in the vault --
+ *  matters once a vault has thousands of notes outside these four folders. Duck-typed (`"children"
+ *  in node`) rather than `instanceof TFolder`, matching this module's existing `TFile` duck-typing
+ *  (see writer.ts's `findMarkerFile`/`findProfileFile`) -- `obsidian` has no runtime package, so a
+ *  value import of `TFolder` would break vitest, which loads this module directly. */
 export function filesUnder(app: App, folder: string): TFile[] {
-	const prefix = folder.endsWith("/") ? folder : `${folder}/`;
-	return app.vault.getMarkdownFiles().filter((file) => file.path === folder || file.path.startsWith(prefix));
+	const root = app.vault.getAbstractFileByPath(folder);
+	if (!root) return [];
+
+	const files: TFile[] = [];
+	const walk = (node: object): void => {
+		if ("children" in node) {
+			for (const child of node.children as object[]) walk(child);
+		} else if ("extension" in node) {
+			files.push(node as TFile);
+		}
+	};
+	walk(root);
+	return files;
 }
 
 function stripFrontmatter(content: string): string {
@@ -103,7 +117,7 @@ function parseMarkerNote(id: string, fm: Record<string, unknown>, blurb: string)
 		formula: asOptionalString(fm.formula),
 		pair: asOptionalString(fm.pair),
 		order: asOptionalNumber(fm.order),
-		status: fm.status === "candidate" ? (fm.status as CandidateStatus) : undefined,
+		status: fm.status === "candidate" ? (fm.status) : undefined,
 		cost: asOptionalNumber(fm.cost),
 		priority: PRIORITIES.includes(fm.priority as Priority) ? (fm.priority as Priority) : undefined,
 		sourceUrl: asOptionalString(fm.source_url),
@@ -133,7 +147,7 @@ function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileN
 
 	return {
 		person,
-		sex: fm.sex as PersonSex,
+		sex: fm.sex,
 		dob: asOptionalString(fm.dob),
 		bloodType: asOptionalString(fm.blood_type),
 		allergies: fm.allergies === undefined ? undefined : asStringArray(fm.allergies),
@@ -169,7 +183,7 @@ function parseRanges(raw: unknown): MarkerRange[] | undefined {
 
 function parseAgeBand(raw: unknown): [number, number] | undefined {
 	if (!Array.isArray(raw) || raw.length !== 2) return undefined;
-	const [low, high] = raw;
+	const [low, high] = raw as unknown[];
 	if (typeof low !== "number" || typeof high !== "number") return undefined;
 	return [low, high];
 }

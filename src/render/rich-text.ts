@@ -12,15 +12,15 @@ export function renderInlineMarkdown(el: HTMLElement, text: string): void {
 		if (!token) continue;
 
 		if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
-			const strong = document.createElement("strong");
+			const strong = createEl("strong");
 			strong.textContent = token.slice(2, -2);
 			el.appendChild(strong);
 		} else if (token.startsWith("_") && token.endsWith("_") && token.length > 2) {
-			const em = document.createElement("em");
+			const em = createEl("em");
 			em.textContent = token.slice(1, -1);
 			el.appendChild(em);
 		} else if (token.startsWith("`") && token.endsWith("`") && token.length > 2) {
-			const code = document.createElement("code");
+			const code = createEl("code");
 			code.textContent = token.slice(1, -1);
 			el.appendChild(code);
 		} else {

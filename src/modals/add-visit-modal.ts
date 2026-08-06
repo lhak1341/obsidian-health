@@ -210,7 +210,7 @@ export class AddVisitModal extends Modal {
 
 		if (!isSeeded) {
 			setting.addText((text) => {
-				text.setPlaceholder("free text");
+				text.setPlaceholder("Free text");
 				text.setValue(state.raw);
 				text.onChange((value) => (state.raw = value));
 			});
@@ -219,7 +219,7 @@ export class AddVisitModal extends Modal {
 
 	private buildAddMarkerForm(root: HTMLElement): void {
 		const details = root.createEl("details", { cls: "hlth-modal-addmarker" });
-		details.createEl("summary", { text: "+ Add a new marker" });
+		details.createEl("summary", { text: "+ add a new marker" });
 
 		const body = details.createDiv();
 		let name = "";
@@ -229,7 +229,7 @@ export class AddVisitModal extends Modal {
 		let panel = this.markers[0]?.panel ?? "";
 
 		new Setting(body).setName("Name").addText((text) => text.onChange((value) => (name = value)));
-		new Setting(body).setName("Id (marker key)").addText((text) => text.onChange((value) => (id = value)));
+		new Setting(body).setName("ID (marker key)").addText((text) => text.onChange((value) => (id = value)));
 		new Setting(body).setName("Type").addDropdown((dropdown) =>
 			dropdown
 				.addOption("numeric", "Numeric")
@@ -252,7 +252,7 @@ export class AddVisitModal extends Modal {
 
 	private async addMarker(id: string, name: string, type: MarkerKind, unit: string, panel: string, details: HTMLDetailsElement): Promise<void> {
 		if (!id || !name) {
-			new Notice("A new marker needs both a name and an id.");
+			new Notice("A new marker needs both a name and an ID.");
 			return;
 		}
 		if (checkDuplicateMarkerId(id, this.markers.map((m) => m.id))) {
