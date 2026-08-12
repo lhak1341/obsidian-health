@@ -11,7 +11,7 @@
 		"test": "vitest run",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
-		"deploy": "bun run build && mkdir -p \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/health\" && cp manifest.json main.js styles.css \"/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/health/\""
+		"deploy": "bun run build && bun run scripts/deploy.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.30.1",
