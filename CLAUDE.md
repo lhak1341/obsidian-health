@@ -15,6 +15,11 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
   intentionally separate axes over the same markers. Do not collapse them.
 - New marker notes default to `curated: false` (hidden until "Show all") and no `direction`
   (neutral gray trend arrow) unless set explicitly — easy to forget both when authoring.
+- A marker's `type:` (numeric vs qualitative) must match how the source lab actually reports
+  it, not just the assay's nominal capability — `uro_ubg` was scaffolded `numeric` but this
+  user's lab (dipstick, not quantitative) always reports it as text ("Normal"), which
+  hard-blocked saving until retyped `qualitative`. Check real recorded values before trusting
+  a newly-scaffolded marker's `type:`.
 - Command ids are not slugs of display names: "Open dashboard" → `open-health-dashboard`.
   Others: `open-health-planner`, `add-lab-visit`.
 
@@ -48,8 +53,14 @@ fallback). This exists because `getFileCache` can return pre-write data after
   `SettingsSectionContext` + stateful section-class pattern (`settings-context.ts`,
   `settings-concern-section.ts`, `settings-profile-section.ts`). Do not grow
   `settings-tab.ts` directly.
-- The `--hlth-*` tokens in `styles.css` are scoped to `.health-dashboard-outer`. Anything
-  mounted into a host plugin cannot see them — use raw Obsidian vars there.
+- The `--hlth-*` tokens in `styles.css` are scoped to `.health-dashboard-outer`,
+  `.health-planner-outer`, and `.health-visit-editor-outer` (one selector list — the three
+  ItemViews sharing the plugin's visual language). Anything mounted into a host plugin
+  cannot see them — use raw Obsidian vars there. Interactive-element classes
+  (`.hlth-showall-btn`, `.hlth-pill`) need the same three-selector list separately — they
+  were scoped to `.hlth-dash` only for a while, so Planner/Editor buttons silently rendered
+  with Obsidian's default button skin instead of the plugin's. When adding a 4th view to
+  this family, extend both lists, not just the token one.
 - `IconSuggest` (`src/render/icon-suggest.ts`, ported from linear-calendar) already exists
   for Lucide-icon text fields. Reuse it.
 - `mountHealthWidget` (`main.ts`) is the guest side of the dashboard handshake;

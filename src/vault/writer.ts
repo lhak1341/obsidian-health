@@ -68,8 +68,8 @@ export function findVisitFile(app: App, paths: VaultPaths, person: string, date:
 }
 
 /** Writes (creates or overwrites) a visit note's frontmatter values via Obsidian's own YAML writer. */
-export async function saveVisitNote(app: App, paths: VaultPaths, person: string, date: string, values: Record<string, number | string>): Promise<void> {
-	const target = buildVisitFrontmatter(person, date, values);
+export async function saveVisitNote(app: App, paths: VaultPaths, person: string, date: string, values: Record<string, number | string>, facility?: string): Promise<void> {
+	const target = buildVisitFrontmatter(person, date, values, facility);
 	const file = await getOrCreateFile(app, personVisitsFolder(paths, person), `${date}.md`, findVisitFile(app, paths, person, date));
 
 	await writeFrontmatter(app, file, (frontmatter) => {

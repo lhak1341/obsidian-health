@@ -12,6 +12,7 @@ export interface DashboardRenderOptions {
 	showAll: boolean;
 	onToggleShowAll: () => void;
 	onAddVisit: () => void;
+	onEditVisit?: () => void;
 	onOpenPlanner: () => void;
 	/** Tries to switch the single configured Base file to the concern's view (key = normalized identity
 	 *  for override lookup, label = display text and default view name); resolves false when the Base
@@ -25,10 +26,60 @@ export interface DashboardRenderOptions {
 	concernIcons: Record<string, string>;
 }
 
-interface RowRef {
+interface RowInstance {
 	header: HTMLElement;
-	open: () => void;
+	detail: HTMLElement;
 }
+
+/** Each marker's row is rendered once per responsive tier (wide/medium/narrow -- see buildGroups),
+ *  so "open" has to act on every instance at once, not just the one under the cursor, or resizing
+ *  to a different tier would silently show it collapsed again. Also enforces the accordion (only
+ *  one row open at a time): opening a new marker closes whichever was open before it. */
+function createRowOpenController() {
+	const instances = new Map<string, RowInstance[]>();
+	let openId: string | undefined;
+
+	const setInstancesOpen = (markerId: string, open: boolean) => {
+		for (const inst of instances.get(markerId) ?? []) {
+			inst.header.classList.toggle("hlth-open", open);
+			inst.detail.classList.toggle("hlth-open", open);
+		}
+	};
+
+	return {
+		register(markerId: string, instance: RowInstance): void {
+			const list = instances.get(markerId) ?? [];
+			list.push(instance);
+			instances.set(markerId, list);
+		},
+		/** Opens `markerId`, closing whatever was previously open; closes it instead if it's already open. */
+		toggle(markerId: string): void {
+			if (openId === markerId) {
+				setInstancesOpen(markerId, false);
+				openId = undefined;
+				return;
+			}
+			if (openId) setInstancesOpen(openId, false);
+			setInstancesOpen(markerId, true);
+			openId = markerId;
+		},
+		/** Opens `markerId` (closing whatever was open); a no-op if it's already the open one. */
+		open(markerId: string): void {
+			if (openId === markerId) return;
+			if (openId) setInstancesOpen(openId, false);
+			setInstancesOpen(markerId, true);
+			openId = markerId;
+		},
+		/** Only one tier's instance has layout at a time (the other two are `display:none`) --
+		 *  `offsetParent` is null for anything not currently rendered, so this finds the real one. */
+		scrollIntoView(markerId: string): void {
+			const visible = (instances.get(markerId) ?? []).find((inst) => inst.header.offsetParent !== null);
+			visible?.header.scrollIntoView({ block: "center", behavior: "smooth" });
+		},
+	};
+}
+
+type RowOpenController = ReturnType<typeof createRowOpenController>;
 
 export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: DashboardRenderOptions): void {
 	root.textContent = "";
@@ -47,10 +98,10 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	}
 
 	const rowByMarkerId = indexPairs(model.markers);
-	const rowsById = new Map<string, RowRef>();
+	const rowOpen = createRowOpenController();
 
-	const groups = buildGroups(model, opts, rowByMarkerId, rowsById);
-	dash.appendChild(buildAttentionBar(model, rowsById));
+	const groups = buildGroups(model, opts, rowByMarkerId, rowOpen);
+	dash.appendChild(buildAttentionBar(model, rowOpen));
 	dash.appendChild(groups);
 }
 
@@ -84,9 +135,20 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 	const addButton = createEl("button");
 	addButton.type = "button";
 	addButton.className = "hlth-showall-btn";
-	addButton.textContent = "+ add visit";
+	addButton.appendChild(iconFor("plus-circle"));
+	addButton.appendChild(document.createTextNode("Add Visit"));
 	addButton.addEventListener("click", () => opts.onAddVisit());
 	actions.appendChild(addButton);
+
+	if (opts.onEditVisit) {
+		const editButton = createEl("button");
+		editButton.type = "button";
+		editButton.className = "hlth-showall-btn";
+		editButton.appendChild(iconFor("pencil"));
+		editButton.appendChild(document.createTextNode("Edit Visit"));
+		editButton.addEventListener("click", () => opts.onEditVisit?.());
+		actions.appendChild(editButton);
+	}
 
 	if (hasMarkers) {
 		const button = createEl("button");
@@ -149,7 +211,7 @@ function attentionReason(status: Status): string {
 	}
 }
 
-function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>): HTMLElement {
+function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): HTMLElement {
 	const flagged = flaggedRows(model);
 
 	const bar = createDiv();
@@ -209,10 +271,8 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 		item.appendChild(why);
 
 		item.addEventListener("click", () => {
-			const rowRef = rowsById.get(primary.marker.id);
-			if (!rowRef) return;
-			rowRef.open();
-			rowRef.header.scrollIntoView({ block: "center", behavior: "smooth" });
+			rowOpen.open(primary.marker.id);
+			rowOpen.scrollIntoView(primary.marker.id);
 		});
 
 		items.appendChild(item);
@@ -222,25 +282,93 @@ function buildAttentionBar(model: DashboardModel, rowsById: Map<string, RowRef>)
 	return bar;
 }
 
-function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
+/** Left column's own groups always read in this fixed editorial sequence, not attention-rank --
+ *  an urgent Cancer marker shouldn't reorder Vitals/Cardiometabolic/Cancer/Immunity relative to
+ *  each other. Applied everywhere those 4 groups appear together (all 3 tiers below). */
+const COL0_ORDER = ["vitals", "cardiometabolic", "cancer", "immunity"];
+
+/** Appends whichever of `sorted`'s col0-pinned groups pass `include`, in `COL0_ORDER` -- not the
+ *  order they appear in `sorted` (attention-rank). */
+function appendCol0(lane: HTMLElement, sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement, include: (concern: string) => boolean = () => true): void {
+	for (const concern of COL0_ORDER) {
+		for (const group of sorted) if (group.concern === concern && include(concern)) lane.appendChild(build(group));
+	}
+}
+
+function makeLanes(tier: HTMLElement, count: number): HTMLElement[] {
+	const lanes: HTMLElement[] = [];
+	for (let i = 0; i < count; i++) {
+		const lane = createDiv();
+		lane.className = "hlth-lane";
+		lanes.push(lane);
+		tier.appendChild(lane);
+	}
+	return lanes;
+}
+
+/** Wide tier: 3 lanes, the CLAUDE.md-pinned left/center/right split (not CSS grid -- grid's row
+ *  tracks are shared across every column, so a very tall item in one lane would inflate every
+ *  other lane's row height at that index; flex has no such cross-lane coupling). Center/right
+ *  stay in attention-rank order; only the left lane (Vitals/Cardiometabolic/Cancer/Immunity) has
+ *  a fixed sequence, via `appendCol0`. */
+function buildWideTier(sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
+	const tier = createDiv();
+	tier.className = "hlth-tier hlth-tier-wide";
+	const [left, center, right] = makeLanes(tier, 3);
+
+	appendCol0(left, sorted, build);
+	for (const group of sorted) if (columnForConcern(group.concern) === 1) center.appendChild(build(group));
+	for (const group of sorted) if (columnForConcern(group.concern) === 2) right.appendChild(build(group));
+
+	return tier;
+}
+
+/** Medium tier: CBC/Blood keeps its own lane (by far the longest single group), joined there by
+ *  Cancer/Immunity in fixed order after it -- leaves the other lane as just Vitals/Cardiometabolic
+ *  (also fixed order) above Everything Else (attention-rank), instead of one lane carrying 4 groups
+ *  against the other's 1. */
+function buildMediumTier(sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
+	const tier = createDiv();
+	tier.className = "hlth-tier hlth-tier-medium";
+	const [left, right] = makeLanes(tier, 2);
+
+	const isBlood = (concern: string) => columnForConcern(concern) === 1;
+	for (const group of sorted) if (isBlood(group.concern)) right.appendChild(build(group));
+	appendCol0(right, sorted, build, (c) => c === "cancer" || c === "immunity");
+
+	appendCol0(left, sorted, build, (c) => c !== "cancer" && c !== "immunity");
+	for (const group of sorted) if (columnForConcern(group.concern) === 2) left.appendChild(build(group));
+
+	return tier;
+}
+
+/** Narrow tier is one lane, but must still read as 3 stacked pinned blocks (left, then center,
+ *  then right), not flat attention-rank order across every group, which would interleave the 3
+ *  pinned columns together. The left block uses the same fixed sequence as the other two tiers. */
+function buildNarrowTier(sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
+	const tier = createDiv();
+	tier.className = "hlth-tier hlth-tier-narrow";
+	const [lane] = makeLanes(tier, 1);
+
+	appendCol0(lane, sorted, build);
+	for (const group of sorted) if (columnForConcern(group.concern) === 1) lane.appendChild(build(group));
+	for (const group of sorted) if (columnForConcern(group.concern) === 2) lane.appendChild(build(group));
+
+	return tier;
+}
+
+function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
 	const container = createDiv();
 	container.className = "hlth-groups";
 
 	const rankIndex = new Map(model.attentionOrder.map((id, i) => [id, i]));
 	const curated = new Set(model.curated);
 	const sorted = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
+	const build = (group: ConcernGroup) => buildGroup(group, opts, curated, rowByMarkerId, rowOpen);
 
-	const columns: ConcernGroup[][] = [[], [], []];
-	for (const group of sorted) columns[columnForConcern(group.concern)].push(group);
-
-	for (const columnGroups of columns) {
-		const col = createDiv();
-		col.className = "hlth-col";
-		for (const group of columnGroups) {
-			col.appendChild(buildGroup(group, opts, curated, rowByMarkerId, rowsById));
-		}
-		container.appendChild(col);
-	}
+	container.appendChild(buildWideTier(sorted, build));
+	container.appendChild(buildMediumTier(sorted, build));
+	container.appendChild(buildNarrowTier(sorted, build));
 
 	return container;
 }
@@ -253,7 +381,7 @@ function rowOrder(row: RowEntry): number {
 	return row.primary.marker.order ?? Number.POSITIVE_INFINITY;
 }
 
-function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowsById: Map<string, RowRef>): HTMLElement {
+function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
 	const rendered = new Set<string>();
 	const rows: RowEntry[] = [];
 	for (const info of group.markers) {
@@ -281,12 +409,9 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 
 	for (const row of rows) {
 		const hidden = !opts.showAll && !curated.has(row.primary.marker.id);
-		const { header, detail, open } = buildRow(row, hidden);
+		const { header, detail } = buildRow(row, hidden, rowOpen);
 		wrap.appendChild(header);
 		wrap.appendChild(detail);
-		const rowRef: RowRef = { header, open };
-		rowsById.set(row.primary.marker.id, rowRef);
-		if (row.secondary) rowsById.set(row.secondary.marker.id, rowRef);
 	}
 
 	return wrap;
@@ -326,7 +451,7 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 	return head;
 }
 
-function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail: HTMLElement; open: () => void } {
+function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController): { header: HTMLElement; detail: HTMLElement } {
 	const { primary, secondary } = row;
 
 	const header = createDiv();
@@ -351,13 +476,12 @@ function buildRow(row: RowEntry, hidden: boolean): { header: HTMLElement; detail
 	detail.className = "hlth-detail";
 	detail.appendChild(buildDetailContent(row));
 
-	const setOpen = (open: boolean) => {
-		header.classList.toggle("hlth-open", open);
-		detail.classList.toggle("hlth-open", open);
-	};
-	header.addEventListener("click", () => setOpen(!header.classList.contains("hlth-open")));
+	const markerId = primary.marker.id;
+	header.addEventListener("click", () => rowOpen.toggle(markerId));
+	rowOpen.register(markerId, { header, detail });
+	if (secondary) rowOpen.register(secondary.marker.id, { header, detail });
 
-	return { header, detail, open: () => setOpen(true) };
+	return { header, detail };
 }
 
 function buildNameCell(info: MarkerStatusInfo): HTMLElement {
@@ -373,7 +497,12 @@ function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 	const target = formatTargetText(marker);
 	const rangeText = `Normal ${formatRangeText(info.band, marker)}${target ? ` · ${target}` : ""}`;
 
-	cell.addEventListener("mouseenter", () => showTooltip(cell, marker.blurb, rangeText));
+	// Skip the tooltip when this row is already unfolded -- the detail panel (buildDetailContent)
+	// shows the same blurb, so the tooltip on top of it is just duplicated information.
+	cell.addEventListener("mouseenter", () => {
+		if (cell.closest(".hlth-row")?.classList.contains("hlth-open")) return;
+		showTooltip(cell, marker.blurb, rangeText);
+	});
 	cell.addEventListener("mouseleave", hideTooltip);
 
 	return cell;

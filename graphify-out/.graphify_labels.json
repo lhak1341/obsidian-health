@@ -102,5 +102,7 @@
   "100": "Ticket: Planner Surface + Bases View",
   "101": "Ticket: Scaffold Plugin + Core Test Runner",
   "102": "Ticket: Settings Tab + Profile Add/Edit",
-  "103": "eslint.config.mjs"
+  "103": "eslint.config.mjs",
+  "104": "dashboard.ts",
+  "105": "deploy.mjs"
 }

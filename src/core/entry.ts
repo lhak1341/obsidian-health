@@ -187,8 +187,8 @@ export function buildVisitValues(entries: FieldEntry[]): Record<string, number |
 	return values;
 }
 
-export function buildVisitFrontmatter(person: string, date: string, values: Record<string, number | string>): Record<string, unknown> {
-	return { type: "lab-visit", person, date, ...values };
+export function buildVisitFrontmatter(person: string, date: string, values: Record<string, number | string>, facility?: string): Record<string, unknown> {
+	return { type: "lab-visit", person, date, ...(facility ? { facility } : {}), ...values };
 }
 
 export interface SummaryLine {

@@ -133,13 +133,14 @@ function parseVisitNote(fm: Record<string, unknown>): VisitNote | null {
 
 	const values: Record<string, number | string> = {};
 	for (const [key, value] of Object.entries(fm)) {
-		if (key === "type" || key === "person" || key === "date") continue;
+		if (key === "type" || key === "person" || key === "date" || key === "facility") continue;
 		if (typeof value === "number" || typeof value === "string") {
 			values[key] = value;
 		}
 	}
 
-	return { person: fm.person, date: fm.date, values };
+	const facility = typeof fm.facility === "string" ? fm.facility : undefined;
+	return { person: fm.person, date: fm.date, values, ...(facility ? { facility } : {}) };
 }
 
 function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileNote | null {

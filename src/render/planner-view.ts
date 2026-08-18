@@ -1,5 +1,6 @@
 import type { MarkerNote, PlanNote } from "../core/types";
 import { formatRawValue } from "./format";
+import { iconFor } from "./icons";
 
 export interface PlannerRenderOptions {
 	backlog: MarkerNote[];
@@ -24,17 +25,22 @@ function buildHeader(opts: PlannerRenderOptions): HTMLElement {
 	const top = createDiv();
 	top.className = "hlth-top";
 
-	const title = createSpan();
-	title.className = "hlth-title";
-	title.textContent = "Planner";
-	top.appendChild(title);
+	const left = createDiv();
+	left.className = "hlth-top-left";
+	top.appendChild(left);
 
 	const back = createEl("button");
 	back.type = "button";
 	back.className = "hlth-showall-btn";
-	back.textContent = "Health";
+	back.appendChild(iconFor("arrow-left"));
+	back.appendChild(document.createTextNode("Health"));
 	back.addEventListener("click", () => opts.onOpenDashboard());
-	top.appendChild(back);
+	left.appendChild(back);
+
+	const title = createSpan();
+	title.className = "hlth-title";
+	title.textContent = "Planner";
+	left.appendChild(title);
 
 	return top;
 }

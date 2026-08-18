@@ -67,7 +67,8 @@ export class HealthView extends ItemView {
 				this.showAll = !this.showAll;
 				void this.refresh();
 			},
-			onAddVisit: () => void this.plugin.openAddVisitModal(),
+			onAddVisit: () => void this.plugin.openVisitEditor(),
+			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit") : undefined,
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
 			onOpenConcern: (key, label) => this.openConcernBase(key, label),
 			profiles: snapshot.profiles.map((p) => p.person),

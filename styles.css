@@ -4,7 +4,8 @@
 
 /* ── Token layer (scoped to view root) ──────────────────────────────────── */
 .health-dashboard-outer,
-.health-planner-outer {
+.health-planner-outer,
+.health-visit-editor-outer {
 	--hlth-bg: var(--background-primary, #ffffff);
 	--hlth-bg2: var(--background-secondary, #f6f6f6);
 	--hlth-bg3: var(--background-secondary-alt, #ececec);
@@ -35,6 +36,7 @@
 	font-family: var(--hlth-fb);
 	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
 	background-size: 14px 14px;
+	container-type: inline-size;
 }
 
 svg.hlth-ic {
@@ -86,6 +88,14 @@ svg.hlth-ic {
 	display: inline-block;
 }
 
+.hlth-title {
+	font-family: var(--hlth-fh);
+	font-size: 18px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	color: var(--hlth-fg1);
+}
+
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
 .hlth-top {
 	display: flex;
@@ -113,7 +123,9 @@ svg.hlth-ic {
    ships a default `<button>` skin (solid `--interactive-normal` fill) that otherwise beats a
    bare single-class selector on specificity, silently overriding `background: transparent` and
    the border color. Two classes' worth of specificity is what actually wins that fight. */
-.hlth-dash .hlth-pill {
+.hlth-dash .hlth-pill,
+.hlth-planner .hlth-pill,
+.hlth-visit-editor .hlth-pill {
 	font-family: var(--hlth-fh);
 	font-size: 12px;
 	font-weight: 600;
@@ -126,12 +138,16 @@ svg.hlth-ic {
 	box-shadow: none;
 }
 
-.hlth-dash .hlth-pill:hover {
+.hlth-dash .hlth-pill:hover,
+.hlth-planner .hlth-pill:hover,
+.hlth-visit-editor .hlth-pill:hover {
 	background: var(--hlth-bg2);
 	color: var(--hlth-fg1);
 }
 
-.hlth-dash .hlth-pill-active {
+.hlth-dash .hlth-pill-active,
+.hlth-planner .hlth-pill-active,
+.hlth-visit-editor .hlth-pill-active {
 	background: var(--interactive-accent, var(--hlth-fg1));
 	color: var(--text-on-accent, var(--hlth-bg));
 	border-color: transparent;
@@ -162,7 +178,9 @@ svg.hlth-ic {
 	flex: none;
 }
 
-.hlth-dash .hlth-showall-btn {
+.hlth-dash .hlth-showall-btn,
+.hlth-planner .hlth-showall-btn,
+.hlth-visit-editor .hlth-showall-btn {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -178,17 +196,23 @@ svg.hlth-ic {
 	cursor: pointer;
 }
 
-.hlth-dash .hlth-showall-btn:hover {
+.hlth-dash .hlth-showall-btn:hover,
+.hlth-planner .hlth-showall-btn:hover,
+.hlth-visit-editor .hlth-showall-btn:hover {
 	background: var(--hlth-bg2);
 	color: var(--hlth-fg1);
 }
 
-.hlth-dash .hlth-showall-btn:focus-visible {
+.hlth-dash .hlth-showall-btn:focus-visible,
+.hlth-planner .hlth-showall-btn:focus-visible,
+.hlth-visit-editor .hlth-showall-btn:focus-visible {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: 2px;
 }
 
-.hlth-dash .hlth-showall-btn.hlth-btn-on {
+.hlth-dash .hlth-showall-btn.hlth-btn-on,
+.hlth-planner .hlth-showall-btn.hlth-btn-on,
+.hlth-visit-editor .hlth-showall-btn.hlth-btn-on {
 	color: var(--interactive-accent);
 	border-color: color-mix(in srgb, var(--interactive-accent) 45%, var(--hlth-border));
 }
@@ -265,38 +289,67 @@ svg.hlth-ic {
 	gap: 8px;
 }
 
-/* ── Concern groups (pinned columns: left=Vitals/Cardiometabolic, center=Blood Count, right=rest) ── */
+/* ── Concern groups ──────────────────────────────────────────────────────────
+   dashboard-view.ts renders THREE tiers up front (wide/medium/narrow -- each its own lane grouping
+   of the same concern groups), and only one is ever visible at a time, picked by the `@container`
+   rules below. This -- not CSS repositioning a single flat set of groups -- is deliberate: a lane
+   is a flex row (`.hlth-lane` per lane, `align-items: flex-start`), and flexbox has no shared
+   cross-lane row track, so one very tall group in one lane can never inflate another lane's height.
+   CSS Grid was tried first and doesn't have that property (grid rows are shared width-wise across
+   every column), which silently produced huge blank gaps whenever a short lane's item landed in
+   the same auto-placed row index as a tall item from another lane. */
 .hlth-groups {
 	margin-top: 10px;
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-	align-items: start;
 }
 
-.hlth-col {
+.hlth-tier {
+	display: none;
+}
+
+.hlth-tier-wide {
+	display: flex;
+	align-items: flex-start;
+}
+
+.hlth-lane {
+	flex: 1 1 0;
 	min-width: 0;
 }
 
-.hlth-col + .hlth-col {
+.hlth-lane + .hlth-lane {
 	border-left: 1px solid var(--hlth-border);
-}
-
-/* Breathing room around the divider lines between columns -- matches `.hlth-groups`'s own
-   10px margin-top (the gap above the whole 3-column row), not applied to the outer edges. */
-.hlth-col:first-child {
-	padding-right: 10px;
-}
-
-.hlth-col:not(:first-child):not(:last-child) {
+	margin-left: 10px;
 	padding-left: 10px;
-	padding-right: 10px;
 }
 
-.hlth-col:last-child:not(:first-child) {
-	padding-left: 10px;
+/* Medium: 2 lanes. CBC/Blood is by far the longest single group, so it keeps a lane to itself,
+   joined there by Cancer/Immunity (dashboard-view.ts's `mediumLane`) -- leaves the other lane as
+   just Vitals/Cardiometabolic plus Everything Else, instead of one lane carrying 4 groups against
+   the other's 1. */
+@container (min-width: 740.01px) and (max-width: 1080px) {
+	.hlth-tier-wide {
+		display: none;
+	}
+
+	.hlth-tier-medium {
+		display: flex;
+		align-items: flex-start;
+	}
+}
+
+/* Narrow: 1 lane, full width -- reads top-to-bottom in the same pinned order as the wide tier. */
+@container (max-width: 740px) {
+	.hlth-tier-wide {
+		display: none;
+	}
+
+	.hlth-tier-narrow {
+		display: flex;
+	}
 }
 
 .hlth-grp {
+	min-width: 0;
 	margin-bottom: 18px;
 	padding: 0 4px;
 }
@@ -617,7 +670,216 @@ svg.hlth-chart {
 	padding: 60px 20px;
 }
 
-/* ── Add lab visit modal ─────────────────────────────────────────────────── */
+/* ── Visit editor page ────────────────────────────────────────────────────── */
+.hlth-visit-editor {
+	height: 100%;
+	overflow-y: auto;
+	box-sizing: border-box;
+	padding: 22px 28px 20px;
+	color: var(--hlth-fg1);
+	font-family: var(--hlth-fb);
+	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
+	background-size: 14px 14px;
+}
+
+/* Person/date (or, in edit mode, person/visit) picker row. */
+.hlth-editor-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 10px 0 16px;
+	border-bottom: 1px solid var(--hlth-border);
+	margin-bottom: 16px;
+}
+
+.hlth-editor-meta-fields {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 20px;
+}
+
+.hlth-editor-save {
+	align-self: flex-end;
+}
+
+.hlth-editor-field {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.hlth-editor-select {
+	font-family: var(--hlth-fm);
+	font-size: 12.5px;
+	color: var(--hlth-fg1);
+	background: var(--hlth-bg2);
+	border: 1px solid var(--hlth-border);
+	border-radius: 4px;
+	padding: 5px 8px;
+	box-shadow: none;
+	min-width: 150px;
+}
+
+/* One card per panel -- the physical lab report's own grouping (CLAUDE.md: panel is the
+   Add Visit form's axis, distinct from the dashboard's concern grouping). Auto-fill so a wide
+   tab shows several panels side by side instead of one long single-column scroll. */
+/* CSS grid places item 5+ on a new grid row that starts only below the TALLEST card in row 1
+   (e.g. a 30-row Blood panel) -- masonry-ish multi-column flow instead, so a short panel like
+   Vitals lands wherever height-balancing puts it instead of stranded below the longest sibling. */
+/* Explicit 3-column pin (PANEL_LAYOUT in visit-editor-view.ts), same idea as the dashboard's
+   `.hlth-groups`/`.hlth-lane`: a fixed editorial grouping, not auto-balanced by content height.
+   Safe to use CSS grid here (unlike the dashboard) because each `.hlth-editor-col` is one grid
+   item holding several stacked cards via normal block flow, not several items sharing grid rows. */
+.hlth-editor-panels {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 14px;
+	align-items: start;
+}
+
+.hlth-editor-col {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+.hlth-editor-panel {
+	min-width: 0;
+	border: 1px solid var(--hlth-border);
+	border-radius: 4px;
+	padding: 2px 10px 6px;
+}
+
+/* Same treatment as the dashboard's `.hlth-grp-head` (flex/inset/hover), minus `cursor: pointer` --
+   unlike a concern group header, this one doesn't open anything on click. */
+.hlth-editor-panel-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 4px -2px 5px;
+	padding: 3px 6px;
+	border-radius: 4px;
+}
+
+.hlth-editor-panel-head:hover {
+	background: var(--hlth-bg2);
+}
+
+.hlth-editor-panel-head svg.hlth-ic {
+	color: var(--hlth-fg3);
+	font-size: 13px;
+}
+
+.hlth-editor-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 5px 0;
+	margin: 0 -4px;
+	padding-left: 4px;
+	padding-right: 4px;
+	border-top: 1px solid var(--hlth-border);
+	border-radius: 4px;
+}
+
+.hlth-editor-panel-head + .hlth-editor-row {
+	border-top: none;
+}
+
+.hlth-editor-row:hover {
+	background: var(--hlth-bg2);
+}
+
+.hlth-editor-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-family: var(--hlth-fb);
+	font-size: 12.5px;
+	color: var(--hlth-fg1);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.hlth-editor-controls {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	flex: none;
+}
+
+.hlth-editor-value {
+	width: 62px;
+	font-family: var(--hlth-fm);
+	font-size: 12.5px;
+	text-align: right;
+	color: var(--hlth-fg1);
+	background: transparent;
+	border: none;
+	border-bottom: 1px solid var(--hlth-border);
+	border-radius: 0;
+	padding: 2px 1px;
+	box-shadow: none;
+}
+
+.hlth-editor-value:focus {
+	border-bottom-color: var(--interactive-accent);
+	outline: none;
+	box-shadow: none;
+}
+
+.hlth-editor-value::placeholder {
+	color: var(--hlth-fg4);
+}
+
+.hlth-editor-value-pair {
+	width: 40px;
+}
+
+.hlth-editor-value-wide {
+	width: 100px;
+	text-align: left;
+}
+
+.hlth-editor-sep {
+	font-family: var(--hlth-fm);
+	font-size: 12px;
+	color: var(--hlth-fg4);
+}
+
+.hlth-editor-unit {
+	min-width: 30px;
+	font-family: var(--hlth-fm);
+	font-size: 10px;
+	color: var(--hlth-fg3);
+}
+
+.hlth-editor-unit-select {
+	font-family: var(--hlth-fm);
+	font-size: 10.5px;
+	color: var(--hlth-fg2);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+	max-width: 90px;
+}
+
+.hlth-editor-qualitative {
+	font-size: 12px;
+	color: var(--hlth-fg1);
+	background: var(--hlth-bg2);
+	border: 1px solid var(--hlth-border);
+	border-radius: 4px;
+	padding: 3px 6px;
+	max-width: 120px;
+}
+
+/* Review/errors/add-marker blocks, shared with the compact panel rows above. */
 .hlth-modal-errors {
 	color: var(--color-red);
 	font-size: 12.5px;
@@ -954,6 +1216,8 @@ svg.hlth-widget-chip-unit-flag {
 	display: flex;
 	flex-direction: column;
 	gap: 22px;
+	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
+	background-size: 14px 14px;
 }
 
 .hlth-planner-plan,
@@ -1001,9 +1265,15 @@ svg.hlth-widget-chip-unit-flag {
 	grid-template-columns: minmax(120px, 1fr) 90px 70px 60px auto;
 	align-items: center;
 	gap: 10px;
-	padding: 8px 2px;
+	padding: 8px 4px;
+	margin: 0 -4px;
 	border-top: 1px solid var(--hlth-border);
+	border-radius: 4px;
 	font-size: 13px;
+}
+
+.hlth-planner-row:hover {
+	background: var(--hlth-bg2);
 }
 
 .hlth-planner-name {

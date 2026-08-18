@@ -1,16 +1,16 @@
-# Graph Report - obsidian-health  (2026-08-06)
+# Graph Report - obsidian-health  (2026-08-18)
 
 ## Corpus Check
-- 43 files · ~23,351 words
+- 44 files · ~23,700 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 515 nodes · 1024 edges · 104 communities (17 shown, 87 thin omitted)
+- 531 nodes · 1067 edges · 106 communities (19 shown, 87 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.7)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `db17d327`
+- Built from commit: `5f3adcdf`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -116,62 +116,64 @@
 - Ticket: Planner Surface + Bases View
 - Ticket: Scaffold Plugin + Core Test Runner
 - Ticket: Settings Tab + Profile Add/Edit
+- dashboard.ts
+- deploy.mjs
 
 ## God Nodes (most connected - your core abstractions)
-1. `MarkerNote` - 24 edges
-2. `AddVisitModal` - 22 edges
-3. `HealthPlugin` - 21 edges
+1. `HealthVisitEditorView` - 29 edges
+2. `MarkerNote` - 26 edges
+3. `HealthPlugin` - 24 edges
 4. `VaultSnapshot` - 21 edges
-5. `HealthSettingTab` - 16 edges
-6. `computeDashboardModel()` - 14 edges
-7. `ProfileSection` - 14 edges
-8. `compilerOptions` - 14 edges
-9. `ProfileNote` - 13 edges
-10. `buildHistoryChart()` - 13 edges
+5. `iconFor()` - 16 edges
+6. `HealthSettingTab` - 16 edges
+7. `ProfileNote` - 15 edges
+8. `computeDashboardModel()` - 14 edges
+9. `ProfileSection` - 14 edges
+10. `compilerOptions` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `renameConcernInSettings()` --calls--> `normalizeConcernKey()`  [EXTRACTED]
-  src/settings.ts → src/core/dashboard.ts
-- `renameConcern()` --calls--> `normalizeConcernKey()`  [EXTRACTED]
-  src/vault/writer.ts → src/core/dashboard.ts
-- `resolveBandForEntry()` --calls--> `resolve()`  [EXTRACTED]
-  src/core/entry.ts → src/core/dashboard.ts
 - `writeFrontmatter()` --calls--> `resolve()`  [EXTRACTED]
   src/vault/writer.ts → src/core/dashboard.ts
 - `PanelGroup` --references--> `MarkerNote`  [EXTRACTED]
   src/core/entry.ts → src/core/types.ts
+- `MarkerRow` --references--> `MarkerNote`  [EXTRACTED]
+  src/core/entry.ts → src/core/types.ts
+- `MarkerStatusInfo` --references--> `MarkerNote`  [EXTRACTED]
+  src/core/model.ts → src/core/types.ts
+- `NewProfileDraft` --references--> `PersonSex`  [EXTRACTED]
+  src/settings-profile-section.ts → src/core/types.ts
 
 ## Import Cycles
 - 3-file cycle: `src/main.ts -> src/settings-tab.ts -> src/settings-context.ts -> src/main.ts`
-- 4-file cycle: `src/main.ts -> src/settings-tab.ts -> src/settings-concern-section.ts -> src/settings-context.ts -> src/main.ts`
 - 4-file cycle: `src/main.ts -> src/settings-tab.ts -> src/settings-profile-section.ts -> src/settings-context.ts -> src/main.ts`
+- 4-file cycle: `src/main.ts -> src/settings-tab.ts -> src/settings-concern-section.ts -> src/settings-context.ts -> src/main.ts`
 
 ## Hyperedges (group relationships)
 - **Four Frontmatter-First Note Kinds Forming the Vault Schema** — docs_prd_note_kinds, docs_prd_visit_note, docs_prd_marker_note, docs_prd_profile_note, docs_prd_plan_note [EXTRACTED 1.00]
 - **mountX Host-Handshake Pattern and Its Health-Plugin Instantiations** — claude_mountx_handshake_pattern, docs_prd_mounthealthwidget, docs_prd_lhak_dashboard_widget, claude_lhak_dashboard_widget_stale_gotcha [INFERRED 0.85]
 - **PRD Suggested Build Order Realized as the Ticket Dependency Chain** — docs_prd_suggested_build_order, tickets_scaffold_plugin, tickets_domain_types_vault_reader, tickets_domain_core, tickets_dashboard_itemview [EXTRACTED 1.00]
 
-## Communities (104 total, 87 thin omitted)
+## Communities (106 total, 87 thin omitted)
 
 ### Community 0 - "Chart Rendering"
 Cohesion: 0.07
-Nodes (67): Arrow, ArrowDirection, ArrowTone, ConcernGroup, DashboardModel, DashboardSettings, MarkerStatusInfo, SeriesPoint (+59 more)
+Nodes (67): pairByPartner(), pairMarkerNotes(), DashboardModel, MarkerStatusInfo, buildRow(), renderBasesMarkers(), columnForConcern(), CONCERN_CONFIG (+59 more)
 
 ### Community 1 - "Planner Backlog Logic"
 Cohesion: 0.08
 Nodes (37): computePlannerBacklog(), latestPlanNote(), PRIORITY_RANK, priorityRank(), CandidateStatus, Direction, MarkerRange, PlanNote (+29 more)
 
 ### Community 2 - "Visit Entry Validation"
-Cohesion: 0.10
-Nodes (27): convert(), isSoftWarn(), buildPreSaveSummary(), buildVisitValues(), checkDuplicateMarkerId(), evaluateNumericField(), evaluateQualitativeField(), evaluateVisitFields() (+19 more)
+Cohesion: 0.08
+Nodes (29): convert(), isSoftWarn(), buildPreSaveSummary(), buildVisitValues(), checkDuplicateMarkerId(), evaluateNumericField(), evaluateQualitativeField(), evaluateVisitFields() (+21 more)
 
 ### Community 3 - "Concern Grouping & Registry"
-Cohesion: 0.12
-Nodes (12): parseAllergies(), validateProfileInput(), PersonSex, ProfileNote, renderDragReorderList(), ConcernSection, saveOrder(), SettingsSectionContext (+4 more)
+Cohesion: 0.14
+Nodes (9): PersonSex, renderDragReorderList(), ConcernSection, saveOrder(), SettingsSectionContext, NewProfileDraft, ProfileSection, VaultSnapshot (+1 more)
 
 ### Community 4 - "Bases View & Dashboard Model"
-Cohesion: 0.08
-Nodes (23): HealthBasesView, ageAt(), arrowTone(), buildConcernGroups(), buildSeries(), computeDashboardModel(), deriveArrow(), deriveStatus() (+15 more)
+Cohesion: 0.11
+Nodes (10): HealthBasesView, HealthView, HealthPlugin, HealthWidgetHandle, HealthWidgetOptions, renderHealthWidgetEmpty(), DEFAULT_SETTINGS, HealthPluginSettings (+2 more)
 
 ### Community 7 - "Package Dependencies"
 Cohesion: 0.06
@@ -182,8 +184,8 @@ Cohesion: 0.10
 Nodes (19): DOM, ES2020, node, src/**/*.ts, compilerOptions, baseUrl, esModuleInterop, isolatedModules (+11 more)
 
 ### Community 9 - "Vault Reader/Writer"
-Cohesion: 0.22
-Nodes (20): buildVisitFrontmatter(), MarkerKind, renameConcernInSettings(), filesUnder(), ensureFolder(), findMarkerFile(), findProfileFile(), findVisitFile() (+12 more)
+Cohesion: 0.21
+Nodes (21): normalizeConcernKey(), buildVisitFrontmatter(), MarkerKind, renameConcernInSettings(), filesUnder(), ensureFolder(), findMarkerFile(), findProfileFile() (+13 more)
 
 ### Community 11 - "Concern/Panel Axes & Multi-Profile"
 Cohesion: 0.17
@@ -202,12 +204,20 @@ Cohesion: 0.40
 Nodes (4): Development, Disclosures, Health, What it does
 
 ### Community 41 - "PRD Out of Scope"
-Cohesion: 0.15
-Nodes (12): Architecture reviews, Data authoring gotcha, Obsidian button styling gotcha, obsidian-health, Obsidian metadataCache write-lag gotcha, Obsidian settings tab gotcha, Obsidian vault ordering gotcha, Obsidian view rendering gotcha (+4 more)
+Cohesion: 0.29
+Nodes (6): Domain, obsidian-health, Process, Structure, Testing, Write seam
 
 ### Community 43 - "PRD Problem Statement"
 Cohesion: 0.44
 Nodes (11): ResolvedRange, buildBandRect(), buildHistoryChart(), buildSecondaryPath(), buildSparkline(), HistoryChartOptions, numericPoints(), paddedDomain() (+3 more)
+
+### Community 104 - "dashboard.ts"
+Cohesion: 0.15
+Nodes (23): ageAt(), arrowTone(), buildConcernGroups(), buildSeries(), computeDashboardModel(), deriveArrow(), deriveStatus(), groupByConcern() (+15 more)
+
+### Community 105 - "deploy.mjs"
+Cohesion: 0.40
+Nodes (3): OPTIONAL, REQUIRED, targets
 
 ## Knowledge Gaps
 - **131 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+126 more)
@@ -217,17 +227,17 @@ Nodes (11): ResolvedRange, buildBandRect(), buildHistoryChart(), buildSecondaryP
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MarkerNote` connect `Visit Entry Validation` to `Chart Rendering`, `Planner Backlog Logic`, `Concern Grouping & Registry`, `Bases View & Dashboard Model`, `Vault Reader/Writer`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+- **Why does `MarkerNote` connect `Visit Entry Validation` to `Chart Rendering`, `Planner Backlog Logic`, `Concern Grouping & Registry`, `dashboard.ts`, `Vault Reader/Writer`?**
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+- **Why does `HealthVisitEditorView` connect `Visit Entry Validation` to `Concern Grouping & Registry`, `Bases View & Dashboard Model`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **Why does `VaultSnapshot` connect `Concern Grouping & Registry` to `Planner Backlog Logic`, `Visit Entry Validation`, `Bases View & Dashboard Model`, `Plugin Lifecycle & Views`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
-- **Why does `HealthPlugin` connect `Bases View & Dashboard Model` to `Planner Backlog Logic`, `Concern Grouping & Registry`, `Plugin Lifecycle & Views`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **What connects `id`, `name`, `version` to the rest of the system?**
   _131 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Chart Rendering` be split into smaller, more focused modules?**
-  _Cohesion score 0.07382091592617908 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07228070175438596 - nodes in this community are weakly interconnected._
 - **Should `Planner Backlog Logic` be split into smaller, more focused modules?**
   _Cohesion score 0.07918367346938776 - nodes in this community are weakly interconnected._
 - **Should `Visit Entry Validation` be split into smaller, more focused modules?**
-  _Cohesion score 0.10453283996299723 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08080808080808081 - nodes in this community are weakly interconnected._

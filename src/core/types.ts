@@ -43,6 +43,7 @@ export interface VisitNote {
 	person: string;
 	date: string;
 	values: Record<string, number | string>;
+	facility?: string;
 }
 
 export interface ProfileNote {

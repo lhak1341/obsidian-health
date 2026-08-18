@@ -1,12 +1,12 @@
 import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { HEALTH_BASES_VIEW_TYPE, HealthBasesView } from "./bases-view";
 import { computeDashboardModel } from "./core/dashboard";
-import { AddVisitModal } from "./modals/add-visit-modal";
 import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
 import { DEFAULT_SETTINGS, type HealthPluginSettings, type WidgetTier } from "./settings";
 import { HEALTH_VIEW_TYPE, HealthView } from "./dashboard-view";
+import { HEALTH_VISIT_EDITOR_VIEW_TYPE, HealthVisitEditorView } from "./visit-editor-view";
 import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
 
 export interface HealthWidgetHandle {
@@ -32,6 +32,7 @@ export default class HealthPlugin extends Plugin {
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
 		this.registerView(HEALTH_PLANNER_VIEW_TYPE, (leaf) => new HealthPlannerView(leaf, this));
+		this.registerView(HEALTH_VISIT_EDITOR_VIEW_TYPE, (leaf) => new HealthVisitEditorView(leaf, this));
 		this.registerBasesView(HEALTH_BASES_VIEW_TYPE, {
 			name: "Health markers",
 			icon: "heart-pulse",
@@ -54,7 +55,7 @@ export default class HealthPlugin extends Plugin {
 		this.addCommand({
 			id: "add-lab-visit",
 			name: "Add lab visit",
-			callback: () => void this.openAddVisitModal(),
+			callback: () => void this.openVisitEditor(),
 		});
 	}
 
@@ -62,7 +63,20 @@ export default class HealthPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async openAddVisitModal(): Promise<void> {
+	/** Dashboard/Planner/Visit-editor share a single tab -- switching between them swaps that one
+	 *  leaf's view type in place instead of spawning a new tab per view. Finds any leaf already
+	 *  showing one of the three, preferring an exact match so a same-type reopen doesn't re-tab. */
+	private findHealthLeaf(exactType: string): WorkspaceLeaf | undefined {
+		const { workspace } = this.app;
+		return (
+			workspace.getLeavesOfType(exactType)[0] ??
+			workspace.getLeavesOfType(HEALTH_VIEW_TYPE)[0] ??
+			workspace.getLeavesOfType(HEALTH_PLANNER_VIEW_TYPE)[0] ??
+			workspace.getLeavesOfType(HEALTH_VISIT_EDITOR_VIEW_TYPE)[0]
+		);
+	}
+
+	async openVisitEditor(initialDate?: string, mode: "add" | "edit" = "add"): Promise<void> {
 		const snapshot = await this.scanVault();
 		const defaultPerson = this.settings.defaultProfile ?? snapshot.profiles[0]?.person;
 		if (!defaultPerson) {
@@ -70,7 +84,14 @@ export default class HealthPlugin extends Plugin {
 			return;
 		}
 
-		new AddVisitModal(this.app, this.settings, snapshot, defaultPerson, () => this.refreshOpenViews()).open();
+		const { workspace } = this.app;
+		const leaf = this.findHealthLeaf(HEALTH_VISIT_EDITOR_VIEW_TYPE) ?? workspace.getLeaf("tab");
+		await leaf.setViewState({
+			type: HEALTH_VISIT_EDITOR_VIEW_TYPE,
+			active: true,
+			state: { person: defaultPerson, initialDate, mode },
+		});
+		await workspace.revealLeaf(leaf);
 	}
 
 	refreshOpenViews(): void {
@@ -130,11 +151,8 @@ export default class HealthPlugin extends Plugin {
 	async activateView(): Promise<void> {
 		const { workspace } = this.app;
 
-		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(HEALTH_VIEW_TYPE)[0] ?? null;
-		if (!leaf) {
-			leaf = workspace.getLeaf("tab");
-			await leaf.setViewState({ type: HEALTH_VIEW_TYPE, active: true });
-		}
+		const leaf = this.findHealthLeaf(HEALTH_VIEW_TYPE) ?? workspace.getLeaf("tab");
+		if (leaf.view.getViewType() !== HEALTH_VIEW_TYPE) await leaf.setViewState({ type: HEALTH_VIEW_TYPE, active: true });
 
 		await workspace.revealLeaf(leaf);
 	}
@@ -142,11 +160,8 @@ export default class HealthPlugin extends Plugin {
 	async activatePlannerView(): Promise<void> {
 		const { workspace } = this.app;
 
-		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(HEALTH_PLANNER_VIEW_TYPE)[0] ?? null;
-		if (!leaf) {
-			leaf = workspace.getLeaf("tab");
-			await leaf.setViewState({ type: HEALTH_PLANNER_VIEW_TYPE, active: true });
-		}
+		const leaf = this.findHealthLeaf(HEALTH_PLANNER_VIEW_TYPE) ?? workspace.getLeaf("tab");
+		if (leaf.view.getViewType() !== HEALTH_PLANNER_VIEW_TYPE) await leaf.setViewState({ type: HEALTH_PLANNER_VIEW_TYPE, active: true });
 
 		await workspace.revealLeaf(leaf);
 	}
