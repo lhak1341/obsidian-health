@@ -52,6 +52,11 @@ fallback). This exists because `getFileCache` can return pre-write data after
   `Blood Count` concern and broke column placement for that whole group.
 - `vitest.config.ts`'s `include` covers `src/core|vault|render/**`. A test file outside
   those globs is silently skipped by `bun run test`.
+- Not every `render/*.ts` file is testable even for its pure exports: `dashboard-view.ts`,
+  `visit-editor-view.ts`, `planner-view.ts` import `icons.ts`, which value-imports `obsidian`
+  (unresolvable outside the app). Pure logic that needs coverage from inside one of these goes
+  in its own Obsidian-free sibling file (see `tier-lanes.ts`), not tested by importing the
+  render file directly.
 - Settings-tab classes cannot be instantiated in tests. Extract the decision logic —
   see `SettingsDirtyTracker` (`settings-dirty-tracker.ts`) and `saveOrder`
   (`settings-context.ts`), both tested with zero Obsidian imports.

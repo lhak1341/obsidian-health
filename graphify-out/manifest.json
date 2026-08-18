@@ -15,13 +15,13 @@
     "semantic_hash": ""
   },
   "src/bases-view.ts": {
-    "mtime": 1785976212.0023766,
-    "ast_hash": "1188145517c1e084b135895a7d156409",
+    "mtime": 1787067111.2435677,
+    "ast_hash": "f0d7660782b83afc42f8e2910133fdfa",
     "semantic_hash": ""
   },
   "src/core/dashboard.ts": {
-    "mtime": 1787045484.1066232,
-    "ast_hash": "d7a2192c938da90c2951b94905259f7c",
+    "mtime": 1787067077.5663574,
+    "ast_hash": "f97520302c64b57ea1b38441de1ac28a",
     "semantic_hash": ""
   },
   "src/core/entry.ts": {
@@ -30,9 +30,9 @@
     "semantic_hash": ""
   },
   "src/core/model.ts": {
-    "mtime": 1785766580.4567635,
-    "ast_hash": "6d558bd899f2f2accf3cad813b22b5e2",
-    "semantic_hash": "6d558bd899f2f2accf3cad813b22b5e2"
+    "mtime": 1787065622.4333823,
+    "ast_hash": "98d7e4f975b9121d8df3373b907ca0b2",
+    "semantic_hash": ""
   },
   "src/core/planner.ts": {
     "mtime": 1785574728.7178822,
@@ -45,14 +45,14 @@
     "semantic_hash": ""
   },
   "src/main.ts": {
-    "mtime": 1787062477.5464644,
-    "ast_hash": "af2804aa9ead6832e12969ef132d267c",
+    "mtime": 1787067098.06094,
+    "ast_hash": "4dc01f507cf97b193a660cdb89dc704e",
     "semantic_hash": ""
   },
   "src/planner-view.ts": {
-    "mtime": 1785574914.3640778,
-    "ast_hash": "af4a834573886fd01ba206a130621131",
-    "semantic_hash": "af4a834573886fd01ba206a130621131"
+    "mtime": 1787067104.6761048,
+    "ast_hash": "e54c4c102a10a73fbf65fe44d06760bb",
+    "semantic_hash": ""
   },
   "src/render/bases-view.ts": {
     "mtime": 1785976212.0024242,
@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "src/render/dashboard-view.ts": {
-    "mtime": 1787062450.0271714,
-    "ast_hash": "ac58cb947e6999bbc7925e1c947a0283",
+    "mtime": 1787066403.397194,
+    "ast_hash": "1e6f97c5ccc5a9d3b1796f084134cb36",
     "semantic_hash": ""
   },
   "src/render/drag-reorder.ts": {
@@ -80,8 +80,8 @@
     "semantic_hash": "41459c2915fa0bb555660c5d6f4caee4"
   },
   "src/render/format.ts": {
-    "mtime": 1787051329.9275901,
-    "ast_hash": "c34893ab9187b8e31db069101e7cdb53",
+    "mtime": 1787065641.0973341,
+    "ast_hash": "0be9e89f6b1f88fae6dd477d2ca66817",
     "semantic_hash": ""
   },
   "src/render/icon-suggest.ts": {
@@ -170,8 +170,8 @@
     "semantic_hash": "4a9adeb63132679ce77dcbaf789a35fe"
   },
   "CLAUDE.md": {
-    "mtime": 1787063131.3857944,
-    "ast_hash": "2ea7423cdc01b2f0512604dc5bb9ee0b",
+    "mtime": 1787067437.8455727,
+    "ast_hash": "faa5db700242406b9eb3e98558309e56",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -190,13 +190,13 @@
     "semantic_hash": "f2bcc0add8458c40358eb4188c45d1e3"
   },
   "src/dashboard-view.ts": {
-    "mtime": 1787062469.8119023,
-    "ast_hash": "c383b15b59567868699db4370558a183",
+    "mtime": 1787067119.5151322,
+    "ast_hash": "769c802dd4998fe0dc7ddb6f229ea010",
     "semantic_hash": ""
   },
   "docs/adr/0001-no-shared-rename-helper-in-settings-sections.md": {
-    "mtime": 1785941565.8822312,
-    "ast_hash": "f5f4e7729a10eac4d1d13dbbabbc7912",
+    "mtime": 1787065826.3538148,
+    "ast_hash": "9477aa58089ad317043ea02ca102655e",
     "semantic_hash": ""
   },
   "eslint.config.mjs": {
@@ -227,6 +227,16 @@
   "src/render/visit-editor-view.ts": {
     "mtime": 1787060310.1311646,
     "ast_hash": "53fda19cbf3cc6b36512266dab8bd35e",
+    "semantic_hash": ""
+  },
+  "src/render/tier-lanes.ts": {
+    "mtime": 1787066375.3516836,
+    "ast_hash": "63e4a62ceb32fd9869ec7e18ab9e2c6c",
+    "semantic_hash": ""
+  },
+  "docs/adr/0002-defer-typed-interface-for-dashboardviewstate.md": {
+    "mtime": 1787066628.3026333,
+    "ast_hash": "1d36907c47cf6365b92af0d7e2918858",
     "semantic_hash": ""
   }
 }

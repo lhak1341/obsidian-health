@@ -46,3 +46,15 @@ export interface DashboardModel {
 export interface DashboardSettings {
 	deadbandPct: number;
 }
+
+/** A marker's latest value, unit, series, band, and target resolved into one display unit
+ *  (canonical or alt) -- see `toDisplay` in dashboard.ts. Non-numeric fields (qualitative
+ *  readings, a marker with no target) pass through as `undefined`/unchanged rather than
+ *  converting. */
+export interface DisplayReading {
+	value: number | string | undefined;
+	unit: string | undefined;
+	series: SeriesPoint[];
+	band: ResolvedRange;
+	target: number | undefined;
+}

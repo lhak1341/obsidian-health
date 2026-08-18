@@ -1,6 +1,6 @@
 import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { HEALTH_BASES_VIEW_TYPE, HealthBasesView } from "./bases-view";
-import { computeDashboardModel } from "./core/dashboard";
+import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
 import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
@@ -78,7 +78,7 @@ export default class HealthPlugin extends Plugin {
 
 	async openVisitEditor(initialDate?: string, mode: "add" | "edit" = "add"): Promise<void> {
 		const snapshot = await this.scanVault();
-		const defaultPerson = this.settings.defaultProfile ?? snapshot.profiles[0]?.person;
+		const defaultPerson = resolveDefaultProfile(snapshot.profiles, this.settings.defaultProfile)?.person;
 		if (!defaultPerson) {
 			new Notice("Add a profile note before recording a lab visit.");
 			return;
@@ -125,8 +125,7 @@ export default class HealthPlugin extends Plugin {
 		const snapshot = await this.scanVault();
 		if (isDestroyed()) return;
 
-		const defaultPerson = this.settings.defaultProfile;
-		const profile = (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
+		const profile = resolveDefaultProfile(snapshot.profiles, this.settings.defaultProfile);
 
 		if (!profile) {
 			renderHealthWidgetEmpty(root, "No profile configured yet.");

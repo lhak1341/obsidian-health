@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { computeDashboardModel, convert, convertTo, isSoftWarn, resolve } from "./dashboard";
+import { computeDashboardModel, convert, convertTo, isSoftWarn, isToggleable, resolve, resolveDefaultProfile, toDisplay } from "./dashboard";
 import { realVaultFixture } from "./fixtures/real-vault";
-import type { DashboardSettings } from "./model";
+import type { DashboardSettings, MarkerStatusInfo } from "./model";
 import type { MarkerNote, ProfileNote, VisitNote } from "./types";
 
 function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
@@ -131,6 +131,112 @@ describe("isSoftWarn", () => {
 		const canonical = convert(1000, "mg/dL", m);
 
 		expect(isSoftWarn(canonical, { low: 3.6, high: 5.18 })).toBe(true);
+	});
+});
+
+describe("resolveDefaultProfile", () => {
+	it("resolves the configured default when it matches a real profile", () => {
+		const profiles = [profile({ person: "alice" }), profile({ person: "bob" })];
+
+		expect(resolveDefaultProfile(profiles, "bob")?.person).toBe("bob");
+	});
+
+	it("falls back to the first profile when no default is configured", () => {
+		const profiles = [profile({ person: "alice" }), profile({ person: "bob" })];
+
+		expect(resolveDefaultProfile(profiles, undefined)?.person).toBe("alice");
+	});
+
+	it("falls back to the first profile when the configured default no longer matches any profile", () => {
+		// Guards the bug a naive `defaultProfile ?? profiles[0]` has: a stale id (renamed/deleted
+		// person) is truthy, so `??` would keep it forever instead of falling through.
+		const profiles = [profile({ person: "alice" }), profile({ person: "bob" })];
+
+		expect(resolveDefaultProfile(profiles, "carol")?.person).toBe("alice");
+	});
+
+	it("returns undefined when there are no profiles at all", () => {
+		expect(resolveDefaultProfile([], "alice")).toBeUndefined();
+	});
+});
+
+describe("isToggleable", () => {
+	it("is true when both alt_unit and alt_factor are set", () => {
+		expect(isToggleable(marker({ altUnit: "mg/dL", altFactor: 0.0555 }))).toBe(true);
+	});
+
+	it("is false when either is missing", () => {
+		expect(isToggleable(marker())).toBe(false);
+		expect(isToggleable(marker({ altUnit: "mg/dL" }))).toBe(false);
+	});
+});
+
+function statusInfo(overrides: Partial<MarkerStatusInfo> = {}): MarkerStatusInfo {
+	return {
+		marker: marker(),
+		status: "good",
+		band: { low: 10, high: 50 },
+		series: [{ date: "2025-01-01", value: 20 }],
+		latest: { date: "2025-01-01", value: 20 },
+		...overrides,
+	};
+}
+
+describe("toDisplay", () => {
+	const toggleable = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555, optimalHigh: 40 });
+
+	it("passes canonical values through unchanged when not toggled", () => {
+		const info = statusInfo({ marker: toggleable, band: { low: 10, high: 50 }, latest: { date: "2025-01-01", value: 20 } });
+
+		const display = toDisplay(info, false);
+
+		expect(display).toEqual({ value: 20, unit: "mmol/L", series: info.series, band: { low: 10, high: 50 }, target: 40 });
+	});
+
+	it("converts value, series, band, and target together when toggled", () => {
+		const info = statusInfo({
+			marker: toggleable,
+			band: { low: 10, high: 50 },
+			series: [{ date: "2025-01-01", value: 20 }],
+			latest: { date: "2025-01-01", value: 20 },
+		});
+
+		const display = toDisplay(info, true);
+
+		expect(display.unit).toBe("mg/dL");
+		expect(display.value).toBeCloseTo(convertTo(20, "mg/dL", toggleable));
+		expect(display.series[0].value).toBeCloseTo(convertTo(20, "mg/dL", toggleable));
+		expect(display.band.low).toBeCloseTo(convertTo(10, "mg/dL", toggleable));
+		expect(display.band.high).toBeCloseTo(convertTo(50, "mg/dL", toggleable));
+		expect(display.target).toBeCloseTo(convertTo(40, "mg/dL", toggleable));
+	});
+
+	it("stays canonical when toggled but the marker has no alt unit", () => {
+		const m = marker({ unit: "U/L" });
+		const info = statusInfo({ marker: m, latest: { date: "2025-01-01", value: 20 } });
+
+		expect(toDisplay(info, true)).toEqual(toDisplay(info, false));
+	});
+
+	it("leaves a qualitative (string) reading and its series untouched even when toggled", () => {
+		const m = marker({ type: "qualitative", unit: undefined, altUnit: "alt", altFactor: 2 });
+		const info = statusInfo({
+			marker: m,
+			band: {},
+			series: [{ date: "2025-01-01", value: "Normal" }],
+			latest: { date: "2025-01-01", value: "Normal" },
+		});
+
+		const display = toDisplay(info, true);
+
+		expect(display.value).toBe("Normal");
+		expect(display.series).toEqual(info.series);
+	});
+
+	it("resolves value to undefined when there's no latest reading", () => {
+		const info = statusInfo({ latest: undefined });
+
+		expect(toDisplay(info, false).value).toBeUndefined();
 	});
 });
 

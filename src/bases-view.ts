@@ -1,5 +1,5 @@
 import { BasesView, type QueryController } from "obsidian";
-import { computeDashboardModel } from "./core/dashboard";
+import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
 import type HealthPlugin from "./main";
 import { renderBasesMarkers } from "./render/bases-view";
 
@@ -29,8 +29,7 @@ export class HealthBasesView extends BasesView {
 		const snapshot = await this.plugin.scanVault();
 		if (this.destroyed) return;
 
-		const person = this.plugin.settings.defaultProfile ?? snapshot.profiles[0]?.person;
-		const profile = snapshot.profiles.find((p) => p.person === person);
+		const profile = resolveDefaultProfile(snapshot.profiles, this.plugin.settings.defaultProfile);
 
 		this.containerEl.textContent = "";
 		if (!profile) {

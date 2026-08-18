@@ -1,4 +1,5 @@
 import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { resolveDefaultProfile } from "./core/dashboard";
 import { computePlannerBacklog, latestPlanNote } from "./core/planner";
 import type HealthPlugin from "./main";
 import { renderPlanner } from "./render/planner-view";
@@ -35,7 +36,7 @@ export class HealthPlannerView extends ItemView {
 
 	async refresh(): Promise<void> {
 		const snapshot = await this.plugin.scanVault();
-		const person = this.plugin.settings.defaultProfile ?? snapshot.profiles[0]?.person;
+		const person = resolveDefaultProfile(snapshot.profiles, this.plugin.settings.defaultProfile)?.person;
 
 		this.contentEl.empty();
 		this.contentEl.addClass("health-planner-outer");

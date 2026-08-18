@@ -5,6 +5,7 @@ import type {
 	ConcernGroup,
 	DashboardModel,
 	DashboardSettings,
+	DisplayReading,
 	MarkerStatusInfo,
 	ResolvedRange,
 	SeriesPoint,
@@ -59,6 +60,18 @@ export function computeDashboardModel(
 		concernGroups,
 		curated,
 	};
+}
+
+/** Resolves which profile a stateless view should default to: `settings.defaultProfile` if it
+ *  still matches a real profile, else the first one, else `undefined` when there are none. Every
+ *  caller here is stateless (recomputed fresh each time) -- a caller that needs to remember a
+ *  user's in-session pick across repaints (`HealthView`) layers that on top of this, it doesn't
+ *  belong in this function. Guards against a stale `defaultProfile` (pointing at a renamed/deleted
+ *  person) explicitly: a naive `defaultProfile ?? profiles[0]` would keep the stale id forever
+ *  instead of falling back, since `??` only substitutes on `null`/`undefined`, not on "doesn't
+ *  match anything". */
+export function resolveDefaultProfile(profiles: ProfileNote[], defaultPerson: string | undefined): ProfileNote | undefined {
+	return (defaultPerson && profiles.find((p) => p.person === defaultPerson)) || profiles[0];
 }
 
 /** Folds a raw frontmatter concern string to its identity key -- the single definition of "same
@@ -194,6 +207,41 @@ export function convertTo(value: number, toUnit: string, marker: MarkerNote): nu
 	if (toUnit === marker.unit) return value;
 	if (toUnit === marker.altUnit && marker.altFactor !== undefined) return value / marker.altFactor;
 	throw new Error(`Marker "${marker.id}" has no known unit "${toUnit}"`);
+}
+
+/** Whether `marker` has a defined alt unit to toggle into (Uric Acid mg/dL <-> µmol/L, etc). */
+export function isToggleable(marker: MarkerNote): boolean {
+	return marker.altUnit !== undefined && marker.altFactor !== undefined;
+}
+
+/** Bundles a marker's latest value, unit, series, band, and target into whichever unit is
+ *  currently selected (canonical, or alt when `toggled` and `isToggleable`) -- the single place
+ *  that decides which fields convert, so a row and its detail panel can never show one converted
+ *  and the other not. Guards per-field like the values it replaced: a qualitative reading or a
+ *  missing point passes through unchanged rather than converting. */
+export function toDisplay(info: MarkerStatusInfo, toggled: boolean): DisplayReading {
+	const marker = info.marker;
+	const canConvert = toggled && isToggleable(marker);
+	const altUnit = marker.altUnit!;
+
+	const latestValue = info.latest?.value;
+	const value = canConvert && typeof latestValue === "number" ? convertTo(latestValue, altUnit, marker) : latestValue;
+
+	const series = !canConvert
+		? info.series
+		: info.series.map((point) => (typeof point.value === "number" ? { ...point, value: convertTo(point.value, altUnit, marker) } : point));
+
+	const band = !canConvert
+		? info.band
+		: {
+				low: info.band.low !== undefined ? convertTo(info.band.low, altUnit, marker) : undefined,
+				high: info.band.high !== undefined ? convertTo(info.band.high, altUnit, marker) : undefined,
+			};
+
+	const rawTarget = marker.optimalHigh ?? marker.optimalLow;
+	const target = canConvert && rawTarget !== undefined ? convertTo(rawTarget, altUnit, marker) : rawTarget;
+
+	return { value, unit: canConvert ? altUnit : marker.unit, series, band, target };
 }
 
 export function isSoftWarn(value: number, band: ResolvedRange): boolean {

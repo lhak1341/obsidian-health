@@ -12,9 +12,10 @@ duplicating business logic — they're each correctly using the `SettingsSection
 (`save`/`reload`/dirty-tracking), and the shapes already diverge: `ProfileSection` wraps its vault
 call in `try/catch` because `renameProfileInVault` can throw on a name collision (profiles are unique
 files), while `renameConcernInVault` never throws (concerns aren't unique files, no collision case).
-This is unlike `saveConcernOrder`/`saveProfileOrder` (a separate, still-open candidate), where the
-entire 4-line sparse-order algorithm is byte-identical across both sections — that one is real
-duplication; this one isn't. The 6-file trace reflects the intentional layered adapter → vault-write
+This is unlike `saveConcernOrder`/`saveProfileOrder`, where the entire 4-line sparse-order algorithm
+was byte-identical across both sections — that one *was* real duplication, and has since been
+extracted into the shared `saveOrder()` helper in `settings-context.ts`, which both sections now
+call. The 6-file trace reflects the intentional layered adapter → vault-write
 → settings-mutation → dirty-tracking → tab-render split this project already commits to (see
 CONTEXT.md's Adapter/Domain core split), not a shallow interface. The vault-write/settings-key split
 specifically (`renameConcern` in `vault/writer.ts` calling into `renameConcernInSettings` in

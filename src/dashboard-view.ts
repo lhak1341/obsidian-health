@@ -1,5 +1,5 @@
 import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
-import { computeDashboardModel } from "./core/dashboard";
+import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
 import type { DashboardModel } from "./core/model";
 import type { ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
@@ -53,8 +53,7 @@ export class HealthView extends ItemView {
 		// The active profile is session-only: it survives a repaint (e.g. after a unit toggle)
 		// but resets to the configured default whenever it no longer resolves to a real profile.
 		const current = this.viewState.activePerson && this.snapshot.profiles.find((p) => p.person === this.viewState.activePerson);
-		const defaultPerson = this.plugin.settings.defaultProfile;
-		const profile = current || (defaultPerson && this.snapshot.profiles.find((p) => p.person === defaultPerson)) || this.snapshot.profiles[0];
+		const profile = current || resolveDefaultProfile(this.snapshot.profiles, this.plugin.settings.defaultProfile);
 		this.viewState.activePerson = profile?.person;
 
 		if (!profile) {

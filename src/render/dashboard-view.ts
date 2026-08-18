@@ -1,12 +1,13 @@
-import { convertTo } from "../core/dashboard";
-import type { ConcernGroup, DashboardModel, MarkerStatusInfo, ResolvedRange, SeriesPoint, Status } from "../core/model";
+import { isToggleable, toDisplay } from "../core/dashboard";
+import type { ConcernGroup, DashboardModel, DisplayReading, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
-import { columnForConcern, labelForConcern, orderForConcern } from "./concern-registry";
+import { labelForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
 import { renderInlineMarkdown } from "./rich-text";
+import { MEDIUM_LANES, NARROW_LANES, resolveLane, type Segment, WIDE_LANES } from "./tier-lanes";
 import { hideTooltip, showTooltip } from "./tooltip";
 
 /** Session-only UI state that must survive a repaint instead of resetting -- owned by the adapter
@@ -318,17 +319,6 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 	return bar;
 }
 
-/** Appends whichever of `sorted`'s col0-pinned groups pass `include`, ordered by the concern
- *  registry's `order` (a fixed editorial sequence, not attention-rank -- an urgent Cancer marker
- *  shouldn't reorder Vitals/Cardiometabolic/Cancer/Immunity relative to each other). Applied
- *  everywhere those groups appear together (all 3 tiers below). */
-function appendCol0(lane: HTMLElement, sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement, include: (concern: string) => boolean = () => true): void {
-	const col0 = sorted
-		.filter((group) => columnForConcern(group.concern) === 0 && include(group.concern))
-		.sort((a, b) => orderForConcern(a.concern) - orderForConcern(b.concern));
-	for (const group of col0) lane.appendChild(build(group));
-}
-
 function makeLanes(tier: HTMLElement, count: number): HTMLElement[] {
 	const lanes: HTMLElement[] = [];
 	for (let i = 0; i < count; i++) {
@@ -340,54 +330,17 @@ function makeLanes(tier: HTMLElement, count: number): HTMLElement[] {
 	return lanes;
 }
 
-/** Wide tier: 3 lanes, the CLAUDE.md-pinned left/center/right split (not CSS grid -- grid's row
- *  tracks are shared across every column, so a very tall item in one lane would inflate every
- *  other lane's row height at that index; flex has no such cross-lane coupling). Center/right
- *  stay in attention-rank order; only the left lane (Vitals/Cardiometabolic/Cancer/Immunity) has
- *  a fixed sequence, via `appendCol0`. */
-function buildWideTier(sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
+/** Builds one responsive tier from a lane table -- each entry in `lanes` is one lane's ordered
+ *  segment list (see `resolveLane`). Flex, not CSS grid -- grid's row tracks are shared across
+ *  every column, so a very tall item in one lane would inflate every other lane's row height at
+ *  that index; flex has no such cross-lane coupling. */
+function buildTier(className: string, sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement, lanes: Segment[][]): HTMLElement {
 	const tier = createDiv();
-	tier.className = "hlth-tier hlth-tier-wide";
-	const [left, center, right] = makeLanes(tier, 3);
-
-	appendCol0(left, sorted, build);
-	for (const group of sorted) if (columnForConcern(group.concern) === 1) center.appendChild(build(group));
-	for (const group of sorted) if (columnForConcern(group.concern) === 2) right.appendChild(build(group));
-
-	return tier;
-}
-
-/** Medium tier: CBC/Blood keeps its own lane (by far the longest single group), joined there by
- *  Cancer/Immunity in fixed order after it -- leaves the other lane as just Vitals/Cardiometabolic
- *  (also fixed order) above Everything Else (attention-rank), instead of one lane carrying 4 groups
- *  against the other's 1. */
-function buildMediumTier(sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
-	const tier = createDiv();
-	tier.className = "hlth-tier hlth-tier-medium";
-	const [left, right] = makeLanes(tier, 2);
-
-	const isBlood = (concern: string) => columnForConcern(concern) === 1;
-	for (const group of sorted) if (isBlood(group.concern)) right.appendChild(build(group));
-	appendCol0(right, sorted, build, (c) => c === "cancer" || c === "immunity");
-
-	appendCol0(left, sorted, build, (c) => c !== "cancer" && c !== "immunity");
-	for (const group of sorted) if (columnForConcern(group.concern) === 2) left.appendChild(build(group));
-
-	return tier;
-}
-
-/** Narrow tier is one lane, but must still read as 3 stacked pinned blocks (left, then center,
- *  then right), not flat attention-rank order across every group, which would interleave the 3
- *  pinned columns together. The left block uses the same fixed sequence as the other two tiers. */
-function buildNarrowTier(sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
-	const tier = createDiv();
-	tier.className = "hlth-tier hlth-tier-narrow";
-	const [lane] = makeLanes(tier, 1);
-
-	appendCol0(lane, sorted, build);
-	for (const group of sorted) if (columnForConcern(group.concern) === 1) lane.appendChild(build(group));
-	for (const group of sorted) if (columnForConcern(group.concern) === 2) lane.appendChild(build(group));
-
+	tier.className = `hlth-tier ${className}`;
+	const laneEls = makeLanes(tier, lanes.length);
+	lanes.forEach((segments, i) => {
+		for (const group of resolveLane(sorted, segments)) laneEls[i].appendChild(build(group));
+	});
 	return tier;
 }
 
@@ -400,9 +353,9 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 	const sorted = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
 	const build = (group: ConcernGroup) => buildGroup(group, opts, curated, rowByMarkerId, rowOpen);
 
-	container.appendChild(buildWideTier(sorted, build));
-	container.appendChild(buildMediumTier(sorted, build));
-	container.appendChild(buildNarrowTier(sorted, build));
+	container.appendChild(buildTier("hlth-tier-wide", sorted, build, WIDE_LANES));
+	container.appendChild(buildTier("hlth-tier-medium", sorted, build, MEDIUM_LANES));
+	container.appendChild(buildTier("hlth-tier-narrow", sorted, build, NARROW_LANES));
 
 	return container;
 }
@@ -488,12 +441,15 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, opts: DashboardRenderOptions): { header: HTMLElement; detail: HTMLElement } {
 	const { primary, secondary } = row;
 	const toggled = opts.viewState.unitToggles.has(primary.marker.id);
+	// Computed once per row and threaded down -- the row and its detail panel read the same
+	// bundle, so they can't drift into showing different units for the same marker.
+	const display = toDisplay(primary, toggled);
 
 	const header = createDiv();
 	header.className = "hlth-row";
 	if (hidden) header.classList.add("hlth-hidden");
 
-	header.appendChild(buildNameCell(primary, toggled));
+	header.appendChild(buildNameCell(primary, display));
 
 	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
 
@@ -504,9 +460,9 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 	// fixed-width but right-aligned -- e.g. "0.38" sits further from its box's left edge than
 	// "453.56" does. Column alignment wins over that variance here.
 	header.appendChild(buildArrowCell(primary));
-	header.appendChild(buildValueOnlyCell(row, toggled));
+	header.appendChild(buildValueOnlyCell(row, display));
 	header.appendChild(
-		buildUnitCell(primary, toggled, (markerId) => {
+		buildUnitCell(primary.marker, display, (markerId) => {
 			if (!opts.viewState.unitToggles.delete(markerId)) opts.viewState.unitToggles.add(markerId);
 			opts.onViewStateChange();
 		}),
@@ -514,7 +470,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 
 	const detail = createDiv();
 	detail.className = "hlth-detail";
-	detail.appendChild(buildDetailContent(row, toggled));
+	detail.appendChild(buildDetailContent(row, display));
 
 	const markerId = primary.marker.id;
 	header.addEventListener("click", () => rowOpen.toggle(markerId));
@@ -524,7 +480,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 	return { header, detail };
 }
 
-function buildNameCell(info: MarkerStatusInfo, toggled: boolean): HTMLElement {
+function buildNameCell(info: MarkerStatusInfo, display: DisplayReading): HTMLElement {
 	const marker = info.marker;
 	const cell = createDiv();
 	cell.className = "hlth-name";
@@ -534,10 +490,8 @@ function buildNameCell(info: MarkerStatusInfo, toggled: boolean): HTMLElement {
 	text.textContent = marker.name;
 	cell.appendChild(text);
 
-	const displayUnit = toggled && isToggleable(marker) ? marker.altUnit : marker.unit;
-	const target = toggledTarget(marker.optimalHigh ?? marker.optimalLow, toggled, marker);
-	const targetText = toggled ? toggledTargetLabel(marker, target) : formatTargetText(marker) || undefined;
-	const rangeText = `Normal ${formatRangeText(toggledBand(info.band, toggled, marker), marker, displayUnit)}${targetText ? ` · ${targetText}` : ""}`;
+	const targetText = formatTargetText(marker, display.target) || undefined;
+	const rangeText = `Normal ${formatRangeText(display.band, marker, display.unit)}${targetText ? ` · ${targetText}` : ""}`;
 
 	// Skip the tooltip when this row is already unfolded -- the detail panel (buildDetailContent)
 	// shows the same blurb, so the tooltip on top of it is just duplicated information.
@@ -550,72 +504,32 @@ function buildNameCell(info: MarkerStatusInfo, toggled: boolean): HTMLElement {
 	return cell;
 }
 
-/** Whether `marker` has a defined alt unit to toggle into (Uric Acid mg/dL <-> µmol/L, etc). */
-function isToggleable(marker: MarkerNote): boolean {
-	return marker.altUnit !== undefined && marker.altFactor !== undefined;
-}
-
-/** Latest-reading display text, substituting the alt-unit conversion for `primary`'s value when toggled. */
-function formatToggledRowValue(primary: MarkerStatusInfo, secondary: MarkerStatusInfo | undefined, toggled: boolean): string {
-	if (!primary.latest) return "—";
-	const raw = primary.latest.value;
-	const canConvert = toggled && typeof raw === "number" && isToggleable(primary.marker);
-	const primaryText = formatRawValue(canConvert ? convertTo(raw, primary.marker.altUnit!, primary.marker) : raw);
+/** Formats `display.value`, paired with `secondary`'s raw (never-toggled) reading for BP-style rows. */
+function formatDisplayValue(display: DisplayReading, secondary: MarkerStatusInfo | undefined): string {
+	if (display.value === undefined) return "—";
+	const primaryText = formatRawValue(display.value);
 	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
 	return primaryText;
 }
 
-/** Converts every numeric point in a series into `marker`'s alt unit, a no-op if not toggled/toggleable. */
-function toggledSeries(series: SeriesPoint[], toggled: boolean, marker: MarkerNote): SeriesPoint[] {
-	if (!toggled || !isToggleable(marker)) return series;
-	return series.map((point) => (typeof point.value === "number" ? { ...point, value: convertTo(point.value, marker.altUnit!, marker) } : point));
-}
-
-/** Converts a resolved band's low/high into `marker`'s alt unit -- has to move in lockstep with
- *  `toggledSeries`, or the chart's band rect would be drawn against the wrong scale entirely. */
-function toggledBand(band: ResolvedRange, toggled: boolean, marker: MarkerNote): ResolvedRange {
-	if (!toggled || !isToggleable(marker)) return band;
-	return {
-		low: band.low !== undefined ? convertTo(band.low, marker.altUnit!, marker) : undefined,
-		high: band.high !== undefined ? convertTo(band.high, marker.altUnit!, marker) : undefined,
-	};
-}
-
-/** Converts a single optimal-target number into `marker`'s alt unit, a no-op if not toggled/toggleable. */
-function toggledTarget(target: number | undefined, toggled: boolean, marker: MarkerNote): number | undefined {
-	if (target === undefined || !toggled || !isToggleable(marker)) return target;
-	return convertTo(target, marker.altUnit!, marker);
-}
-
-/** Mirrors `format.ts`'s `formatTargetText`, but off an already-converted number instead of
- *  re-reading `marker.optimalHigh`/`optimalLow` -- keeps the chart's target label in the same unit
- *  as the target line it's drawn next to. */
-function toggledTargetLabel(marker: MarkerNote, target: number | undefined): string | undefined {
-	if (target === undefined) return undefined;
-	if (marker.optimalHigh !== undefined) return `your target ≤ ${formatRawValue(target)}`;
-	if (marker.optimalLow !== undefined) return `your target ≥ ${formatRawValue(target)}`;
-	return undefined;
-}
-
-function buildValueOnlyCell(row: RowEntry, toggled: boolean): HTMLElement {
+function buildValueOnlyCell(row: RowEntry, display: DisplayReading): HTMLElement {
 	const { primary, secondary } = row;
 	const value = createSpan();
 	value.className = "hlth-value";
 	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	value.textContent = formatToggledRowValue(primary, secondary, toggled);
+	value.textContent = formatDisplayValue(display, secondary);
 	return value;
 }
 
-function buildUnitCell(primary: MarkerStatusInfo, toggled: boolean, onToggle: (markerId: string) => void): HTMLElement {
-	const marker = primary.marker;
+function buildUnitCell(marker: MarkerNote, display: DisplayReading, onToggle: (markerId: string) => void): HTMLElement {
 	const unit = createSpan();
 	unit.className = "hlth-unit";
-	unit.textContent = (toggled && isToggleable(marker) ? marker.altUnit : marker.unit) ?? "";
+	unit.textContent = display.unit ?? "";
 
 	if (isToggleable(marker)) {
 		unit.classList.add("hlth-unit-toggle");
-		unit.title = `Click to show in ${toggled ? marker.unit : marker.altUnit}`;
+		unit.title = `Click to show in ${display.unit === marker.unit ? marker.altUnit : marker.unit}`;
 		unit.addEventListener("click", (evt) => {
 			// The row header itself toggles open/closed on click -- stop that from also firing.
 			evt.stopPropagation();
@@ -626,7 +540,7 @@ function buildUnitCell(primary: MarkerStatusInfo, toggled: boolean, onToggle: (m
 	return unit;
 }
 
-function buildDetailContent(row: RowEntry, toggled: boolean): HTMLElement {
+function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement {
 	const { primary, secondary } = row;
 	const marker = primary.marker;
 	const wrap = createDiv();
@@ -642,12 +556,11 @@ function buildDetailContent(row: RowEntry, toggled: boolean): HTMLElement {
 	const now = createSpan();
 	now.className = "hlth-detail-now";
 	now.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	now.textContent = formatToggledRowValue(primary, secondary, toggled);
-	const displayUnit = toggled && isToggleable(marker) ? marker.altUnit : marker.unit;
-	if (displayUnit) {
+	now.textContent = formatDisplayValue(display, secondary);
+	if (display.unit) {
 		const unit = createSpan();
 		unit.className = "hlth-unit";
-		unit.textContent = ` ${displayUnit}`;
+		unit.textContent = ` ${display.unit}`;
 		now.appendChild(unit);
 	}
 	cap.appendChild(now);
@@ -662,20 +575,19 @@ function buildDetailContent(row: RowEntry, toggled: boolean): HTMLElement {
 	if (numericCount < 2) {
 		const note = createDiv();
 		note.className = "hlth-single-note";
-		const readings = toggledSeries(primary.series, toggled, marker)
-			.map((point) => `${formatYear(point.date)} · ${formatRawValue(point.value)}${displayUnit ? ` ${displayUnit}` : ""}`)
+		const readings = display.series
+			.map((point) => `${formatYear(point.date)} · ${formatRawValue(point.value)}${display.unit ? ` ${display.unit}` : ""}`)
 			.join(", ");
 		note.textContent = `Single reading so far — ${readings}. Trend appears after the next visit.`;
 		wrap.appendChild(note);
 		return wrap;
 	}
 
-	const target = toggledTarget(marker.optimalHigh ?? marker.optimalLow, toggled, marker);
 	wrap.appendChild(
-		buildHistoryChart(toggledSeries(primary.series, toggled, marker), secondary?.series, {
-			band: toggledBand(primary.band, toggled, marker),
-			target,
-			targetLabel: (toggled ? toggledTargetLabel(marker, target) : formatTargetText(marker)) || undefined,
+		buildHistoryChart(display.series, secondary?.series, {
+			band: display.band,
+			target: display.target,
+			targetLabel: formatTargetText(marker, display.target) || undefined,
 			statusColor: statusColor(primary.status),
 			pairFormat: secondary ? (p, s) => `${formatRawValue(p)}${s !== undefined ? `/${formatRawValue(s)}` : ""}` : undefined,
 		}),
