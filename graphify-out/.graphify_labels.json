@@ -104,5 +104,8 @@
   "102": "Ticket: Settings Tab + Profile Add/Edit",
   "103": "eslint.config.mjs",
   "104": "dashboard.ts",
-  "105": "deploy.mjs"
+  "105": "deploy.mjs",
+  "106": "writer.ts",
+  "107": "tier-lanes.ts",
+  "108": "0003-curated-view-layout-is-a-generic-weight-based-packer.md"
 }

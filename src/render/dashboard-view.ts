@@ -1,3 +1,4 @@
+import { Menu } from "obsidian";
 import { isToggleable, toDisplay } from "../core/dashboard";
 import type { ConcernGroup, DashboardModel, DisplayReading, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
@@ -7,7 +8,7 @@ import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, form
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
 import { renderInlineMarkdown } from "./rich-text";
-import { MEDIUM_LANES, NARROW_LANES, resolveLane, type Segment, WIDE_LANES } from "./tier-lanes";
+import { MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, type Segment, WIDE_LANES } from "./tier-lanes";
 import { hideTooltip, showTooltip } from "./tooltip";
 
 /** Session-only UI state that must survive a repaint instead of resetting -- owned by the adapter
@@ -32,6 +33,8 @@ export interface DashboardRenderOptions {
 	 *  for override lookup, label = display text and default view name); resolves false when the Base
 	 *  file doesn't exist (caller degrades to in-plugin expand). */
 	onOpenConcern: (key: string, label: string) => boolean | Promise<boolean>;
+	/** Right-click on a row -- flips the marker note's `curated:` frontmatter, then rescans. */
+	onToggleCurated: (markerId: string) => void;
 	profiles: string[];
 	profile: ProfileNote;
 	lastVisitDate?: string;
@@ -333,7 +336,8 @@ function makeLanes(tier: HTMLElement, count: number): HTMLElement[] {
 /** Builds one responsive tier from a lane table -- each entry in `lanes` is one lane's ordered
  *  segment list (see `resolveLane`). Flex, not CSS grid -- grid's row tracks are shared across
  *  every column, so a very tall item in one lane would inflate every other lane's row height at
- *  that index; flex has no such cross-lane coupling. */
+ *  that index; flex has no such cross-lane coupling. Used for Show all, which keeps the
+ *  pinned-column system; Curated view uses `buildPackedTier` instead (see docs/adr/0003). */
 function buildTier(className: string, sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement, lanes: Segment[][]): HTMLElement {
 	const tier = createDiv();
 	tier.className = `hlth-tier ${className}`;
@@ -342,6 +346,30 @@ function buildTier(className: string, sorted: ConcernGroup[], build: (group: Con
 		for (const group of resolveLane(sorted, segments)) laneEls[i].appendChild(build(group));
 	});
 	return tier;
+}
+
+/** Builds one responsive tier from `packLanes`' already-assigned lane groups (Curated view only). */
+function buildPackedTier(className: string, laneGroups: ConcernGroup[][], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
+	const tier = createDiv();
+	tier.className = `hlth-tier ${className}`;
+	const laneEls = makeLanes(tier, laneGroups.length);
+	laneGroups.forEach((groups, i) => {
+		for (const group of groups) laneEls[i].appendChild(build(group));
+	});
+	return tier;
+}
+
+/** Visible (non-hidden) row count per concern in Curated view -- `packLanes`' weight input. */
+function countVisibleRows(sorted: ConcernGroup[], rowByMarkerId: Map<string, RowEntry>, curated: Set<string>): Map<string, number> {
+	const counts = new Map<string, number>();
+	for (const group of sorted) {
+		const rows = collectGroupRows(group, rowByMarkerId);
+		counts.set(
+			group.concern,
+			rows.filter((row) => curated.has(row.primary.marker.id)).length,
+		);
+	}
+	return counts;
 }
 
 function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
@@ -353,9 +381,16 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 	const sorted = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
 	const build = (group: ConcernGroup) => buildGroup(group, opts, curated, rowByMarkerId, rowOpen);
 
-	container.appendChild(buildTier("hlth-tier-wide", sorted, build, WIDE_LANES));
-	container.appendChild(buildTier("hlth-tier-medium", sorted, build, MEDIUM_LANES));
-	container.appendChild(buildTier("hlth-tier-narrow", sorted, build, NARROW_LANES));
+	if (opts.viewState.showAll) {
+		container.appendChild(buildTier("hlth-tier-wide", sorted, build, WIDE_LANES));
+		container.appendChild(buildTier("hlth-tier-medium", sorted, build, MEDIUM_LANES));
+		container.appendChild(buildTier("hlth-tier-narrow", sorted, build, NARROW_LANES));
+	} else {
+		const visibleRows = countVisibleRows(sorted, rowByMarkerId, curated);
+		container.appendChild(buildPackedTier("hlth-tier-wide", packLanes(sorted, visibleRows, 3, "vitals"), build));
+		container.appendChild(buildPackedTier("hlth-tier-medium", packLanes(sorted, visibleRows, 2, "vitals"), build));
+		container.appendChild(buildPackedTier("hlth-tier-narrow", packLanes(sorted, visibleRows, 1, "vitals"), build));
+	}
 
 	return container;
 }
@@ -368,7 +403,9 @@ function rowOrder(row: RowEntry): number {
 	return row.primary.marker.order ?? Number.POSITIVE_INFINITY;
 }
 
-function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
+/** A BP-style pair (primary+secondary) shares one `RowEntry` under both marker ids in
+ *  `rowByMarkerId` -- dedupe on the primary id so the pair isn't rendered twice. */
+function collectGroupRows(group: ConcernGroup, rowByMarkerId: Map<string, RowEntry>): RowEntry[] {
 	const rendered = new Set<string>();
 	const rows: RowEntry[] = [];
 	for (const info of group.markers) {
@@ -377,6 +414,11 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 		rendered.add(row.primary.marker.id);
 		rows.push(row);
 	}
+	return rows;
+}
+
+function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
+	const rows = collectGroupRows(group, rowByMarkerId);
 	// Vault scan order is otherwise arbitrary (filesystem/cache enumeration, not alphabetical) --
 	// `order:` frontmatter lets a marker note pin its row position; unset markers fall back to
 	// alphabetical by name so the layout is still deterministic without it.
@@ -449,7 +491,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 	header.className = "hlth-row";
 	if (hidden) header.classList.add("hlth-hidden");
 
-	header.appendChild(buildNameCell(primary, display));
+	header.appendChild(buildNameCell(primary, display, opts.viewState.showAll));
 
 	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
 
@@ -474,13 +516,24 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 
 	const markerId = primary.marker.id;
 	header.addEventListener("click", () => rowOpen.toggle(markerId));
+	header.addEventListener("contextmenu", (evt) => {
+		evt.preventDefault();
+		const menu = new Menu();
+		menu.addItem((item) =>
+			item
+				.setTitle(primary.marker.curated ? "Un-curate" : "Curate")
+				.setIcon("bookmark")
+				.onClick(() => opts.onToggleCurated(markerId)),
+		);
+		menu.showAtMouseEvent(evt);
+	});
 	rowOpen.register(markerId, { header, detail });
 	if (secondary) rowOpen.register(secondary.marker.id, { header, detail });
 
 	return { header, detail };
 }
 
-function buildNameCell(info: MarkerStatusInfo, display: DisplayReading): HTMLElement {
+function buildNameCell(info: MarkerStatusInfo, display: DisplayReading, showAll: boolean): HTMLElement {
 	const marker = info.marker;
 	const cell = createDiv();
 	cell.className = "hlth-name";
@@ -489,6 +542,13 @@ function buildNameCell(info: MarkerStatusInfo, display: DisplayReading): HTMLEle
 	text.className = "hlth-name-text";
 	text.textContent = marker.name;
 	cell.appendChild(text);
+
+	// Curated flag is only worth flagging in Show all -- the Curated view already implies it.
+	if (showAll && marker.curated) {
+		const bookmark = iconFor("bookmark");
+		bookmark.classList.add("hlth-curated-badge");
+		cell.appendChild(bookmark);
+	}
 
 	const targetText = formatTargetText(marker, display.target) || undefined;
 	const rangeText = `Normal ${formatRangeText(display.band, marker, display.unit)}${targetText ? ` · ${targetText}` : ""}`;

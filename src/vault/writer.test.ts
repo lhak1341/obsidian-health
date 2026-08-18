@@ -14,6 +14,7 @@ import {
 	saveProfileNote,
 	saveProfileOrder,
 	saveVisitNote,
+	toggleMarkerCurated,
 	writeFrontmatter,
 } from "./writer";
 
@@ -249,6 +250,31 @@ describe("saveMarkerOrder", () => {
 	it("is a no-op when the marker file doesn't exist", async () => {
 		const app = createFakeApp([]);
 		await expect(saveMarkerOrder(app, paths, "missing", 30)).resolves.toBeUndefined();
+	});
+});
+
+describe("toggleMarkerCurated", () => {
+	it("flips curated: from false to true", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT", curated: false } }]);
+
+		await toggleMarkerCurated(app, paths, "alt");
+
+		const f = file(app, "markers/alt.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.curated).toBe(true);
+	});
+
+	it("flips curated: from true back to false", async () => {
+		const app = createFakeApp([{ path: "markers/alt.md", frontmatter: { name: "ALT", curated: true } }]);
+
+		await toggleMarkerCurated(app, paths, "alt");
+
+		const f = file(app, "markers/alt.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.curated).toBe(false);
+	});
+
+	it("is a no-op when the marker file doesn't exist", async () => {
+		const app = createFakeApp([]);
+		await expect(toggleMarkerCurated(app, paths, "missing")).resolves.toBeUndefined();
 	});
 });
 

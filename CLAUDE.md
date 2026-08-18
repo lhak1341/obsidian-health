@@ -92,8 +92,16 @@ fallback). This exists because `getFileCache` can return pre-write data after
   see `dashboard-view.ts`, `planner-view.ts`, `bases-view.ts`, `visit-editor-view.ts` and their
   `render/` siblings. State that must survive a repaint is passed by reference in a shared state
   object (mutated in place by input handlers); I/O-touching callbacks stay adapter-owned in `opts`.
+- Curated view and Show all use two independent lane-layout systems, not one: Show all keeps the
+  pinned-column system (`WIDE_LANES`/`MEDIUM_LANES`/`NARROW_LANES` in `tier-lanes.ts`); Curated view
+  uses a dynamic weight-based packer (`packLanes`, same file — see `docs/adr/0003`) that ignores the
+  pin entirely, including a `pinFirst` exception for Vitals. A change to one doesn't touch the other.
 
 ## Process
 
 After finishing a ticket, check off its boxes in `tickets.md` and commit separately
 (`docs: check off ticket N`).
+
+Architecture decisions live in `docs/adr/` (`0001-*.md`, `0002-*.md`, ...) -- check there before
+redesigning something that already has a record; write one when a decision is hard to reverse,
+non-obvious without context, and a real trade-off.

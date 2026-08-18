@@ -5,6 +5,7 @@ import type { ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
 import { renderDashboard, type DashboardViewState } from "./render/dashboard-view";
 import type { VaultSnapshot } from "./vault/reader";
+import { toggleMarkerCurated } from "./vault/writer";
 
 export const HEALTH_VIEW_TYPE = "health-dashboard";
 
@@ -87,6 +88,7 @@ export class HealthView extends ItemView {
 			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit") : undefined,
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
 			onOpenConcern: (key, label) => this.openConcernBase(key, label),
+			onToggleCurated: (markerId) => void this.toggleCurated(markerId),
 			profiles: this.snapshot.profiles.map((p) => p.person),
 			profile,
 			lastVisitDate,
@@ -99,6 +101,13 @@ export class HealthView extends ItemView {
 			const dash = this.contentEl.querySelector(".hlth-dash");
 			if (dash) dash.scrollTop = scrollTop;
 		}
+	}
+
+	/** Flips a marker's `curated:` flag on disk (row context menu), then rescans -- the curated set is
+	 *  derived from `snapshot.markers` at scan time, so a local repaint would keep showing stale state. */
+	private async toggleCurated(markerId: string): Promise<void> {
+		await toggleMarkerCurated(this.app, this.plugin.settings, markerId);
+		await this.reload();
 	}
 
 	/** A concern header opens the single configured Base file (settings.basePath), switching to the

@@ -118,6 +118,15 @@ export async function saveMarkerOrder(app: App, paths: VaultPaths, id: string, o
 	});
 }
 
+/** Flips a marker note's `curated:` frontmatter -- driven by the dashboard row's right-click menu. */
+export async function toggleMarkerCurated(app: App, paths: VaultPaths, id: string): Promise<void> {
+	const file = findMarkerFile(app, paths, id);
+	if (!file) return;
+	await writeFrontmatter(app, file, (frontmatter) => {
+		frontmatter.curated = !frontmatter.curated;
+	});
+}
+
 /** Renames a concern id across every marker note that references it in its `concern:` array, and
  *  the settings-side pointers that key off it (Base overrides, icon override) -- one call for both
  *  halves so a future caller can't rewrite the notes and forget the settings, or vice versa. The id

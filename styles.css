@@ -405,10 +405,6 @@ svg.hlth-ic {
 	margin-left: auto;
 }
 
-.hlth-grp-hint + .hlth-grp-tag {
-	margin-left: 8px;
-}
-
 /* ── Marker row ──────────────────────────────────────────────────────────── */
 .hlth-row {
 	display: grid;
@@ -448,6 +444,9 @@ svg.hlth-ic {
 .hlth-name {
 	position: relative;
 	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .hlth-name-text {
@@ -458,6 +457,12 @@ svg.hlth-ic {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: block;
+	min-width: 0;
+}
+
+.hlth-curated-badge {
+	color: var(--color-orange);
+	flex: none;
 }
 
 /* Appended directly to `document.body` (see dashboard-view.ts `getSharedTooltip`) so it escapes
