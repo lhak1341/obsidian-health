@@ -22,6 +22,15 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
   a newly-scaffolded marker's `type:`.
 - Command ids are not slugs of display names: "Open dashboard" → `open-health-dashboard`.
   Others: `open-health-planner`, `add-lab-visit`.
+- Visit values are stored raw-as-reported (not canonical) with unit noted in a `<id>_unit`
+  sibling key on `VisitNote.values`; conversion to canonical happens read-time in
+  `dashboard.ts`'s `buildSeries`/`toCanonicalReading`. Don't reintroduce write-time conversion.
+- Marker frontmatter keys are snake_case for camelCase `MarkerNote` fields (`alt_unit`,
+  `alt_factor`, `source_url`, `year_planned`, `optimal_high`/`optimal_low`) — get the casing
+  wrong and the field silently parses as `undefined`, no error.
+- A new marker needs wiring in 3 places to be fully visible: the marker note, the visit note's
+  value, and `03 base/Health.base`'s matching view's `order:` list (keyed by the marker's
+  `concern`) — the in-plugin dashboard works without step 3, so it's easy to forget.
 
 ## Write seam
 
@@ -67,6 +76,10 @@ fallback). This exists because `getFileCache` can return pre-write data after
   `obsidian-lhak-dashboard/src/panels/HealthPanel.ts` is the host side.
 - `.hlth-widget { zoom: 0.9 }` is intentional, not an oversight — Obsidian is
   Chromium-only.
+- `HealthView.refresh()` (`dashboard-view.ts`) does `contentEl.empty()` + full rebuild on every
+  state change (showAll, profile switch, unit toggle). Any UI state that should survive a
+  refresh (open row, scroll position) must be a `HealthView` instance field threaded through
+  `DashboardRenderOptions`, not bare DOM state — see `unitToggles`/`openMarkerId`.
 
 ## Process
 

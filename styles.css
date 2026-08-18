@@ -560,6 +560,16 @@ svg.hlth-spk {
 	text-overflow: ellipsis;
 }
 
+.hlth-unit-toggle {
+	cursor: pointer;
+	text-decoration: underline dotted;
+	text-underline-offset: 2px;
+}
+
+.hlth-unit-toggle:hover {
+	color: var(--hlth-fg2);
+}
+
 /* ── Accordion detail ────────────────────────────────────────────────────── */
 .hlth-detail {
 	overflow: hidden;
@@ -1262,7 +1272,10 @@ svg.hlth-widget-chip-unit-flag {
 
 .hlth-planner-row {
 	display: grid;
-	grid-template-columns: minmax(120px, 1fr) 90px 70px 60px auto;
+	/* Last column fixed-width, not `auto` -- `auto` sizes to that row's own content, so a row
+	   with no Source link (most of them) would get a narrower column than one that has the link
+	   text, throwing off where every earlier fixed column starts since column 1 is `1fr`. */
+	grid-template-columns: minmax(120px, 1fr) 90px 70px 60px 56px;
 	align-items: center;
 	gap: 10px;
 	padding: 8px 4px;
@@ -1301,6 +1314,7 @@ svg.hlth-widget-chip-unit-flag {
 .hlth-planner-year {
 	font-family: var(--hlth-fm);
 	color: var(--hlth-fg2);
+	text-align: right;
 }
 
 .hlth-planner-link {

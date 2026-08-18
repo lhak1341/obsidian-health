@@ -46,14 +46,15 @@ export function formatRawValue(value: number | string): string {
 	return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
 }
 
-export function formatRangeText(band: ResolvedRange, marker: MarkerNote): string {
+export function formatRangeText(band: ResolvedRange, marker: MarkerNote, unitOverride?: string): string {
 	if (marker.type === "qualitative") {
 		const normal = marker.normal;
 		if (Array.isArray(normal)) return normal.join(" / ");
 		return normal ?? "—";
 	}
 
-	const unit = marker.unit ? ` ${marker.unit}` : "";
+	const displayUnit = unitOverride ?? marker.unit;
+	const unit = displayUnit ? ` ${displayUnit}` : "";
 	if (band.low !== undefined && band.high !== undefined) return `${formatRawValue(band.low)} – ${formatRawValue(band.high)}${unit}`;
 	if (band.high !== undefined) return `< ${formatRawValue(band.high)}${unit}`;
 	if (band.low !== undefined) return `> ${formatRawValue(band.low)}${unit}`;

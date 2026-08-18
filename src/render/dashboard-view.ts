@@ -1,4 +1,5 @@
-import type { ConcernGroup, DashboardModel, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
+import { convertTo } from "../core/dashboard";
+import type { ConcernGroup, DashboardModel, MarkerStatusInfo, ResolvedRange, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
 import { columnForConcern, labelForConcern } from "./concern-registry";
@@ -24,6 +25,15 @@ export interface DashboardRenderOptions {
 	profile: ProfileNote;
 	lastVisitDate?: string;
 	concernIcons: Record<string, string>;
+	/** Marker ids currently displayed in their alt unit (session-only, owned by the view instance so
+	 *  it survives a refresh but resets when the dashboard is closed/reopened). Only markers with
+	 *  both `altUnit` and `altFactor` are click-toggleable in the first place. */
+	unitToggles: Set<string>;
+	onToggleUnit: (markerId: string) => void;
+	/** Which marker's row is expanded, if any -- session-only, owned by the view instance so it
+	 *  survives a refresh triggered mid-expand (e.g. a unit toggle) instead of silently re-folding. */
+	openMarkerId: string | undefined;
+	onOpenRowChange: (markerId: string | undefined) => void;
 }
 
 interface RowInstance {
@@ -34,10 +44,15 @@ interface RowInstance {
 /** Each marker's row is rendered once per responsive tier (wide/medium/narrow -- see buildGroups),
  *  so "open" has to act on every instance at once, not just the one under the cursor, or resizing
  *  to a different tier would silently show it collapsed again. Also enforces the accordion (only
- *  one row open at a time): opening a new marker closes whichever was open before it. */
-function createRowOpenController() {
+ *  one row open at a time): opening a new marker closes whichever was open before it.
+ *
+ *  `initialOpenId`/`onChange` let the caller (HealthView) persist which marker is open across a
+ *  `renderDashboard` re-render -- this controller itself is rebuilt from scratch on every call, so
+ *  without that round-trip an in-render state change (e.g. a unit toggle, which triggers a refresh
+ *  same as showAll/profile-switch do) would silently re-fold whatever the user had open. */
+function createRowOpenController(initialOpenId: string | undefined, onChange: (markerId: string | undefined) => void) {
 	const instances = new Map<string, RowInstance[]>();
-	let openId: string | undefined;
+	let openId: string | undefined = initialOpenId;
 
 	const setInstancesOpen = (markerId: string, open: boolean) => {
 		for (const inst of instances.get(markerId) ?? []) {
@@ -51,17 +66,23 @@ function createRowOpenController() {
 			const list = instances.get(markerId) ?? [];
 			list.push(instance);
 			instances.set(markerId, list);
+			if (markerId === openId) {
+				instance.header.classList.add("hlth-open");
+				instance.detail.classList.add("hlth-open");
+			}
 		},
 		/** Opens `markerId`, closing whatever was previously open; closes it instead if it's already open. */
 		toggle(markerId: string): void {
 			if (openId === markerId) {
 				setInstancesOpen(markerId, false);
 				openId = undefined;
+				onChange(undefined);
 				return;
 			}
 			if (openId) setInstancesOpen(openId, false);
 			setInstancesOpen(markerId, true);
 			openId = markerId;
+			onChange(markerId);
 		},
 		/** Opens `markerId` (closing whatever was open); a no-op if it's already the open one. */
 		open(markerId: string): void {
@@ -69,6 +90,7 @@ function createRowOpenController() {
 			if (openId) setInstancesOpen(openId, false);
 			setInstancesOpen(markerId, true);
 			openId = markerId;
+			onChange(markerId);
 		},
 		/** Only one tier's instance has layout at a time (the other two are `display:none`) --
 		 *  `offsetParent` is null for anything not currently rendered, so this finds the real one. */
@@ -98,7 +120,7 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	}
 
 	const rowByMarkerId = indexPairs(model.markers);
-	const rowOpen = createRowOpenController();
+	const rowOpen = createRowOpenController(opts.openMarkerId, opts.onOpenRowChange);
 
 	const groups = buildGroups(model, opts, rowByMarkerId, rowOpen);
 	dash.appendChild(buildAttentionBar(model, rowOpen));
@@ -409,7 +431,7 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 
 	for (const row of rows) {
 		const hidden = !opts.showAll && !curated.has(row.primary.marker.id);
-		const { header, detail } = buildRow(row, hidden, rowOpen);
+		const { header, detail } = buildRow(row, hidden, rowOpen, opts);
 		wrap.appendChild(header);
 		wrap.appendChild(detail);
 	}
@@ -451,14 +473,15 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 	return head;
 }
 
-function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController): { header: HTMLElement; detail: HTMLElement } {
+function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, opts: DashboardRenderOptions): { header: HTMLElement; detail: HTMLElement } {
 	const { primary, secondary } = row;
+	const toggled = opts.unitToggles.has(primary.marker.id);
 
 	const header = createDiv();
 	header.className = "hlth-row";
 	if (hidden) header.classList.add("hlth-hidden");
 
-	header.appendChild(buildNameCell(primary));
+	header.appendChild(buildNameCell(primary, toggled));
 
 	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
 
@@ -469,12 +492,12 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController): {
 	// fixed-width but right-aligned -- e.g. "0.38" sits further from its box's left edge than
 	// "453.56" does. Column alignment wins over that variance here.
 	header.appendChild(buildArrowCell(primary));
-	header.appendChild(buildValueOnlyCell(row));
-	header.appendChild(buildUnitCell(primary));
+	header.appendChild(buildValueOnlyCell(row, toggled));
+	header.appendChild(buildUnitCell(primary, toggled, opts.onToggleUnit));
 
 	const detail = createDiv();
 	detail.className = "hlth-detail";
-	detail.appendChild(buildDetailContent(row));
+	detail.appendChild(buildDetailContent(row, toggled));
 
 	const markerId = primary.marker.id;
 	header.addEventListener("click", () => rowOpen.toggle(markerId));
@@ -484,7 +507,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController): {
 	return { header, detail };
 }
 
-function buildNameCell(info: MarkerStatusInfo): HTMLElement {
+function buildNameCell(info: MarkerStatusInfo, toggled: boolean): HTMLElement {
 	const marker = info.marker;
 	const cell = createDiv();
 	cell.className = "hlth-name";
@@ -494,8 +517,10 @@ function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 	text.textContent = marker.name;
 	cell.appendChild(text);
 
-	const target = formatTargetText(marker);
-	const rangeText = `Normal ${formatRangeText(info.band, marker)}${target ? ` · ${target}` : ""}`;
+	const displayUnit = toggled && isToggleable(marker) ? marker.altUnit : marker.unit;
+	const target = toggledTarget(marker.optimalHigh ?? marker.optimalLow, toggled, marker);
+	const targetText = toggled ? toggledTargetLabel(marker, target) : formatTargetText(marker) || undefined;
+	const rangeText = `Normal ${formatRangeText(toggledBand(info.band, toggled, marker), marker, displayUnit)}${targetText ? ` · ${targetText}` : ""}`;
 
 	// Skip the tooltip when this row is already unfolded -- the detail panel (buildDetailContent)
 	// shows the same blurb, so the tooltip on top of it is just duplicated information.
@@ -508,24 +533,83 @@ function buildNameCell(info: MarkerStatusInfo): HTMLElement {
 	return cell;
 }
 
-function buildValueOnlyCell(row: RowEntry): HTMLElement {
+/** Whether `marker` has a defined alt unit to toggle into (Uric Acid mg/dL <-> µmol/L, etc). */
+function isToggleable(marker: MarkerNote): boolean {
+	return marker.altUnit !== undefined && marker.altFactor !== undefined;
+}
+
+/** Latest-reading display text, substituting the alt-unit conversion for `primary`'s value when toggled. */
+function formatToggledRowValue(primary: MarkerStatusInfo, secondary: MarkerStatusInfo | undefined, toggled: boolean): string {
+	if (!primary.latest) return "—";
+	const raw = primary.latest.value;
+	const canConvert = toggled && typeof raw === "number" && isToggleable(primary.marker);
+	const primaryText = formatRawValue(canConvert ? convertTo(raw, primary.marker.altUnit!, primary.marker) : raw);
+	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
+	return primaryText;
+}
+
+/** Converts every numeric point in a series into `marker`'s alt unit, a no-op if not toggled/toggleable. */
+function toggledSeries(series: SeriesPoint[], toggled: boolean, marker: MarkerNote): SeriesPoint[] {
+	if (!toggled || !isToggleable(marker)) return series;
+	return series.map((point) => (typeof point.value === "number" ? { ...point, value: convertTo(point.value, marker.altUnit!, marker) } : point));
+}
+
+/** Converts a resolved band's low/high into `marker`'s alt unit -- has to move in lockstep with
+ *  `toggledSeries`, or the chart's band rect would be drawn against the wrong scale entirely. */
+function toggledBand(band: ResolvedRange, toggled: boolean, marker: MarkerNote): ResolvedRange {
+	if (!toggled || !isToggleable(marker)) return band;
+	return {
+		low: band.low !== undefined ? convertTo(band.low, marker.altUnit!, marker) : undefined,
+		high: band.high !== undefined ? convertTo(band.high, marker.altUnit!, marker) : undefined,
+	};
+}
+
+/** Converts a single optimal-target number into `marker`'s alt unit, a no-op if not toggled/toggleable. */
+function toggledTarget(target: number | undefined, toggled: boolean, marker: MarkerNote): number | undefined {
+	if (target === undefined || !toggled || !isToggleable(marker)) return target;
+	return convertTo(target, marker.altUnit!, marker);
+}
+
+/** Mirrors `format.ts`'s `formatTargetText`, but off an already-converted number instead of
+ *  re-reading `marker.optimalHigh`/`optimalLow` -- keeps the chart's target label in the same unit
+ *  as the target line it's drawn next to. */
+function toggledTargetLabel(marker: MarkerNote, target: number | undefined): string | undefined {
+	if (target === undefined) return undefined;
+	if (marker.optimalHigh !== undefined) return `your target ≤ ${formatRawValue(target)}`;
+	if (marker.optimalLow !== undefined) return `your target ≥ ${formatRawValue(target)}`;
+	return undefined;
+}
+
+function buildValueOnlyCell(row: RowEntry, toggled: boolean): HTMLElement {
 	const { primary, secondary } = row;
 	const value = createSpan();
 	value.className = "hlth-value";
 	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	value.textContent = formatRowValue(primary, secondary);
+	value.textContent = formatToggledRowValue(primary, secondary, toggled);
 	return value;
 }
 
-function buildUnitCell(primary: MarkerStatusInfo): HTMLElement {
+function buildUnitCell(primary: MarkerStatusInfo, toggled: boolean, onToggle: (markerId: string) => void): HTMLElement {
+	const marker = primary.marker;
 	const unit = createSpan();
 	unit.className = "hlth-unit";
-	unit.textContent = primary.marker.unit ?? "";
+	unit.textContent = (toggled && isToggleable(marker) ? marker.altUnit : marker.unit) ?? "";
+
+	if (isToggleable(marker)) {
+		unit.classList.add("hlth-unit-toggle");
+		unit.title = `Click to show in ${toggled ? marker.unit : marker.altUnit}`;
+		unit.addEventListener("click", (evt) => {
+			// The row header itself toggles open/closed on click -- stop that from also firing.
+			evt.stopPropagation();
+			onToggle(marker.id);
+		});
+	}
+
 	return unit;
 }
 
-function buildDetailContent(row: RowEntry): HTMLElement {
+function buildDetailContent(row: RowEntry, toggled: boolean): HTMLElement {
 	const { primary, secondary } = row;
 	const marker = primary.marker;
 	const wrap = createDiv();
@@ -541,11 +625,12 @@ function buildDetailContent(row: RowEntry): HTMLElement {
 	const now = createSpan();
 	now.className = "hlth-detail-now";
 	now.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	now.textContent = formatRowValue(primary, secondary);
-	if (marker.unit) {
+	now.textContent = formatToggledRowValue(primary, secondary, toggled);
+	const displayUnit = toggled && isToggleable(marker) ? marker.altUnit : marker.unit;
+	if (displayUnit) {
 		const unit = createSpan();
 		unit.className = "hlth-unit";
-		unit.textContent = ` ${marker.unit}`;
+		unit.textContent = ` ${displayUnit}`;
 		now.appendChild(unit);
 	}
 	cap.appendChild(now);
@@ -560,18 +645,20 @@ function buildDetailContent(row: RowEntry): HTMLElement {
 	if (numericCount < 2) {
 		const note = createDiv();
 		note.className = "hlth-single-note";
-		const readings = primary.series.map((point) => `${formatYear(point.date)} · ${formatRawValue(point.value)}${marker.unit ? ` ${marker.unit}` : ""}`).join(", ");
+		const readings = toggledSeries(primary.series, toggled, marker)
+			.map((point) => `${formatYear(point.date)} · ${formatRawValue(point.value)}${displayUnit ? ` ${displayUnit}` : ""}`)
+			.join(", ");
 		note.textContent = `Single reading so far — ${readings}. Trend appears after the next visit.`;
 		wrap.appendChild(note);
 		return wrap;
 	}
 
-	const target = marker.optimalHigh ?? marker.optimalLow;
+	const target = toggledTarget(marker.optimalHigh ?? marker.optimalLow, toggled, marker);
 	wrap.appendChild(
-		buildHistoryChart(primary.series, secondary?.series, {
-			band: primary.band,
+		buildHistoryChart(toggledSeries(primary.series, toggled, marker), secondary?.series, {
+			band: toggledBand(primary.band, toggled, marker),
 			target,
-			targetLabel: formatTargetText(marker) || undefined,
+			targetLabel: (toggled ? toggledTargetLabel(marker, target) : formatTargetText(marker)) || undefined,
 			statusColor: statusColor(primary.status),
 			pairFormat: secondary ? (p, s) => `${formatRawValue(p)}${s !== undefined ? `/${formatRawValue(s)}` : ""}` : undefined,
 		}),

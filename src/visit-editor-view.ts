@@ -1,4 +1,4 @@
-import { ItemView, Notice, Setting, WorkspaceLeaf, type ViewStateResult } from "obsidian";
+import { ItemView, Modal, Notice, Setting, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
 import {
 	buildPreSaveSummary,
 	buildVisitValues,
@@ -13,6 +13,7 @@ import {
 	type VisitFieldError,
 } from "./core/entry";
 import type { MarkerKind, MarkerNote, ProfileNote } from "./core/types";
+import { convert, convertTo } from "./core/dashboard";
 import type HealthPlugin from "./main";
 import { iconFor } from "./render/icons";
 import type { VaultSnapshot } from "./vault/reader";
@@ -45,6 +46,33 @@ const DEFAULT_PANEL_COLUMN = 2;
 function formatVisitError(error: VisitFieldError, markersById: Map<string, MarkerNote>): string {
 	if (!error.markerId) return error.reason;
 	return `${markersById.get(error.markerId)!.name}: ${error.reason}`;
+}
+
+/** Obsidian-native stand-in for `window.confirm` -- blocking native dialogs don't render on mobile
+ *  and look out of place next to the rest of the app's UI. */
+class DiscardChangesModal extends Modal {
+	constructor(
+		app: App,
+		private readonly onDiscard: () => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		this.contentEl.createEl("p", { text: "Discard unsaved changes to this visit?" });
+		const buttons = this.contentEl.createDiv({ cls: "modal-button-container" });
+		buttons.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());
+		buttons
+			.createEl("button", { text: "Discard", cls: "mod-warning" })
+			.addEventListener("click", () => {
+				this.close();
+				this.onDiscard();
+			});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
 }
 
 export class HealthVisitEditorView extends ItemView {
@@ -129,7 +157,11 @@ export class HealthVisitEditorView extends ItemView {
 		for (const marker of this.markers) {
 			const value = existing.values[marker.id];
 			if (value === undefined) continue;
-			this.fields.set(marker.id, { raw: String(value), unit: marker.unit ?? "" });
+
+			// The stored value is already the lab's raw reading -- `units[id]` (falling back to the
+			// marker's canonical unit) says what unit it's in, no conversion needed to display it.
+			const unit = existing.units?.[marker.id] ?? marker.unit ?? "";
+			this.fields.set(marker.id, { raw: String(value), unit });
 		}
 	}
 
@@ -158,8 +190,11 @@ export class HealthVisitEditorView extends ItemView {
 		back.appendChild(iconFor("arrow-left"));
 		back.appendChild(document.createTextNode("Health"));
 		back.addEventListener("click", () => {
-			if (this.dirty && !window.confirm("Discard unsaved changes to this visit?")) return;
-			void this.plugin.activateView();
+			if (!this.dirty) {
+				void this.plugin.activateView();
+				return;
+			}
+			new DiscardChangesModal(this.app, () => void this.plugin.activateView()).open();
 		});
 		top.appendChild(back);
 
@@ -311,6 +346,16 @@ export class HealthVisitEditorView extends ItemView {
 			for (const option of options) unitSelect.createEl("option", { value: option.value, text: option.label });
 			unitSelect.value = state.unit;
 			unitSelect.addEventListener("change", () => {
+				// Convert the already-typed number along with the unit switch, rather than leaving it
+				// as-is under the new unit label -- switching mg/dL -> µmol/L should reflect the same
+				// reading, not silently relabel the same digits.
+				const parsed = Number(state.raw.trim());
+				if (state.raw.trim() !== "" && Number.isFinite(parsed)) {
+					const canonical = convert(parsed, state.unit, marker);
+					const converted = convertTo(canonical, unitSelect.value, marker);
+					state.raw = String(Math.round(converted * 1000) / 1000);
+					input.value = state.raw;
+				}
 				state.unit = unitSelect.value;
 				this.dirty = true;
 			});
@@ -443,7 +488,7 @@ export class HealthVisitEditorView extends ItemView {
 			.filter((line) => line.softWarn)
 			.map((line) => line.label);
 
-		const values = buildVisitValues(entries);
+		const values = buildVisitValues(entries, markersById);
 		await saveVisitNote(this.app, this.plugin.settings, this.person, this.date, values, this.facility.trim() || undefined);
 
 		const warnSuffix = softWarnLabels.length > 0 ? ` Double-check: ${softWarnLabels.join(", ")}.` : "";

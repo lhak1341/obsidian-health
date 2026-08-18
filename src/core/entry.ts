@@ -98,7 +98,11 @@ export type FieldOutcome =
 	| { kind: "blocked"; reason: string }
 	| { kind: "ok"; value: number | string; softWarn: boolean };
 
-/** Numeric entry pipeline: pick unit -> convert to canonical -> hard-block malformed -> soft-warn wildly outside band. */
+/** Numeric entry pipeline: hard-blocks malformed input and unknown units, soft-warns using the
+ *  canonical-converted magnitude against the band -- but `value` stays the raw entered number in
+ *  its original unit (never the canonical conversion). Storage keeps what the lab actually printed;
+ *  conversion to canonical happens at read time (see `dashboard.ts`'s `buildSeries`), keyed off the
+ *  visit's `<id>_unit` sibling key (see `buildVisitValues`). */
 export function evaluateNumericField(raw: string, unit: string, marker: MarkerNote, band: ResolvedRange): FieldOutcome {
 	const trimmed = raw.trim();
 	if (trimmed === "") return { kind: "omitted" };
@@ -118,7 +122,7 @@ export function evaluateNumericField(raw: string, unit: string, marker: MarkerNo
 		}
 	}
 
-	return { kind: "ok", value: canonical, softWarn: isSoftWarn(canonical, band) };
+	return { kind: "ok", value: parsed, softWarn: isSoftWarn(canonical, band) };
 }
 
 export function evaluateQualitativeField(raw: string): FieldOutcome {
@@ -130,6 +134,9 @@ export function evaluateQualitativeField(raw: string): FieldOutcome {
 export interface FieldEntry {
 	markerId: string;
 	outcome: FieldOutcome;
+	/** Unit `outcome.value` is expressed in (numeric fields only) -- the unit the lab actually
+	 *  reported, not necessarily the marker's canonical unit. */
+	unit?: string;
 }
 
 /** A field entry with its raw user input retained, for review/summary display. */
@@ -172,17 +179,26 @@ export function evaluateVisitFields(
 				: evaluateNumericField(state.raw, state.unit, marker, profile ? resolveBandForEntry(marker, profile, date) : {});
 
 		if (outcome.kind === "blocked") errors.push({ markerId: marker.id, reason: outcome.reason });
-		entries.push({ markerId: marker.id, raw: state.raw, outcome });
+		entries.push({ markerId: marker.id, raw: state.raw, outcome, unit: marker.type === "numeric" ? state.unit : undefined });
 	}
 
 	return { entries, errors };
 }
 
-/** Assembles the values map that becomes the visit note body: omitted/blocked fields drop their key entirely. */
-export function buildVisitValues(entries: FieldEntry[]): Record<string, number | string> {
+/** Assembles the values map that becomes the visit note body: omitted/blocked fields drop their key
+ *  entirely. `outcome.value` is written as-is (the raw entered number, not canonical) alongside a
+ *  `<id>_unit` sibling key whenever the entered unit differs from the marker's canonical one, so the
+ *  note keeps exactly what the lab reported instead of a lossy canonical conversion. */
+export function buildVisitValues(entries: FieldEntry[], markersById: Map<string, MarkerNote>): Record<string, number | string> {
 	const values: Record<string, number | string> = {};
 	for (const entry of entries) {
-		if (entry.outcome.kind === "ok") values[entry.markerId] = entry.outcome.value;
+		if (entry.outcome.kind !== "ok") continue;
+		values[entry.markerId] = entry.outcome.value;
+
+		const marker = markersById.get(entry.markerId);
+		if (entry.unit && marker?.unit !== undefined && entry.unit !== marker.unit) {
+			values[`${entry.markerId}_unit`] = entry.unit;
+		}
 	}
 	return values;
 }
@@ -195,12 +211,13 @@ export interface SummaryLine {
 	markerId: string;
 	label: string;
 	raw: string;
-	canonical: number | string;
+	value: number | string;
 	unit?: string;
 	softWarn: boolean;
 }
 
-/** Pre-save summary rows for fields that will actually be written, so converted values can be eyeballed before writing. */
+/** Pre-save summary rows for fields that will actually be written, so wildly-off entries can be
+ *  eyeballed (via `softWarn`) before writing. */
 export function buildPreSaveSummary(markersById: Map<string, MarkerNote>, entries: FieldEvaluation[]): SummaryLine[] {
 	const lines: SummaryLine[] = [];
 	for (const entry of entries) {
@@ -210,8 +227,8 @@ export function buildPreSaveSummary(markersById: Map<string, MarkerNote>, entrie
 			markerId: entry.markerId,
 			label: marker?.name ?? entry.markerId,
 			raw: entry.raw,
-			canonical: entry.outcome.value,
-			unit: marker?.unit,
+			value: entry.outcome.value,
+			unit: entry.unit ?? marker?.unit,
 			softWarn: entry.outcome.softWarn,
 		});
 	}

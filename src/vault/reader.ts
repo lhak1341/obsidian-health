@@ -132,15 +132,22 @@ function parseVisitNote(fm: Record<string, unknown>): VisitNote | null {
 	if (typeof fm.date !== "string") return null;
 
 	const values: Record<string, number | string> = {};
+	const units: Record<string, string> = {};
+	// `_unit` suffix is reserved for a value's original-unit sibling key (e.g. `uric_acid_unit`); a
+	// marker id that itself ends in `_unit` would collide with this and never round-trip its own value.
 	for (const [key, value] of Object.entries(fm)) {
 		if (key === "type" || key === "person" || key === "date" || key === "facility") continue;
+		if (key.endsWith("_unit") && typeof value === "string") {
+			units[key.slice(0, -"_unit".length)] = value;
+			continue;
+		}
 		if (typeof value === "number" || typeof value === "string") {
 			values[key] = value;
 		}
 	}
 
 	const facility = typeof fm.facility === "string" ? fm.facility : undefined;
-	return { person: fm.person, date: fm.date, values, ...(facility ? { facility } : {}) };
+	return { person: fm.person, date: fm.date, values, ...(Object.keys(units).length > 0 ? { units } : {}), ...(facility ? { facility } : {}) };
 }
 
 function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileNote | null {

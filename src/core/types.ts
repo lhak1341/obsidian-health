@@ -43,6 +43,9 @@ export interface VisitNote {
 	person: string;
 	date: string;
 	values: Record<string, number | string>;
+	/** Marker id -> unit originally reported for that value, only present when it differs from the
+	 *  marker's canonical `unit` (e.g. a lab reporting Uric Acid in mg/dL for a µmol/L-canonical marker). */
+	units?: Record<string, string>;
 	facility?: string;
 }
 

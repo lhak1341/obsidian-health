@@ -8,6 +8,10 @@ export const HEALTH_VIEW_TYPE = "health-dashboard";
 export class HealthView extends ItemView {
 	private showAll: boolean;
 	private activePerson: string | undefined;
+	/** Marker ids shown in their alt unit -- session-only, resets on view close/reopen (new instance). */
+	private readonly unitToggles = new Set<string>();
+	/** Which row is expanded, if any -- same session-only lifetime as `unitToggles`. */
+	private openMarkerId: string | undefined;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -47,6 +51,11 @@ export class HealthView extends ItemView {
 		const profile = current || (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
 		this.activePerson = profile?.person;
 
+		// `.hlth-dash` (the actual scrollable element, not contentEl itself) gets torn down and
+		// rebuilt from scratch below, which would otherwise silently reset scroll position on every
+		// refresh -- including ones triggered mid-scroll, like a unit toggle inside an open row.
+		const scrollTop = this.contentEl.querySelector(".hlth-dash")?.scrollTop;
+
 		this.contentEl.empty();
 		this.contentEl.addClass("health-dashboard-outer");
 
@@ -80,7 +89,21 @@ export class HealthView extends ItemView {
 			profile,
 			lastVisitDate,
 			concernIcons: this.plugin.settings.concernIcons,
+			unitToggles: this.unitToggles,
+			onToggleUnit: (markerId) => {
+				if (!this.unitToggles.delete(markerId)) this.unitToggles.add(markerId);
+				void this.refresh();
+			},
+			openMarkerId: this.openMarkerId,
+			onOpenRowChange: (markerId) => {
+				this.openMarkerId = markerId;
+			},
 		});
+
+		if (scrollTop !== undefined) {
+			const dash = this.contentEl.querySelector(".hlth-dash");
+			if (dash) dash.scrollTop = scrollTop;
+		}
 	}
 
 	/** A concern header opens the single configured Base file (settings.basePath), switching to the

@@ -162,20 +162,21 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 		tick.textContent = formatYear(point.date);
 		svg.appendChild(tick);
 
-		if (last) {
-			const secondaryAtLast = secondaryPoints.find((p) => p.date === point.date)?.value;
-			const label = svgEl("text", {
-				x: Math.min(x(i), width - padR).toFixed(1),
-				y: (y(point.value) - 8).toFixed(1),
-				"text-anchor": "end",
-				"font-family": "var(--font-interface)",
-				"font-weight": 700,
-				"font-size": 10,
-				fill: opts.statusColor,
-			});
-			label.textContent = opts.pairFormat ? opts.pairFormat(point.value, secondaryAtLast) : formatRawValue(point.value);
-			svg.appendChild(label);
-		}
+		// Every point gets its value labeled, not just the latest -- the latest stands out (bold,
+		// status color, right-clamped like its tick) while older points stay small and faint so the
+		// trend line itself is still the dominant visual, not a wall of numbers.
+		const secondaryAtPoint = secondaryPoints.find((p) => p.date === point.date)?.value;
+		const label = svgEl("text", {
+			x: last ? Math.min(x(i), width - padR).toFixed(1) : x(i).toFixed(1),
+			y: (y(point.value) - 8).toFixed(1),
+			"text-anchor": last ? "end" : "middle",
+			"font-family": "var(--font-interface)",
+			"font-weight": last ? 700 : 500,
+			"font-size": last ? 10 : 8.5,
+			fill: last ? opts.statusColor : "var(--text-faint)",
+		});
+		label.textContent = opts.pairFormat ? opts.pairFormat(point.value, secondaryAtPoint) : formatRawValue(point.value);
+		svg.appendChild(label);
 	});
 
 	return svg;

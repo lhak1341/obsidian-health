@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeDashboardModel, convert, isSoftWarn, resolve } from "./dashboard";
+import { computeDashboardModel, convert, convertTo, isSoftWarn, resolve } from "./dashboard";
 import { realVaultFixture } from "./fixtures/real-vault";
 import type { DashboardSettings } from "./model";
 import type { MarkerNote, ProfileNote, VisitNote } from "./types";
@@ -22,8 +22,8 @@ function profile(overrides: Partial<ProfileNote> = {}): ProfileNote {
 	return { person: "self", sex: "m", ...overrides };
 }
 
-function visit(date: string, values: VisitNote["values"], person = "self"): VisitNote {
-	return { person, date, values };
+function visit(date: string, values: VisitNote["values"], person = "self", units?: VisitNote["units"]): VisitNote {
+	return { person, date, values, ...(units ? { units } : {}) };
 }
 
 const settings: DashboardSettings = { deadbandPct: 0.03 };
@@ -88,6 +88,27 @@ describe("convert", () => {
 		const m = marker({ unit: "mmol/L" });
 
 		expect(() => convert(100, "furlongs", m)).toThrow();
+	});
+});
+
+describe("convertTo", () => {
+	it("passes the value through unchanged when targeting the canonical unit", () => {
+		const m = marker({ unit: "U/L" });
+
+		expect(convertTo(10, "U/L", m)).toBe(10);
+	});
+
+	it("converts a canonical value to the alt unit -- inverse of convert", () => {
+		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
+
+		expect(convertTo(5.55, "mg/dL", m)).toBeCloseTo(100);
+		expect(convertTo(convert(100, "mg/dL", m), "mg/dL", m)).toBeCloseTo(100);
+	});
+
+	it("throws for a unit the marker doesn't know", () => {
+		const m = marker({ unit: "mmol/L" });
+
+		expect(() => convertTo(100, "furlongs", m)).toThrow();
 	});
 });
 
@@ -291,6 +312,27 @@ describe("computeDashboardModel — series", () => {
 		const model = computeDashboardModel([m], [visit("2025-01-01", { alt: 20 })], profile(), settings);
 
 		expect(model.markers).toHaveLength(0);
+	});
+});
+
+describe("computeDashboardModel — mixed-unit visits", () => {
+	it("converts a visit's raw value into the marker's canonical unit using its `units` sibling entry", () => {
+		const m = marker({ id: "uric_acid", unit: "umol/L", altUnit: "mg/dL", altFactor: 59.48 });
+		const visits = [
+			visit("2019-01-01", { uric_acid: 7.3 }, "self", { uric_acid: "mg/dL" }),
+			visit("2024-01-01", { uric_acid: 434.2 }, "self"),
+		];
+		const model = computeDashboardModel([m], visits, profile(), settings);
+
+		expect(model.markers[0].series[0].value).toBeCloseTo(7.3 * 59.48);
+		expect(model.markers[0].series[1].value).toBe(434.2);
+	});
+
+	it("falls back to the raw number when `units` names a unit the marker doesn't recognize", () => {
+		const m = marker({ id: "alt", unit: "U/L" });
+		const model = computeDashboardModel([m], [visit("2024-01-01", { alt: 20 }, "self", { alt: "furlongs" })], profile(), settings);
+
+		expect(model.markers[0].series[0].value).toBe(20);
 	});
 });
 

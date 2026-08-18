@@ -115,12 +115,27 @@ function statusTier(status: Status): number {
 function buildSeries(marker: MarkerNote, visits: VisitNote[]): SeriesPoint[] {
 	const points: SeriesPoint[] = [];
 	for (const visit of visits) {
-		const value = visit.values[marker.id];
-		if (value === undefined) continue;
-		if (marker.type === "numeric" && typeof value !== "number") continue;
+		const raw = visit.values[marker.id];
+		if (raw === undefined) continue;
+		if (marker.type === "numeric" && typeof raw !== "number") continue;
+		const value = typeof raw === "number" ? toCanonicalReading(raw, visit.units?.[marker.id], marker) : raw;
 		points.push({ date: visit.date, value });
 	}
 	return points;
+}
+
+/** Normalizes a visit's raw reported number into the marker's canonical unit -- every downstream
+ *  consumer (band checks, status, trend arrow, sparkline/chart) works off canonical values, so this
+ *  is the single seam that converts. A visit's `units[id]` records the unit it was actually entered
+ *  in; absent means it's already canonical. Falls back to the raw number on an unrecognized unit
+ *  (stale/hand-edited frontmatter) rather than dropping the reading entirely. */
+function toCanonicalReading(raw: number, unit: string | undefined, marker: MarkerNote): number {
+	if (!unit || unit === marker.unit) return raw;
+	try {
+		return convert(raw, unit, marker);
+	} catch {
+		return raw;
+	}
 }
 
 function deriveStatus(marker: MarkerNote, band: ResolvedRange, latest: SeriesPoint): { status: Status; excess: number } {
@@ -172,6 +187,13 @@ export function convert(value: number, fromUnit: string, marker: MarkerNote): nu
 	if (fromUnit === marker.unit) return value;
 	if (fromUnit === marker.altUnit && marker.altFactor !== undefined) return value * marker.altFactor;
 	throw new Error(`Marker "${marker.id}" has no known unit "${fromUnit}"`);
+}
+
+/** Inverse of `convert`: canonical-unit value -> `toUnit` (the marker's unit or altUnit). */
+export function convertTo(value: number, toUnit: string, marker: MarkerNote): number {
+	if (toUnit === marker.unit) return value;
+	if (toUnit === marker.altUnit && marker.altFactor !== undefined) return value / marker.altFactor;
+	throw new Error(`Marker "${marker.id}" has no known unit "${toUnit}"`);
 }
 
 export function isSoftWarn(value: number, band: ResolvedRange): boolean {

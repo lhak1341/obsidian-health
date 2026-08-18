@@ -64,3 +64,27 @@ describe("scanVault marker parsing", () => {
 		expect(markers[0].ranges).toEqual([{ sex: "any", age: undefined, low: 7, high: 55 }]);
 	});
 });
+
+describe("scanVault visit parsing", () => {
+	it("splits `<id>_unit` sibling keys out of values into their own `units` map", async () => {
+		const app = createFakeApp([
+			{
+				path: "visits/alice/2019-01-01.md",
+				frontmatter: { type: "lab-visit", person: "alice", date: "2019-01-01", uric_acid: 345.2, uric_acid_unit: "mg/dL" },
+			},
+		]);
+
+		const { visits } = await scanVault(app, paths);
+
+		expect(visits[0].values).toEqual({ uric_acid: 345.2 });
+		expect(visits[0].units).toEqual({ uric_acid: "mg/dL" });
+	});
+
+	it("omits `units` entirely when no visit value carries a `_unit` sibling", async () => {
+		const app = createFakeApp([{ path: "visits/alice/2024-01-01.md", frontmatter: { type: "lab-visit", person: "alice", date: "2024-01-01", alt: 31.3 } }]);
+
+		const { visits } = await scanVault(app, paths);
+
+		expect(visits[0].units).toBeUndefined();
+	});
+});

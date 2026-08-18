@@ -140,10 +140,19 @@ describe("evaluateNumericField", () => {
 		expect(result.kind).toBe("blocked");
 	});
 
-	it("converts an alt-unit entry to canonical via alt_factor", () => {
+	it("keeps the raw entered value (in its entered unit), not a canonical conversion", () => {
 		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
 		const result = evaluateNumericField("100", "mg/dL", m, { low: 3.6, high: 5.18 });
-		expect(result).toEqual({ kind: "ok", value: 5.55, softWarn: false });
+		expect(result).toEqual({ kind: "ok", value: 100, softWarn: false });
+	});
+
+	it("still soft-warns off the canonical-converted magnitude even though the stored value stays raw", () => {
+		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
+		// 1000 mg/dL converts to 55.5 mmol/L, wildly outside a 3.6-5.18 band -- the raw 1000 alone
+		// wouldn't trip isSoftWarn's threshold at all, so this only passes if the softWarn check
+		// still converts internally despite `value` no longer doing so.
+		const result = evaluateNumericField("1000", "mg/dL", m, { low: 3.6, high: 5.18 });
+		expect(result).toEqual({ kind: "ok", value: 1000, softWarn: true });
 	});
 
 	it("soft-warns when the canonical value lands wildly outside the band", () => {
@@ -224,13 +233,36 @@ describe("evaluateVisitFields", () => {
 
 describe("buildVisitValues", () => {
 	it("keeps only ok entries, dropping omitted and blocked ones", () => {
-		const values = buildVisitValues([
-			{ markerId: "alt", outcome: { kind: "ok", value: 20, softWarn: false } },
-			{ markerId: "ast", outcome: { kind: "omitted" } },
-			{ markerId: "bad", outcome: { kind: "blocked", reason: "nope" } },
-		]);
+		const values = buildVisitValues(
+			[
+				{ markerId: "alt", outcome: { kind: "ok", value: 20, softWarn: false } },
+				{ markerId: "ast", outcome: { kind: "omitted" } },
+				{ markerId: "bad", outcome: { kind: "blocked", reason: "nope" } },
+			],
+			new Map(),
+		);
 
 		expect(values).toEqual({ alt: 20 });
+	});
+
+	it("writes a `<id>_unit` sibling key when the entered unit differs from the marker's canonical unit", () => {
+		const uric = marker({ id: "uric_acid", unit: "umol/L", altUnit: "mg/dL", altFactor: 59.48 });
+		const values = buildVisitValues(
+			[{ markerId: "uric_acid", outcome: { kind: "ok", value: 345.2, softWarn: false }, unit: "mg/dL" }],
+			new Map([["uric_acid", uric]]),
+		);
+
+		expect(values).toEqual({ uric_acid: 345.2, uric_acid_unit: "mg/dL" });
+	});
+
+	it("omits the `<id>_unit` sibling key when the entered unit matches the canonical unit", () => {
+		const uric = marker({ id: "uric_acid", unit: "umol/L", altUnit: "mg/dL", altFactor: 59.48 });
+		const values = buildVisitValues(
+			[{ markerId: "uric_acid", outcome: { kind: "ok", value: 345.2, softWarn: false }, unit: "umol/L" }],
+			new Map([["uric_acid", uric]]),
+		);
+
+		expect(values).toEqual({ uric_acid: 345.2 });
 	});
 });
 
@@ -246,16 +278,16 @@ describe("buildVisitFrontmatter", () => {
 });
 
 describe("buildPreSaveSummary", () => {
-	it("lists only fields that will be written, with raw and canonical values", () => {
+	it("lists only fields that will be written, with raw text and parsed value", () => {
 		const alt = marker({ id: "alt", name: "ALT", unit: "U/L" });
 		const markersById = new Map([["alt", alt]]);
 
 		const summary = buildPreSaveSummary(markersById, [
-			{ markerId: "alt", raw: "20", outcome: { kind: "ok", value: 20, softWarn: false } },
+			{ markerId: "alt", raw: "20", outcome: { kind: "ok", value: 20, softWarn: false }, unit: "U/L" },
 			{ markerId: "ast", raw: "", outcome: { kind: "omitted" } },
 		]);
 
-		expect(summary).toEqual([{ markerId: "alt", label: "ALT", raw: "20", canonical: 20, unit: "U/L", softWarn: false }]);
+		expect(summary).toEqual([{ markerId: "alt", label: "ALT", raw: "20", value: 20, unit: "U/L", softWarn: false }]);
 	});
 });
 

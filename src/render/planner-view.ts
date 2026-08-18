@@ -1,5 +1,4 @@
 import type { MarkerNote, PlanNote } from "../core/types";
-import { formatRawValue } from "./format";
 import { iconFor } from "./icons";
 
 export interface PlannerRenderOptions {
@@ -88,7 +87,10 @@ function buildPlanSection(opts: PlannerRenderOptions): HTMLElement {
 
 function previewText(body: string): string {
 	const firstLine = body.split("\n").find((line) => line.trim().length > 0) ?? "";
-	return firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : firstLine;
+	// Strips a leading markdown heading marker ("## Executive summary" -> "Executive summary") --
+	// this is a plain-text preview, not a rendered one, so the raw "#"s would otherwise leak through.
+	const stripped = firstLine.replace(/^#+\s*/, "");
+	return stripped.length > 140 ? `${stripped.slice(0, 140)}…` : stripped;
 }
 
 function buildBacklog(backlog: MarkerNote[]): HTMLElement {
@@ -132,7 +134,7 @@ function buildBacklogRow(marker: MarkerNote): HTMLElement {
 
 	const cost = createSpan();
 	cost.className = "hlth-planner-cost";
-	cost.textContent = marker.cost !== undefined ? formatRawValue(marker.cost) : "—";
+	cost.textContent = marker.cost !== undefined ? marker.cost.toLocaleString("en-US") : "—";
 	row.appendChild(cost);
 
 	const year = createSpan();
