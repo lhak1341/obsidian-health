@@ -11,6 +11,7 @@ import {
 	groupMarkersByPanel,
 	pairMarkerNotes,
 	parseAllergies,
+	prefillFields,
 	unitOptions,
 	validateDate,
 	validateProfileInput,
@@ -101,6 +102,42 @@ describe("findVisit", () => {
 
 	it("returns undefined when no visit matches", () => {
 		expect(findVisit([visit("2024-01-01", {})], "self", "2025-01-01")).toBeUndefined();
+	});
+});
+
+describe("prefillFields", () => {
+	it("returns empty fields and no facility when no visit matches person+date", () => {
+		const result = prefillFields([visit("2024-01-01", { alt: 20 })], [marker({ id: "alt" })], "self", "2025-01-01");
+		expect(result.fields.size).toBe(0);
+		expect(result.facility).toBe("");
+	});
+
+	it("prefills a field per recorded value, skipping markers with no recorded value", () => {
+		const visits = [visit("2025-01-01", { alt: 20 })];
+		const result = prefillFields(visits, [marker({ id: "alt" }), marker({ id: "ast" })], "self", "2025-01-01");
+
+		expect(result.fields.get("alt")).toEqual({ raw: "20", unit: "" });
+		expect(result.fields.has("ast")).toBe(false);
+	});
+
+	it("uses the visit's recorded unit over the marker's canonical unit when both are present", () => {
+		const v = { ...visit("2025-01-01", { uric_acid: 5 }), units: { uric_acid: "mg/dL" } };
+		const result = prefillFields([v], [marker({ id: "uric_acid", unit: "umol/L" })], "self", "2025-01-01");
+
+		expect(result.fields.get("uric_acid")).toEqual({ raw: "5", unit: "mg/dL" });
+	});
+
+	it("falls back to the marker's canonical unit when the visit didn't record one", () => {
+		const result = prefillFields([visit("2025-01-01", { alt: 20 })], [marker({ id: "alt", unit: "U/L" })], "self", "2025-01-01");
+
+		expect(result.fields.get("alt")).toEqual({ raw: "20", unit: "U/L" });
+	});
+
+	it("carries the visit's facility through", () => {
+		const v = { ...visit("2025-01-01", { alt: 20 }), facility: "Quest" };
+		const result = prefillFields([v], [marker({ id: "alt" })], "self", "2025-01-01");
+
+		expect(result.facility).toBe("Quest");
 	});
 });
 

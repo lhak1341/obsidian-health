@@ -107,5 +107,6 @@
   "105": "deploy.mjs",
   "106": "writer.ts",
   "107": "tier-lanes.ts",
-  "108": "0003-curated-view-layout-is-a-generic-weight-based-packer.md"
+  "108": "0003-curated-view-layout-is-a-generic-weight-based-packer.md",
+  "109": "0004-defer-grouping-dashboardrenderoptions-callbacks.md"
 }

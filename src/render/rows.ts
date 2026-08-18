@@ -1,5 +1,5 @@
 import { pairByPartner } from "../core/entry";
-import type { DashboardModel, MarkerStatusInfo } from "../core/model";
+import type { ConcernGroup, DashboardModel, MarkerStatusInfo } from "../core/model";
 import { buildSparkline } from "./charts";
 import { formatArrow, formatRawValue, statusColor } from "./format";
 
@@ -46,12 +46,48 @@ export function flaggedRows(model: DashboardModel): RowEntry[] {
 	return flagged;
 }
 
-/** Latest reading as display text, paired (`primary/secondary`) for BP-style markers. */
-export function formatRowValue(primary: MarkerStatusInfo, secondary?: MarkerStatusInfo): string {
-	if (!primary.latest) return "—";
-	const primaryText = formatRawValue(primary.latest.value);
+/** Formats a primary value as display text, paired (`primary/secondary`) for BP-style markers.
+ *  `primaryValue` is the caller's choice of source -- a marker's raw latest reading, or a
+ *  unit-toggled display value -- `secondary` always reads its own raw latest reading. */
+export function formatRowValue(primaryValue: number | string | undefined, secondary?: MarkerStatusInfo): string {
+	if (primaryValue === undefined) return "—";
+	const primaryText = formatRawValue(primaryValue);
 	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
 	return primaryText;
+}
+
+/** Row position within a group: `order:` frontmatter pins a spot, unset markers sort last (then
+ *  alphabetically by name at the call site) -- vault scan order is otherwise arbitrary. */
+export function rowOrder(row: RowEntry): number {
+	return row.primary.marker.order ?? Number.POSITIVE_INFINITY;
+}
+
+/** A BP-style pair (primary+secondary) shares one `RowEntry` under both marker ids in
+ *  `rowByMarkerId` -- dedupe on the primary id so the pair isn't collected twice. */
+export function collectGroupRows(group: ConcernGroup, rowByMarkerId: Map<string, RowEntry>): RowEntry[] {
+	const rendered = new Set<string>();
+	const rows: RowEntry[] = [];
+	for (const info of group.markers) {
+		const row = rowByMarkerId.get(info.marker.id)!;
+		if (rendered.has(row.primary.marker.id)) continue;
+		rendered.add(row.primary.marker.id);
+		rows.push(row);
+	}
+	return rows;
+}
+
+/** Visible (non-hidden) row count per concern in Curated view -- tier-lanes.ts's `packLanes`'
+ *  weight input. */
+export function countVisibleRows(sorted: ConcernGroup[], rowByMarkerId: Map<string, RowEntry>, curated: Set<string>): Map<string, number> {
+	const counts = new Map<string, number>();
+	for (const group of sorted) {
+		const rows = collectGroupRows(group, rowByMarkerId);
+		counts.set(
+			group.concern,
+			rows.filter((row) => curated.has(row.primary.marker.id)).length,
+		);
+	}
+	return counts;
 }
 
 /** Builds the `hlth-arrow` span (glyph + color) shared by the widget row, the Bases row, and the dashboard's attention/table rows. */
@@ -86,7 +122,7 @@ export function fillMarkerRowContent(
 	const value = createSpan();
 	value.className = "hlth-widget-row-value";
 	if (opts.colorValue ?? true) value.style.color = statusColor(primary.status);
-	value.textContent = formatRowValue(primary, secondary);
+	value.textContent = formatRowValue(primary.latest?.value, secondary);
 	el.appendChild(value);
 
 	el.appendChild(buildArrowCell(primary));

@@ -31,6 +31,10 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
 - A new marker needs wiring in 3 places to be fully visible: the marker note, the visit note's
   value, and `03 base/Health.base`'s matching view's `order:` list (keyed by the marker's
   `concern`) — the in-plugin dashboard works without step 3, so it's easy to forget.
+- A paired marker's `pair:` frontmatter is a shared group key (e.g. both twins carry `pair: bp`),
+  not the partner's `id` — `pairByPartner` (`core/entry.ts`) matches on equal `pair` values, not
+  an id-to-pair-id lookup. Get this backwards in a test fixture and the pair silently splits into
+  two solo rows instead of failing loudly.
 
 ## Write seam
 
@@ -55,8 +59,10 @@ fallback). This exists because `getFileCache` can return pre-write data after
 - Not every `render/*.ts` file is testable even for its pure exports: `dashboard-view.ts`,
   `visit-editor-view.ts`, `planner-view.ts` import `icons.ts`, which value-imports `obsidian`
   (unresolvable outside the app). Pure logic that needs coverage from inside one of these goes
-  in its own Obsidian-free sibling file (see `tier-lanes.ts`), not tested by importing the
-  render file directly.
+  in its own Obsidian-free sibling file — check for an existing domain-shaped one first
+  (`rows.ts` for `RowEntry`-scoped logic, `tier-lanes.ts` for concern-group ordering) before
+  adding a new bucket file. `rows.ts` is itself hybrid: untested DOM-builders (`buildArrowCell`,
+  `fillMarkerRowContent`) sit beside its tested pure exports.
 - Settings-tab classes cannot be instantiated in tests. Extract the decision logic —
   see `SettingsDirtyTracker` (`settings-dirty-tracker.ts`) and `saveOrder`
   (`settings-context.ts`), both tested with zero Obsidian imports.

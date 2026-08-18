@@ -1,16 +1,23 @@
 import type { ConcernGroup } from "../core/model";
-import { columnForConcern, orderForConcern } from "./concern-registry";
+import { columnForConcern, mediumLaneGroupForConcern, orderForConcern } from "./concern-registry";
 
 export interface Segment {
 	include: (concern: string) => boolean;
 	fixedOrder: boolean;
 }
 
+/** A concern group's attention rank -- the best (lowest) rank among its markers, so an urgent
+ *  marker pulls its whole group up. Feeds the `sorted` input every lane table (WIDE_LANES,
+ *  MEDIUM_LANES, NARROW_LANES, packLanes) expects. */
+export function groupRank(group: ConcernGroup, rankIndex: Map<string, number>): number {
+	return Math.min(...group.markers.map((info) => rankIndex.get(info.marker.id) ?? Number.POSITIVE_INFINITY));
+}
+
 const isCol = (column: 0 | 1 | 2) => (concern: string) => columnForConcern(concern) === column;
 const isCol0 = isCol(0);
 const isCol1 = isCol(1);
 const isCol2 = isCol(2);
-const isCancerOrImmunity = (concern: string) => concern === "cancer" || concern === "immunity";
+const isMediumLaneGroup = (group: 0 | 1) => (concern: string) => mediumLaneGroupForConcern(concern) === group;
 
 /** Resolves one lane's ordered concern-group list. Each segment filters `sorted` by `include`,
  *  then either sorts by the concern registry's `order` (a fixed editorial sequence -- an urgent
@@ -88,12 +95,12 @@ export function packLanes(sorted: ConcernGroup[], visibleRows: ReadonlyMap<strin
  *  against the other's 1. */
 export const MEDIUM_LANES: Segment[][] = [
 	[
-		{ include: (c) => isCol0(c) && !isCancerOrImmunity(c), fixedOrder: true },
+		{ include: (c) => isCol0(c) && isMediumLaneGroup(0)(c), fixedOrder: true },
 		{ include: isCol2, fixedOrder: false },
 	],
 	[
 		{ include: isCol1, fixedOrder: false },
-		{ include: (c) => isCol0(c) && isCancerOrImmunity(c), fixedOrder: true },
+		{ include: (c) => isCol0(c) && isMediumLaneGroup(1)(c), fixedOrder: true },
 	],
 ];
 

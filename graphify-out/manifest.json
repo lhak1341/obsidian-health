@@ -65,13 +65,13 @@
     "semantic_hash": ""
   },
   "src/render/concern-registry.ts": {
-    "mtime": 1787060850.45812,
-    "ast_hash": "95759b62b44f49f40e4004214fbf771d",
+    "mtime": 1787092261.3919234,
+    "ast_hash": "5d87e60d7cb63e87ecc63b81424e3cea",
     "semantic_hash": ""
   },
   "src/render/dashboard-view.ts": {
-    "mtime": 1787073342.6604972,
-    "ast_hash": "7741b36b01ed7e4e1edf1eefe8dc2296",
+    "mtime": 1787092468.9709892,
+    "ast_hash": "e42bd9370d884c965a00c94bf2ddb69d",
     "semantic_hash": ""
   },
   "src/render/drag-reorder.ts": {
@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   "src/render/rows.ts": {
-    "mtime": 1785976212.0024216,
-    "ast_hash": "739bc19236153171fdbb891f4b15aced",
+    "mtime": 1787092426.79129,
+    "ast_hash": "d734b179f5e0d6c5274c5956bda73bf6",
     "semantic_hash": ""
   },
   "src/render/tooltip.ts": {
@@ -170,8 +170,8 @@
     "semantic_hash": "4a9adeb63132679ce77dcbaf789a35fe"
   },
   "CLAUDE.md": {
-    "mtime": 1787073955.9646072,
-    "ast_hash": "4996c4c8afd6bc7e92c3561140d9cd42",
+    "mtime": 1787093156.435117,
+    "ast_hash": "880f4d36d731ff770e9450d4aa84309c",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "src/visit-editor-view.ts": {
-    "mtime": 1787060339.1738062,
-    "ast_hash": "f9a107f7341fd9724016646ca5e5d469",
+    "mtime": 1787092712.315963,
+    "ast_hash": "b398c8f87ca62c68a97346962d5e116e",
     "semantic_hash": ""
   },
   "src/render/panel-registry.ts": {
@@ -225,13 +225,13 @@
     "semantic_hash": ""
   },
   "src/render/visit-editor-view.ts": {
-    "mtime": 1787060310.1311646,
-    "ast_hash": "53fda19cbf3cc6b36512266dab8bd35e",
+    "mtime": 1787092704.615523,
+    "ast_hash": "fe2b0d7c66b1a90060ae2902a883db1d",
     "semantic_hash": ""
   },
   "src/render/tier-lanes.ts": {
-    "mtime": 1787073333.8095179,
-    "ast_hash": "13172819b6a2ede86285ba8af9510ad4",
+    "mtime": 1787092432.3497214,
+    "ast_hash": "2304afcd3a23184d99a4a1db78c827f2",
     "semantic_hash": ""
   },
   "docs/adr/0002-defer-typed-interface-for-dashboardviewstate.md": {
@@ -242,6 +242,11 @@
   "docs/adr/0003-curated-view-layout-is-a-generic-weight-based-packer.md": {
     "mtime": 1787073355.8109996,
     "ast_hash": "ccfe7a19cef39b7daa17896cd28f0801",
+    "semantic_hash": ""
+  },
+  "docs/adr/0004-defer-grouping-dashboardrenderoptions-callbacks.md": {
+    "mtime": 1787092834.0853224,
+    "ast_hash": "20ea6c0b4ae9cc1a999ff79a2ca6a209",
     "semantic_hash": ""
   }
 }

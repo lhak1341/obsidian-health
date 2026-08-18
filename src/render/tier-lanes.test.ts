@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { ConcernGroup } from "../core/model";
-import { MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
+import type { ConcernGroup, MarkerStatusInfo } from "../core/model";
+import type { MarkerNote } from "../core/types";
+import { CONCERN_CONFIG } from "./concern-registry";
+import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
+
+function markerInfo(id: string): MarkerStatusInfo {
+	return { marker: { id, name: id, aliases: [], type: "numeric", panel: "", concern: [], curated: false, blurb: "" } as MarkerNote, status: "good", band: {}, series: [] };
+}
 
 function group(concern: string): ConcernGroup {
 	return { concern, status: "good", markers: [] };
@@ -112,6 +118,18 @@ describe("resolveLane / MEDIUM_LANES", () => {
 	it("right lane: col-1 in rank order, then Cancer/Immunity fixed-order", () => {
 		expect(concerns(resolveLane(sorted, MEDIUM_LANES[1]))).toEqual(["blood", "cbc", "cancer", "immunity"]);
 	});
+
+	it("a new column-0 concern routes purely off the registry's mediumLaneGroup -- MEDIUM_LANES itself never changes", () => {
+		// Regression for the drift MEDIUM_LANES used to hardcode as a concern === "cancer" || "immunity"
+		// string check: registering a new col-0 concern here must be the only edit needed.
+		CONCERN_CONFIG.screening = { icon: "shield", column: 0, label: "Screening", order: 4, mediumLaneGroup: 1 };
+		try {
+			const withScreening = [...sorted, group("screening")];
+			expect(concerns(resolveLane(withScreening, MEDIUM_LANES[1]))).toEqual(["blood", "cbc", "cancer", "immunity", "screening"]);
+		} finally {
+			delete CONCERN_CONFIG.screening;
+		}
+	});
 });
 
 describe("resolveLane / NARROW_LANES", () => {
@@ -126,5 +144,21 @@ describe("resolveLane / NARROW_LANES", () => {
 			"kidney",
 			"liver",
 		]);
+	});
+});
+
+describe("groupRank", () => {
+	it("takes the best (lowest) rank among a group's markers, so one urgent marker pulls up the whole group", () => {
+		const rankIndex = new Map([
+			["alt", 0],
+			["ast", 5],
+		]);
+		const group: ConcernGroup = { concern: "liver", status: "high", markers: [markerInfo("ast"), markerInfo("alt")] };
+		expect(groupRank(group, rankIndex)).toBe(0);
+	});
+
+	it("sorts a group with no ranked markers last (+Infinity)", () => {
+		const group: ConcernGroup = { concern: "liver", status: "good", markers: [markerInfo("unranked")] };
+		expect(groupRank(group, new Map())).toBe(Number.POSITIVE_INFINITY);
 	});
 });

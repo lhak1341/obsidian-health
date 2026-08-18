@@ -6,9 +6,9 @@ import { buildHistoryChart, buildSparkline } from "./charts";
 import { labelForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
-import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
+import { buildArrowCell, collectGroupRows, countVisibleRows, flaggedRows, formatRowValue, indexPairs, rowOrder, type RowEntry } from "./rows";
 import { renderInlineMarkdown } from "./rich-text";
-import { MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, type Segment, WIDE_LANES } from "./tier-lanes";
+import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, type Segment, WIDE_LANES } from "./tier-lanes";
 import { hideTooltip, showTooltip } from "./tooltip";
 
 /** Session-only UI state that must survive a repaint instead of resetting -- owned by the adapter
@@ -300,7 +300,7 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 		const value = createSpan();
 		value.className = "hlth-attn-value";
 		value.style.color = statusColor(primary.status);
-		value.textContent = formatRowValue(primary, secondary);
+		value.textContent = formatRowValue(primary.latest?.value, secondary);
 		item.appendChild(value);
 
 		item.appendChild(buildArrowCell(primary));
@@ -359,19 +359,6 @@ function buildPackedTier(className: string, laneGroups: ConcernGroup[][], build:
 	return tier;
 }
 
-/** Visible (non-hidden) row count per concern in Curated view -- `packLanes`' weight input. */
-function countVisibleRows(sorted: ConcernGroup[], rowByMarkerId: Map<string, RowEntry>, curated: Set<string>): Map<string, number> {
-	const counts = new Map<string, number>();
-	for (const group of sorted) {
-		const rows = collectGroupRows(group, rowByMarkerId);
-		counts.set(
-			group.concern,
-			rows.filter((row) => curated.has(row.primary.marker.id)).length,
-		);
-	}
-	return counts;
-}
-
 function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
 	const container = createDiv();
 	container.className = "hlth-groups";
@@ -393,28 +380,6 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 	}
 
 	return container;
-}
-
-function groupRank(group: ConcernGroup, rankIndex: Map<string, number>): number {
-	return Math.min(...group.markers.map((info) => rankIndex.get(info.marker.id) ?? Number.POSITIVE_INFINITY));
-}
-
-function rowOrder(row: RowEntry): number {
-	return row.primary.marker.order ?? Number.POSITIVE_INFINITY;
-}
-
-/** A BP-style pair (primary+secondary) shares one `RowEntry` under both marker ids in
- *  `rowByMarkerId` -- dedupe on the primary id so the pair isn't rendered twice. */
-function collectGroupRows(group: ConcernGroup, rowByMarkerId: Map<string, RowEntry>): RowEntry[] {
-	const rendered = new Set<string>();
-	const rows: RowEntry[] = [];
-	for (const info of group.markers) {
-		const row = rowByMarkerId.get(info.marker.id)!;
-		if (rendered.has(row.primary.marker.id)) continue;
-		rendered.add(row.primary.marker.id);
-		rows.push(row);
-	}
-	return rows;
 }
 
 function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
@@ -564,21 +529,13 @@ function buildNameCell(info: MarkerStatusInfo, display: DisplayReading, showAll:
 	return cell;
 }
 
-/** Formats `display.value`, paired with `secondary`'s raw (never-toggled) reading for BP-style rows. */
-function formatDisplayValue(display: DisplayReading, secondary: MarkerStatusInfo | undefined): string {
-	if (display.value === undefined) return "—";
-	const primaryText = formatRawValue(display.value);
-	if (secondary?.latest) return `${primaryText}/${formatRawValue(secondary.latest.value)}`;
-	return primaryText;
-}
-
 function buildValueOnlyCell(row: RowEntry, display: DisplayReading): HTMLElement {
 	const { primary, secondary } = row;
 	const value = createSpan();
 	value.className = "hlth-value";
 	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	value.textContent = formatDisplayValue(display, secondary);
+	value.textContent = formatRowValue(display.value, secondary);
 	return value;
 }
 
@@ -616,7 +573,7 @@ function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement
 	const now = createSpan();
 	now.className = "hlth-detail-now";
 	now.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
-	now.textContent = formatDisplayValue(display, secondary);
+	now.textContent = formatRowValue(display.value, secondary);
 	if (display.unit) {
 		const unit = createSpan();
 		unit.className = "hlth-unit";

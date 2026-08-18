@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { DashboardModel, MarkerStatusInfo } from "../core/model";
+import type { ConcernGroup, DashboardModel, MarkerStatusInfo } from "../core/model";
 import type { MarkerNote } from "../core/types";
-import { flaggedRows, formatRowValue, indexPairs } from "./rows";
+import { collectGroupRows, countVisibleRows, flaggedRows, formatRowValue, indexPairs, rowOrder } from "./rows";
 
 function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
 	return {
@@ -80,18 +80,52 @@ describe("flaggedRows", () => {
 });
 
 describe("formatRowValue", () => {
-	it("returns an em dash when there's no latest reading", () => {
-		expect(formatRowValue(info())).toBe("—");
+	it("returns an em dash when there's no primary value", () => {
+		expect(formatRowValue(undefined)).toBe("—");
 	});
 
 	it("formats a single value", () => {
-		const primary = info({}, { latest: { date: "2025-01-01", value: 5.2 } });
-		expect(formatRowValue(primary)).toBe("5.2");
+		expect(formatRowValue(5.2)).toBe("5.2");
 	});
 
-	it("formats a paired value as primary/secondary", () => {
-		const primary = info({ id: "sbp" }, { latest: { date: "2025-01-01", value: 120 } });
+	it("formats a paired value as primary/secondary, secondary read from its own latest reading", () => {
 		const secondary = info({ id: "dbp" }, { latest: { date: "2025-01-01", value: 80 } });
-		expect(formatRowValue(primary, secondary)).toBe("120/80");
+		expect(formatRowValue(120, secondary)).toBe("120/80");
+	});
+
+	it("accepts a display value distinct from the primary's raw latest reading (unit-toggle case)", () => {
+		const secondary = info({ id: "dbp" }, { latest: { date: "2025-01-01", value: 80 } });
+		expect(formatRowValue("Normal", secondary)).toBe("Normal/80");
+	});
+});
+
+describe("rowOrder", () => {
+	it("uses the marker's order: frontmatter when set", () => {
+		const row = indexPairs([info({ id: "a", order: 3 })]).get("a")!;
+		expect(rowOrder(row)).toBe(3);
+	});
+
+	it("sorts last (+Infinity) when order: is unset", () => {
+		const row = indexPairs([info({ id: "a" })]).get("a")!;
+		expect(rowOrder(row)).toBe(Number.POSITIVE_INFINITY);
+	});
+});
+
+describe("collectGroupRows / countVisibleRows", () => {
+	it("dedupes a BP-style pair so it's collected once, not once per twin", () => {
+		const sbp = info({ id: "sbp", pair: "bp" });
+		const dbp = info({ id: "dbp", pair: "bp" });
+		const rowByMarkerId = indexPairs([sbp, dbp]);
+		const group: ConcernGroup = { concern: "vitals", status: "good", markers: [sbp, dbp] };
+		expect(collectGroupRows(group, rowByMarkerId)).toHaveLength(1);
+	});
+
+	it("counts only curated rows as visible per concern", () => {
+		const a = info({ id: "a" });
+		const b = info({ id: "b" });
+		const rowByMarkerId = indexPairs([a, b]);
+		const group: ConcernGroup = { concern: "vitals", status: "good", markers: [a, b] };
+		const counts = countVisibleRows([group], rowByMarkerId, new Set(["a"]));
+		expect(counts.get("vitals")).toBe(1);
 	});
 });

@@ -1,8 +1,8 @@
 import { ItemView, Modal, Notice, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
-import { buildPreSaveSummary, buildVisitValues, checkDuplicateMarkerId, evaluateVisitFields, formatVisitError, prefillFields } from "./core/entry";
+import { buildPreSaveSummary, buildVisitValues, checkDuplicateMarkerId, evaluateVisitFields, formatVisitError } from "./core/entry";
 import type { MarkerNote } from "./core/types";
 import type HealthPlugin from "./main";
-import { renderVisitEditor, type EditorFormState, type NewMarkerDraft, type VisitEditorOptions } from "./render/visit-editor-view";
+import { renderVisitEditor, reprefill, type EditorFormState, type NewMarkerDraft, type VisitEditorOptions } from "./render/visit-editor-view";
 import type { VaultSnapshot } from "./vault/reader";
 import { saveNewMarkerNote, saveVisitNote } from "./vault/writer";
 
@@ -105,10 +105,7 @@ export class HealthVisitEditorView extends ItemView {
 		this.state.profiles = this.snapshot.profiles;
 		this.state.visits = this.snapshot.visits;
 
-		const pre = prefillFields(this.state.visits, this.state.markers, this.state.person, this.state.date);
-		this.state.fields = pre.fields;
-		this.state.facility = pre.facility;
-		this.state.dirty = false;
+		reprefill(this.state);
 
 		this.paint();
 	}

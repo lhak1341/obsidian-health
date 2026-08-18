@@ -78,9 +78,9 @@ function buildEditorField(root: HTMLElement, label: string): HTMLElement {
 	return field;
 }
 
-/** Re-derives `state.fields`/`facility`/`dirty` for the (possibly new) person+date and re-renders --
- *  the shared local recompute for every person/date change below. */
-function reprefill(state: EditorFormState): void {
+/** Re-derives `state.fields`/`facility`/`dirty` for the (possibly new) person+date -- the shared
+ *  recompute for every person/date change below, and for the adapter's initial/post-save load. */
+export function reprefill(state: EditorFormState): void {
 	const pre = prefillFields(state.visits, state.markers, state.person, state.date);
 	state.fields = pre.fields;
 	state.facility = pre.facility;
