@@ -2,16 +2,28 @@ import { convertTo } from "../core/dashboard";
 import type { ConcernGroup, DashboardModel, MarkerStatusInfo, ResolvedRange, SeriesPoint, Status } from "../core/model";
 import type { MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
-import { columnForConcern, labelForConcern } from "./concern-registry";
+import { columnForConcern, labelForConcern, orderForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, flaggedRows, formatRowValue, indexPairs, type RowEntry } from "./rows";
 import { renderInlineMarkdown } from "./rich-text";
 import { hideTooltip, showTooltip } from "./tooltip";
 
-export interface DashboardRenderOptions {
+/** Session-only UI state that must survive a repaint instead of resetting -- owned by the adapter
+ *  (HealthView), passed by reference, mutated in place by the handlers below. `activePerson` is
+ *  undefined only before the first profile resolves; by the time `renderDashboard` is ever called
+ *  a profile has already been picked. */
+export interface DashboardViewState {
 	showAll: boolean;
-	onToggleShowAll: () => void;
+	/** Marker ids currently displayed in their alt unit. Only markers with both `altUnit` and
+	 *  `altFactor` are click-toggleable in the first place. */
+	unitToggles: Set<string>;
+	/** Which marker's row is expanded, if any. */
+	openMarkerId: string | undefined;
+	activePerson: string | undefined;
+}
+
+export interface DashboardRenderOptions {
 	onAddVisit: () => void;
 	onEditVisit?: () => void;
 	onOpenPlanner: () => void;
@@ -20,20 +32,14 @@ export interface DashboardRenderOptions {
 	 *  file doesn't exist (caller degrades to in-plugin expand). */
 	onOpenConcern: (key: string, label: string) => boolean | Promise<boolean>;
 	profiles: string[];
-	activePerson: string;
-	onSwitchProfile: (person: string) => void;
 	profile: ProfileNote;
 	lastVisitDate?: string;
 	concernIcons: Record<string, string>;
-	/** Marker ids currently displayed in their alt unit (session-only, owned by the view instance so
-	 *  it survives a refresh but resets when the dashboard is closed/reopened). Only markers with
-	 *  both `altUnit` and `altFactor` are click-toggleable in the first place. */
-	unitToggles: Set<string>;
-	onToggleUnit: (markerId: string) => void;
-	/** Which marker's row is expanded, if any -- session-only, owned by the view instance so it
-	 *  survives a refresh triggered mid-expand (e.g. a unit toggle) instead of silently re-folding. */
-	openMarkerId: string | undefined;
-	onOpenRowChange: (markerId: string | undefined) => void;
+	viewState: DashboardViewState;
+	/** Fired after a `viewState` mutation that needs a full repaint (showAll, unit toggle, profile
+	 *  switch). Deliberately NOT fired for row open/close -- `createRowOpenController` below already
+	 *  self-handles that via CSS class toggles on already-built DOM, no repaint needed at all. */
+	onViewStateChange: () => void;
 }
 
 interface RowInstance {
@@ -120,7 +126,9 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 	}
 
 	const rowByMarkerId = indexPairs(model.markers);
-	const rowOpen = createRowOpenController(opts.openMarkerId, opts.onOpenRowChange);
+	const rowOpen = createRowOpenController(opts.viewState.openMarkerId, (markerId) => {
+		opts.viewState.openMarkerId = markerId;
+	});
 
 	const groups = buildGroups(model, opts, rowByMarkerId, rowOpen);
 	dash.appendChild(buildAttentionBar(model, rowOpen));
@@ -176,10 +184,13 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 		const button = createEl("button");
 		button.type = "button";
 		button.className = "hlth-showall-btn";
-		if (opts.showAll) button.classList.add("hlth-btn-on");
+		if (opts.viewState.showAll) button.classList.add("hlth-btn-on");
 		button.appendChild(iconFor("eye"));
-		button.appendChild(document.createTextNode(opts.showAll ? "Curated" : "Show all"));
-		button.addEventListener("click", () => opts.onToggleShowAll());
+		button.appendChild(document.createTextNode(opts.viewState.showAll ? "Curated" : "Show all"));
+		button.addEventListener("click", () => {
+			opts.viewState.showAll = !opts.viewState.showAll;
+			opts.onViewStateChange();
+		});
 		actions.appendChild(button);
 	}
 
@@ -195,9 +206,12 @@ function buildProfileSwitcher(opts: DashboardRenderOptions): HTMLElement {
 		const pill = createEl("button");
 		pill.type = "button";
 		pill.className = "hlth-pill";
-		if (person === opts.activePerson) pill.classList.add("hlth-pill-active");
+		if (person === opts.viewState.activePerson) pill.classList.add("hlth-pill-active");
 		pill.textContent = person;
-		pill.addEventListener("click", () => opts.onSwitchProfile(person));
+		pill.addEventListener("click", () => {
+			opts.viewState.activePerson = person;
+			opts.onViewStateChange();
+		});
 		ppl.appendChild(pill);
 	}
 	return ppl;
@@ -304,17 +318,15 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 	return bar;
 }
 
-/** Left column's own groups always read in this fixed editorial sequence, not attention-rank --
- *  an urgent Cancer marker shouldn't reorder Vitals/Cardiometabolic/Cancer/Immunity relative to
- *  each other. Applied everywhere those 4 groups appear together (all 3 tiers below). */
-const COL0_ORDER = ["vitals", "cardiometabolic", "cancer", "immunity"];
-
-/** Appends whichever of `sorted`'s col0-pinned groups pass `include`, in `COL0_ORDER` -- not the
- *  order they appear in `sorted` (attention-rank). */
+/** Appends whichever of `sorted`'s col0-pinned groups pass `include`, ordered by the concern
+ *  registry's `order` (a fixed editorial sequence, not attention-rank -- an urgent Cancer marker
+ *  shouldn't reorder Vitals/Cardiometabolic/Cancer/Immunity relative to each other). Applied
+ *  everywhere those groups appear together (all 3 tiers below). */
 function appendCol0(lane: HTMLElement, sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement, include: (concern: string) => boolean = () => true): void {
-	for (const concern of COL0_ORDER) {
-		for (const group of sorted) if (group.concern === concern && include(concern)) lane.appendChild(build(group));
-	}
+	const col0 = sorted
+		.filter((group) => columnForConcern(group.concern) === 0 && include(group.concern))
+		.sort((a, b) => orderForConcern(a.concern) - orderForConcern(b.concern));
+	for (const group of col0) lane.appendChild(build(group));
 }
 
 function makeLanes(tier: HTMLElement, count: number): HTMLElement[] {
@@ -421,7 +433,7 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 
 	const wrap = createDiv();
 	wrap.className = "hlth-grp";
-	const head = buildGroupHeader(group, hiddenCount, opts.showAll, opts.concernIcons);
+	const head = buildGroupHeader(group, hiddenCount, opts.viewState.showAll, opts.concernIcons);
 	head.addEventListener("click", () => {
 		void Promise.resolve(opts.onOpenConcern(group.concern, labelForConcern(group.concern))).then((opened) => {
 			if (!opened) wrap.classList.toggle("hlth-grp-expanded");
@@ -430,7 +442,7 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 	wrap.appendChild(head);
 
 	for (const row of rows) {
-		const hidden = !opts.showAll && !curated.has(row.primary.marker.id);
+		const hidden = !opts.viewState.showAll && !curated.has(row.primary.marker.id);
 		const { header, detail } = buildRow(row, hidden, rowOpen, opts);
 		wrap.appendChild(header);
 		wrap.appendChild(detail);
@@ -475,7 +487,7 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 
 function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, opts: DashboardRenderOptions): { header: HTMLElement; detail: HTMLElement } {
 	const { primary, secondary } = row;
-	const toggled = opts.unitToggles.has(primary.marker.id);
+	const toggled = opts.viewState.unitToggles.has(primary.marker.id);
 
 	const header = createDiv();
 	header.className = "hlth-row";
@@ -493,7 +505,12 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 	// "453.56" does. Column alignment wins over that variance here.
 	header.appendChild(buildArrowCell(primary));
 	header.appendChild(buildValueOnlyCell(row, toggled));
-	header.appendChild(buildUnitCell(primary, toggled, opts.onToggleUnit));
+	header.appendChild(
+		buildUnitCell(primary, toggled, (markerId) => {
+			if (!opts.viewState.unitToggles.delete(markerId)) opts.viewState.unitToggles.add(markerId);
+			opts.onViewStateChange();
+		}),
+	);
 
 	const detail = createDiv();
 	detail.className = "hlth-detail";

@@ -81,6 +81,24 @@ export function findVisit(visits: VisitNote[], person: string, date: string): Vi
 	return visits.find((visit) => visit.person === person && visit.date === date);
 }
 
+/** Prefills a visit form's field state from an existing visit when person+date match one
+ *  (create-or-edit by date); empty fields/facility when there's no match. The stored value is
+ *  already the lab's raw reading -- `units[id]` (falling back to the marker's canonical unit)
+ *  says what unit it's in, no conversion needed to display it. */
+export function prefillFields(visits: VisitNote[], markers: MarkerNote[], person: string, date: string): { fields: Map<string, FieldState>; facility: string } {
+	const fields = new Map<string, FieldState>();
+	const existing = findVisit(visits, person, date);
+	if (!existing) return { fields, facility: "" };
+
+	for (const marker of markers) {
+		const value = existing.values[marker.id];
+		if (value === undefined) continue;
+		const unit = existing.units?.[marker.id] ?? marker.unit ?? "";
+		fields.set(marker.id, { raw: String(value), unit });
+	}
+	return { fields, facility: existing.facility ?? "" };
+}
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function validateDate(raw: string): string | undefined {
@@ -150,6 +168,12 @@ export interface FieldState {
 export interface VisitFieldError {
 	markerId: string;
 	reason: string;
+}
+
+/** Prefixes a field error with its marker's name; a blank markerId (the date check) has no marker to name. */
+export function formatVisitError(error: VisitFieldError, markersById: Map<string, MarkerNote>): string {
+	if (!error.markerId) return error.reason;
+	return `${markersById.get(error.markerId)!.name}: ${error.reason}`;
 }
 
 /** Orchestrates a whole visit form's worth of fields: skips derived markers (computed, never entered)

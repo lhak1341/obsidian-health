@@ -1,24 +1,23 @@
 import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
 import { computeDashboardModel } from "./core/dashboard";
+import type { DashboardModel } from "./core/model";
+import type { ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
-import { renderDashboard } from "./render/dashboard-view";
+import { renderDashboard, type DashboardViewState } from "./render/dashboard-view";
+import type { VaultSnapshot } from "./vault/reader";
 
 export const HEALTH_VIEW_TYPE = "health-dashboard";
 
 export class HealthView extends ItemView {
-	private showAll: boolean;
-	private activePerson: string | undefined;
-	/** Marker ids shown in their alt unit -- session-only, resets on view close/reopen (new instance). */
-	private readonly unitToggles = new Set<string>();
-	/** Which row is expanded, if any -- same session-only lifetime as `unitToggles`. */
-	private openMarkerId: string | undefined;
+	private snapshot: VaultSnapshot = { markers: [], visits: [], profiles: [], plans: [] };
+	private readonly viewState: DashboardViewState;
 
 	constructor(
 		leaf: WorkspaceLeaf,
 		private readonly plugin: HealthPlugin,
 	) {
 		super(leaf);
-		this.showAll = plugin.settings.showAllDefault;
+		this.viewState = { showAll: plugin.settings.showAllDefault, unitToggles: new Set(), openMarkerId: undefined, activePerson: undefined };
 	}
 
 	getViewType(): string {
@@ -34,70 +33,67 @@ export class HealthView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		await this.refresh();
+		await this.reload();
 	}
 
 	async onClose(): Promise<void> {
 		this.contentEl.empty();
 	}
 
-	async refresh(): Promise<void> {
-		const snapshot = await this.plugin.scanVault();
+	/** Rescans the vault -- for when the underlying data may actually have changed (view open,
+	 *  after a visit save). Pure view-state changes (showAll, unit toggle, profile switch) go
+	 *  through `repaint()` instead, which needs no I/O. */
+	async reload(): Promise<void> {
+		this.snapshot = await this.plugin.scanVault();
+		this.repaint();
+	}
 
-		// The active profile is session-only: it survives a refresh (e.g. after saving a visit)
+	/** Recomputes the model from the already-loaded snapshot and repaints -- no vault I/O. */
+	repaint(): void {
+		// The active profile is session-only: it survives a repaint (e.g. after a unit toggle)
 		// but resets to the configured default whenever it no longer resolves to a real profile.
-		const current = this.activePerson && snapshot.profiles.find((p) => p.person === this.activePerson);
+		const current = this.viewState.activePerson && this.snapshot.profiles.find((p) => p.person === this.viewState.activePerson);
 		const defaultPerson = this.plugin.settings.defaultProfile;
-		const profile = current || (defaultPerson && snapshot.profiles.find((p) => p.person === defaultPerson)) || snapshot.profiles[0];
-		this.activePerson = profile?.person;
+		const profile = current || (defaultPerson && this.snapshot.profiles.find((p) => p.person === defaultPerson)) || this.snapshot.profiles[0];
+		this.viewState.activePerson = profile?.person;
 
+		if (!profile) {
+			this.contentEl.empty();
+			this.contentEl.addClass("health-dashboard-outer");
+			this.contentEl.createDiv({ cls: "hlth-empty", text: "No profile configured yet. Add a profile note to get started." });
+			return;
+		}
+
+		const model = computeDashboardModel(this.snapshot.markers, this.snapshot.visits, profile, { deadbandPct: this.plugin.settings.deadbandPct });
+		const lastVisitDate = this.snapshot.visits
+			.filter((v) => v.person === profile.person)
+			.map((v) => v.date)
+			.sort()
+			.at(-1);
+
+		this.paint(model, profile, lastVisitDate);
+	}
+
+	private paint(model: DashboardModel, profile: ProfileNote, lastVisitDate: string | undefined): void {
 		// `.hlth-dash` (the actual scrollable element, not contentEl itself) gets torn down and
 		// rebuilt from scratch below, which would otherwise silently reset scroll position on every
-		// refresh -- including ones triggered mid-scroll, like a unit toggle inside an open row.
+		// repaint -- including ones triggered mid-scroll, like a unit toggle inside an open row.
 		const scrollTop = this.contentEl.querySelector(".hlth-dash")?.scrollTop;
 
 		this.contentEl.empty();
 		this.contentEl.addClass("health-dashboard-outer");
 
-		if (!profile) {
-			this.contentEl.createDiv({ cls: "hlth-empty", text: "No profile configured yet. Add a profile note to get started." });
-			return;
-		}
-
-		const model = computeDashboardModel(snapshot.markers, snapshot.visits, profile, { deadbandPct: this.plugin.settings.deadbandPct });
-		const lastVisitDate = snapshot.visits
-			.filter((v) => v.person === profile.person)
-			.map((v) => v.date)
-			.sort()
-			.at(-1);
 		renderDashboard(this.contentEl, model, {
-			showAll: this.showAll,
-			onToggleShowAll: () => {
-				this.showAll = !this.showAll;
-				void this.refresh();
-			},
 			onAddVisit: () => void this.plugin.openVisitEditor(),
 			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit") : undefined,
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
 			onOpenConcern: (key, label) => this.openConcernBase(key, label),
-			profiles: snapshot.profiles.map((p) => p.person),
-			activePerson: profile.person,
-			onSwitchProfile: (person) => {
-				this.activePerson = person;
-				void this.refresh();
-			},
+			profiles: this.snapshot.profiles.map((p) => p.person),
 			profile,
 			lastVisitDate,
 			concernIcons: this.plugin.settings.concernIcons,
-			unitToggles: this.unitToggles,
-			onToggleUnit: (markerId) => {
-				if (!this.unitToggles.delete(markerId)) this.unitToggles.add(markerId);
-				void this.refresh();
-			},
-			openMarkerId: this.openMarkerId,
-			onOpenRowChange: (markerId) => {
-				this.openMarkerId = markerId;
-			},
+			viewState: this.viewState,
+			onViewStateChange: () => this.repaint(),
 		});
 
 		if (scrollTop !== undefined) {

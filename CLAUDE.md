@@ -76,10 +76,17 @@ fallback). This exists because `getFileCache` can return pre-write data after
   `obsidian-lhak-dashboard/src/panels/HealthPanel.ts` is the host side.
 - `.hlth-widget { zoom: 0.9 }` is intentional, not an oversight — Obsidian is
   Chromium-only.
-- `HealthView.refresh()` (`dashboard-view.ts`) does `contentEl.empty()` + full rebuild on every
-  state change (showAll, profile switch, unit toggle). Any UI state that should survive a
-  refresh (open row, scroll position) must be a `HealthView` instance field threaded through
-  `DashboardRenderOptions`, not bare DOM state — see `unitToggles`/`openMarkerId`.
+- `HealthView` splits `refresh()` into `reload()` (rescans the vault — data may have changed) and
+  `repaint()` (recomputes from the cached snapshot, no I/O — for pure UI-state changes). Session-only
+  UI state (`showAll`/`unitToggles`/`openMarkerId`/`activePerson`) lives in one `DashboardViewState`
+  object passed by reference through `DashboardRenderOptions`, not bare DOM state or scattered fields.
+  Row open/close is the one exception: it self-handles via CSS class toggle and does NOT trigger a
+  repaint — don't wire a new toggle through the same path without checking whether it actually needs one.
+- Every `ItemView` splits into a thin adapter (`src/*-view.ts`: lifecycle, I/O, Obsidian `Modal`/`Notice`)
+  and a pure render module (`src/render/*-view.ts`: `renderX(root, state, opts)`, DOM-only, no I/O) —
+  see `dashboard-view.ts`, `planner-view.ts`, `bases-view.ts`, `visit-editor-view.ts` and their
+  `render/` siblings. State that must survive a repaint is passed by reference in a shared state
+  object (mutated in place by input handlers); I/O-touching callbacks stay adapter-owned in `opts`.
 
 ## Process
 

@@ -34,7 +34,7 @@ _Avoid_: business logic, service layer
 
 **Adapter**:
 A thin Obsidian-facing wrapper around the domain core — vault scanning, `ItemView` rendering, the
-entry modal, the registered Bases view, the widget mount point. Intentionally not unit-tested;
+visit editor view, the registered Bases view, the widget mount point. Intentionally not unit-tested;
 correctness comes from keeping logic out of adapters and in the domain core.
 
 **Concern registry**:

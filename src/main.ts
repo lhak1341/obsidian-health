@@ -97,7 +97,7 @@ export default class HealthPlugin extends Plugin {
 	refreshOpenViews(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType(HEALTH_VIEW_TYPE)) {
 			const view = leaf.view;
-			if (view instanceof HealthView) void view.refresh();
+			if (view instanceof HealthView) void view.reload();
 		}
 	}
 
