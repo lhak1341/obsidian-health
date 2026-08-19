@@ -1,4 +1,3 @@
-import { Setting } from "obsidian";
 import { convert, convertTo } from "../core/dashboard";
 import { findVisit, groupMarkersByPanel, pairMarkerNotes, prefillFields, resolveBandForEntry, unitOptions, type FieldState } from "../core/entry";
 import type { MarkerKind, MarkerNote, ProfileNote, VisitNote } from "../core/types";
@@ -31,6 +30,10 @@ export interface EditorFormState {
 	facility: string;
 	dirty: boolean;
 	errors: string[];
+	/** Marker-search text -- survives a structural rerender (person/date change, add-marker) since
+	 *  it lives on `state` like `facility`/`dirty`, but typing itself never triggers one (see
+	 *  `buildSearchRow`'s input handler); it just re-filters the already-rendered rows in place. */
+	search: string;
 }
 
 export interface VisitEditorOptions {
@@ -43,6 +46,11 @@ export interface VisitEditorOptions {
 export function renderVisitEditor(root: HTMLElement, state: EditorFormState, opts: VisitEditorOptions): void {
 	const rerender = () => renderVisitEditor(root, state, opts);
 
+	// `.hlth-visit-editor` (the scrollable element) gets torn down and rebuilt from scratch below --
+	// a structural change (unit toggle, qualitative pick) would otherwise silently reset scroll
+	// position back to the top on every rerender, same fix as the dashboard's paint().
+	const scrollTop = root.querySelector(".hlth-visit-editor")?.scrollTop;
+
 	root.empty();
 	root.addClass("health-visit-editor-outer");
 
@@ -53,8 +61,10 @@ export function renderVisitEditor(root: HTMLElement, state: EditorFormState, opt
 
 	if (state.errors.length > 0) buildErrors(wrap, state);
 
-	buildFields(wrap, state, rerender);
+	buildFields(wrap, state);
 	buildAddMarkerForm(wrap, state, opts);
+
+	if (scrollTop !== undefined) wrap.scrollTop = scrollTop;
 }
 
 function buildHeader(state: EditorFormState, opts: VisitEditorOptions): HTMLElement {
@@ -168,9 +178,25 @@ function fieldState(state: EditorFormState, markerId: string, defaultUnit: strin
 	return fs;
 }
 
-function buildFields(root: HTMLElement, state: EditorFormState, rerender: () => void): void {
+/** Shows/hides already-built rows in place against `query` -- no rerender, so it can run on every
+ *  keystroke without disturbing input focus. A panel card hides entirely once none of its rows
+ *  match, instead of leaving an empty header floating above a blank card. */
+function applySearchFilter(panels: HTMLElement, query: string): void {
+	const q = query.trim().toLowerCase();
+	for (const card of Array.from(panels.querySelectorAll<HTMLElement>(".hlth-editor-panel"))) {
+		let anyVisible = false;
+		for (const row of Array.from(card.querySelectorAll<HTMLElement>(".hlth-editor-row"))) {
+			const match = q === "" || (row.dataset.search ?? "").includes(q);
+			row.style.display = match ? "" : "none";
+			anyVisible ||= match;
+		}
+		card.style.display = anyVisible ? "" : "none";
+	}
+}
+
+function buildFields(root: HTMLElement, state: EditorFormState): void {
 	const profile = currentProfile(state);
-	const groups = groupMarkersByPanel(state.markers.filter((m) => m.type !== "derived"));
+	const groups = groupMarkersByPanel(state.markers.filter((m) => m.type !== "derived" && (!m.sex || m.sex === profile?.sex)));
 
 	const columns: (typeof groups)[number][][] = [[], [], []];
 	for (const group of groups) columns[columnForPanel(group.panel)].push(group);
@@ -178,15 +204,28 @@ function buildFields(root: HTMLElement, state: EditorFormState, rerender: () => 
 		columnGroups.sort((a, b) => orderForPanel(a.panel) - orderForPanel(b.panel) || a.panel.localeCompare(b.panel));
 	}
 
+	const searchWrap = root.createDiv({ cls: "hlth-editor-search" });
+	searchWrap.appendChild(iconFor("search"));
+	const searchInput = searchWrap.createEl("input", { cls: "hlth-editor-search-input", attr: { type: "text", placeholder: "Search markers…" } });
+	searchInput.value = state.search;
+
 	const panels = root.createDiv({ cls: "hlth-editor-panels" });
 	for (const columnGroups of columns) {
 		if (columnGroups.length === 0) continue;
 		const col = panels.createDiv({ cls: "hlth-editor-col" });
-		for (const group of columnGroups) buildPanelCard(col, group, profile, state, rerender);
+		for (const group of columnGroups) buildPanelCard(col, group, profile, state);
 	}
+
+	searchInput.addEventListener("input", () => {
+		state.search = searchInput.value;
+		applySearchFilter(panels, state.search);
+	});
+	// A persisted, non-empty search (carried over from before a structural rerender -- person/date
+	// change, add-marker) needs re-applying now that the rows exist again.
+	if (state.search) applySearchFilter(panels, state.search);
 }
 
-function buildPanelCard(col: HTMLElement, group: { panel: string; markers: MarkerNote[] }, profile: ProfileNote | undefined, state: EditorFormState, rerender: () => void): void {
+function buildPanelCard(col: HTMLElement, group: { panel: string; markers: MarkerNote[] }, profile: ProfileNote | undefined, state: EditorFormState): void {
 	const card = col.createDiv({ cls: "hlth-editor-panel" });
 
 	// Same head treatment as the dashboard's concern-group header (`.hlth-grp-head`/`.hlth-lbl`),
@@ -197,19 +236,29 @@ function buildPanelCard(col: HTMLElement, group: { panel: string; markers: Marke
 	head.createSpan({ cls: "hlth-lbl hlth-grp-label", text: group.panel });
 	for (const row of pairMarkerNotes(group.markers)) {
 		if (row.secondary) buildPairRow(card, row.primary, row.secondary, state);
-		else if (row.primary.type === "qualitative") buildQualitativeRow(card, row.primary, state, rerender);
+		else if (row.primary.type === "qualitative") buildQualitativeRow(card, row.primary, state);
 		else buildNumericRow(card, row.primary, profile, state);
 	}
 }
 
 /** A range hint costs nothing extra vertically as a placeholder (vs. a second description line
- *  like the old Setting-based row had) -- falls back to the unit when there's no band to show. */
-function rangePlaceholder(marker: MarkerNote, profile: ProfileNote | undefined, state: EditorFormState): string {
+ *  like the old Setting-based row had) -- falls back to the unit when there's no band to show.
+ *  `resolveBandForEntry` returns the band in the marker's canonical unit, so a non-canonical
+ *  `unit` (the alt-unit toggle) needs the band converted before display, not just the raw value. */
+function rangePlaceholder(marker: MarkerNote, profile: ProfileNote | undefined, state: EditorFormState, unit: string): string {
 	const band = profile ? resolveBandForEntry(marker, profile, state.date) : {};
-	if (band.low !== undefined && band.high !== undefined) return `${band.low}–${band.high}`;
-	if (band.low !== undefined) return `≥${band.low}`;
-	if (band.high !== undefined) return `≤${band.high}`;
-	return marker.unit ?? "value";
+	const toUnit = (value: number) => (marker.unit && unit !== marker.unit ? convertTo(value, unit, marker) : value);
+	const round = (value: number) => Math.round(value * 1000) / 1000;
+	if (band.low !== undefined && band.high !== undefined) return `${round(toUnit(band.low))}–${round(toUnit(band.high))}`;
+	if (band.low !== undefined) return `≥${round(toUnit(band.low))}`;
+	if (band.high !== undefined) return `≤${round(toUnit(band.high))}`;
+	return unit || "value";
+}
+
+/** Search text a row matches against -- name plus aliases, so e.g. typing "ALT" still finds
+ *  "Alanine Aminotransferase" even on a marker whose name doesn't spell the abbreviation out. */
+function searchTextFor(marker: MarkerNote): string {
+	return [marker.name, ...marker.aliases].join(" ").toLowerCase();
 }
 
 function buildNumericRow(root: HTMLElement, marker: MarkerNote, profile: ProfileNote | undefined, state: EditorFormState): void {
@@ -217,10 +266,11 @@ function buildNumericRow(root: HTMLElement, marker: MarkerNote, profile: Profile
 	const fs = fieldState(state, marker.id, options[0]?.value ?? "");
 
 	const row = root.createDiv({ cls: "hlth-editor-row" });
+	row.dataset.search = searchTextFor(marker);
 	row.createSpan({ cls: "hlth-editor-name", text: marker.name, attr: { title: marker.name } });
 
 	const controls = row.createDiv({ cls: "hlth-editor-controls" });
-	const input = controls.createEl("input", { cls: "hlth-editor-value", attr: { placeholder: rangePlaceholder(marker, profile, state) } });
+	const input = controls.createEl("input", { cls: "hlth-editor-value", attr: { placeholder: rangePlaceholder(marker, profile, state, fs.unit) } });
 	input.value = fs.raw;
 	input.addEventListener("input", () => {
 		fs.raw = input.value;
@@ -228,21 +278,31 @@ function buildNumericRow(root: HTMLElement, marker: MarkerNote, profile: Profile
 	});
 
 	if (options.length > 1) {
-		const unitSelect = controls.createEl("select", { cls: "hlth-editor-unit-select" });
-		for (const option of options) unitSelect.createEl("option", { value: option.value, text: option.label });
-		unitSelect.value = fs.unit;
-		unitSelect.addEventListener("change", () => {
+		// Only ever two options (canonical + alt), so a click-to-toggle label reads faster than a
+		// dropdown that always has exactly one alternative to pick -- mirrors the dashboard's
+		// buildUnitCell instead of forcing an open/select/close dropdown interaction for one choice.
+		const unitLabel = controls.createSpan({ cls: "hlth-editor-unit hlth-unit-toggle" });
+		const otherOption = () => options.find((option) => option.value !== fs.unit) ?? options[0];
+		const paintUnit = () => {
+			unitLabel.textContent = fs.unit;
+			unitLabel.title = `Click to show in ${otherOption().label}`;
+		};
+		paintUnit();
+		unitLabel.addEventListener("click", () => {
+			const target = otherOption();
 			// Convert the already-typed number along with the unit switch, rather than leaving it
 			// as-is under the new unit label -- switching mg/dL -> µmol/L should reflect the same
 			// reading, not silently relabel the same digits.
 			const parsed = Number(fs.raw.trim());
 			if (fs.raw.trim() !== "" && Number.isFinite(parsed)) {
 				const canonical = convert(parsed, fs.unit, marker);
-				const converted = convertTo(canonical, unitSelect.value, marker);
+				const converted = convertTo(canonical, target.value, marker);
 				fs.raw = String(Math.round(converted * 1000) / 1000);
 				input.value = fs.raw;
 			}
-			fs.unit = unitSelect.value;
+			fs.unit = target.value;
+			input.placeholder = rangePlaceholder(marker, profile, state, fs.unit);
+			paintUnit();
 			state.dirty = true;
 		});
 	} else if (marker.unit) {
@@ -255,6 +315,7 @@ function buildPairRow(root: HTMLElement, primary: MarkerNote, secondary: MarkerN
 	const secondaryState = fieldState(state, secondary.id, secondary.unit ?? "");
 
 	const row = root.createDiv({ cls: "hlth-editor-row" });
+	row.dataset.search = `${searchTextFor(primary)} ${searchTextFor(secondary)}`;
 	row.createSpan({ cls: "hlth-editor-name", text: `${primary.name} / ${secondary.name}`, attr: { title: `${primary.name} / ${secondary.name}` } });
 
 	const controls = row.createDiv({ cls: "hlth-editor-controls" });
@@ -277,66 +338,100 @@ function buildPairRow(root: HTMLElement, primary: MarkerNote, secondary: MarkerN
 	if (primary.unit) controls.createSpan({ cls: "hlth-editor-unit", text: primary.unit });
 }
 
-function buildQualitativeRow(root: HTMLElement, marker: MarkerNote, state: EditorFormState, rerender: () => void): void {
+function buildQualitativeRow(root: HTMLElement, marker: MarkerNote, state: EditorFormState): void {
 	const fs = fieldState(state, marker.id, "");
 	const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
-	const isSeeded = fs.raw === "" || normal.includes(fs.raw);
+	// "" (blank) and any listed normal value are known options; anything else (a prior free-text
+	// entry, e.g. a graded "2+" result) means Other was picked and its text lives in fs.raw itself.
+	const isKnownValue = fs.raw === "" || normal.includes(fs.raw);
 
 	const row = root.createDiv({ cls: "hlth-editor-row" });
+	row.dataset.search = searchTextFor(marker);
 	row.createSpan({ cls: "hlth-editor-name", text: marker.name, attr: { title: marker.name } });
 
 	const controls = row.createDiv({ cls: "hlth-editor-controls" });
 	const select = controls.createEl("select", { cls: "hlth-editor-unit-select hlth-editor-qualitative" });
+	// An untouched field must stay on this blank option, not pre-pick normal[0] -- otherwise Save
+	// can't distinguish "user confirmed normal" from "marker wasn't logged this visit"
+	// (evaluateQualitativeField treats "" as omitted, which is exactly what an unlogged marker wants).
+	select.createEl("option", { value: "", text: "-" });
 	for (const option of normal) select.createEl("option", { value: option, text: option });
 	select.createEl("option", { value: OTHER_OPTION, text: "Other…" });
-	select.value = isSeeded && fs.raw !== "" ? fs.raw : isSeeded ? (normal[0] ?? OTHER_OPTION) : OTHER_OPTION;
-	select.addEventListener("change", () => {
-		fs.raw = select.value === OTHER_OPTION ? "" : select.value;
-		state.dirty = true;
-		rerender();
-	});
+	select.value = isKnownValue ? fs.raw : OTHER_OPTION;
 
-	if (!isSeeded) {
-		const text = controls.createEl("input", { cls: "hlth-editor-value hlth-editor-value-wide", attr: { placeholder: "Free text" } });
-		text.value = fs.raw;
-		text.addEventListener("input", () => {
-			fs.raw = text.value;
-			state.dirty = true;
-		});
-	}
+	// Always in the DOM (not conditionally rebuilt on select change, which previously required a
+	// full-form rerender and -- since picking "Other…" sets fs.raw to "" until something's typed --
+	// made "" ambiguous between "blank" and "Other, nothing typed yet" and hid the box entirely).
+	// Toggling visibility off the select's own value sidesteps that ambiguity. Inline `display`,
+	// not the `.hlth-hidden` class -- that class is scoped `.hlth-row.hlth-hidden` (dashboard rows
+	// only) and silently never matches an `<input>` that isn't itself a `.hlth-row`.
+	const text = controls.createEl("input", { cls: "hlth-editor-value hlth-editor-value-wide", attr: { placeholder: "Free text" } });
+	text.value = isKnownValue ? "" : fs.raw;
+	text.style.display = isKnownValue ? "none" : "";
+
+	select.addEventListener("change", () => {
+		const other = select.value === OTHER_OPTION;
+		text.style.display = other ? "" : "none";
+		fs.raw = other ? text.value : select.value;
+		state.dirty = true;
+		if (other) text.focus();
+	});
+	text.addEventListener("input", () => {
+		fs.raw = text.value;
+		state.dirty = true;
+	});
 }
 
+/** Same compact `.hlth-editor-field`/`.hlth-editor-select` shape as the Person/Date/Facility row
+ *  above -- not Obsidian's `Setting` rows, which are full settings-page-sized and looked wildly
+ *  out of place (and much taller) next to the rest of this form's compact controls. */
 function buildAddMarkerForm(root: HTMLElement, state: EditorFormState, opts: VisitEditorOptions): void {
 	const details = root.createEl("details", { cls: "hlth-modal-addmarker" });
 	details.createEl("summary", { text: "+ add a new marker" });
 
-	const body = details.createDiv();
-	let name = "";
-	let id = "";
-	let type: MarkerKind = "numeric";
-	let unit = "";
-	let panel = state.markers[0]?.panel ?? "";
+	const body = details.createDiv({ cls: "hlth-editor-meta-fields" });
+	const draft = { name: "", id: "", type: "numeric" as MarkerKind, unit: "", panel: "" };
+	const panels = Array.from(new Set(state.markers.map((m) => m.panel).filter((p) => p))).sort((a, b) => a.localeCompare(b));
 
-	new Setting(body).setName("Name").addText((text) => text.onChange((value) => (name = value)));
-	new Setting(body).setName("ID (marker key)").addText((text) => text.onChange((value) => (id = value)));
-	new Setting(body).setName("Type").addDropdown((dropdown) =>
-		dropdown
-			.addOption("numeric", "Numeric")
-			.addOption("qualitative", "Qualitative")
-			.onChange((value) => (type = value as MarkerKind)),
-	);
-	new Setting(body).setName("Unit").addText((text) => text.onChange((value) => (unit = value)));
-	new Setting(body).setName("Panel").addText((text) => {
-		text.setValue(panel);
-		text.onChange((value) => (panel = value));
+	const nameInput = buildEditorField(body, "Name").createEl("input", { cls: "hlth-editor-select" });
+	nameInput.addEventListener("input", () => (draft.name = nameInput.value));
+
+	const idInput = buildEditorField(body, "ID").createEl("input", { cls: "hlth-editor-select" });
+	idInput.addEventListener("input", () => (draft.id = idInput.value));
+
+	const typeSelect = buildEditorField(body, "Type").createEl("select", { cls: "hlth-editor-select" });
+	typeSelect.createEl("option", { value: "numeric", text: "Numeric" });
+	typeSelect.createEl("option", { value: "qualitative", text: "Qualitative" });
+	typeSelect.addEventListener("change", () => (draft.type = typeSelect.value as MarkerKind));
+
+	const unitInput = buildEditorField(body, "Unit").createEl("input", { cls: "hlth-editor-select" });
+	unitInput.addEventListener("input", () => (draft.unit = unitInput.value));
+
+	// Same select+Other pattern as a qualitative row's dropdown (buildQualitativeRow) -- pick an
+	// existing panel by default, or "Other…" to reveal a free-text box for a brand-new one.
+	const panelField = buildEditorField(body, "Panel");
+	const panelSelect = panelField.createEl("select", { cls: "hlth-editor-select" });
+	for (const panel of panels) panelSelect.createEl("option", { value: panel, text: panel });
+	panelSelect.createEl("option", { value: OTHER_OPTION, text: "Other…" });
+
+	const panelOtherInput = panelField.createEl("input", { cls: "hlth-editor-select", attr: { placeholder: "New panel name" } });
+
+	const noExistingPanels = panels.length === 0;
+	panelSelect.value = noExistingPanels ? OTHER_OPTION : panels[0];
+	draft.panel = noExistingPanels ? "" : panels[0];
+	panelOtherInput.style.display = noExistingPanels ? "" : "none";
+
+	panelSelect.addEventListener("change", () => {
+		const other = panelSelect.value === OTHER_OPTION;
+		panelOtherInput.style.display = other ? "" : "none";
+		draft.panel = other ? panelOtherInput.value : panelSelect.value;
+		if (other) panelOtherInput.focus();
 	});
+	panelOtherInput.addEventListener("input", () => (draft.panel = panelOtherInput.value));
 
-	new Setting(body).addButton((btn) =>
-		btn
-			.setButtonText("Add marker")
-			.setCta()
-			.onClick(() => {
-				opts.onAddMarker({ id: id.trim(), name: name.trim(), type, unit: unit.trim(), panel: panel.trim() });
-			}),
-	);
+	const addButton = body.createEl("button", { cls: "hlth-showall-btn hlth-editor-save", text: "Add marker" });
+	addButton.type = "button";
+	addButton.addEventListener("click", () => {
+		opts.onAddMarker({ id: draft.id.trim(), name: draft.name.trim(), type: draft.type, unit: draft.unit.trim(), panel: draft.panel.trim() });
+	});
 }

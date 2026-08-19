@@ -1,7 +1,7 @@
 import { Menu } from "obsidian";
 import { isToggleable, toDisplay } from "../core/dashboard";
 import type { ConcernGroup, DashboardModel, DisplayReading, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
-import type { MarkerNote, ProfileNote } from "../core/types";
+import type { MarkerKind, MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
 import { labelForConcern } from "./concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
@@ -238,14 +238,18 @@ function buildProfileInfo(opts: DashboardRenderOptions): HTMLElement {
 	return line;
 }
 
-function attentionReason(status: Status): string {
+/** Qualitative markers only ever resolve to "good" or "high" (see core/dashboard.ts's normal-list
+ *  check -- no real above/below-range concept for e.g. a "Positive" Trichomonas result), so "above
+ *  range" would misdescribe them; they get a type-neutral "abnormal" instead. */
+function attentionReason(status: Status, markerType: MarkerKind): string {
+	if (markerType === "qualitative") return status === "good" ? "" : "abnormal";
 	switch (status) {
 		case "high":
-			return "above range";
+			return ">range";
 		case "low":
-			return "below range";
+			return "<range";
 		case "watch":
-			return "past your target";
+			return ">target";
 		case "good":
 			return "";
 	}
@@ -303,11 +307,14 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 		value.textContent = formatRowValue(primary.latest?.value, secondary);
 		item.appendChild(value);
 
-		item.appendChild(buildArrowCell(primary));
+		// Skip entirely (not just an empty glyph) when there's no arrow to show -- an empty-but-present
+		// `.hlth-arrow` span still claims its own `gap` slot on both sides, reading as a stray gap
+		// before "why" on rows (e.g. qualitative markers, single-reading numerics) that have none.
+		if (primary.arrow) item.appendChild(buildArrowCell(primary));
 
 		const why = createSpan();
 		why.className = "hlth-attn-why";
-		why.textContent = attentionReason(primary.status);
+		why.textContent = attentionReason(primary.status, primary.marker.type);
 		item.appendChild(why);
 
 		item.addEventListener("click", () => {
@@ -533,7 +540,11 @@ function buildValueOnlyCell(row: RowEntry, display: DisplayReading): HTMLElement
 	const { primary, secondary } = row;
 	const value = createSpan();
 	value.className = "hlth-value";
-	if (primary.marker.type === "qualitative") value.classList.add("hlth-value-qual");
+	// Off the actual displayed value's type, not `marker.type` -- a numeric marker can still show a
+	// legacy string reading (e.g. `hbsab: Immune`, recorded back when that assay was qualitative-only),
+	// which needs the same compact text sizing a genuinely qualitative marker's value gets, not the
+	// bigger digit-sized default meant for numbers.
+	if (typeof display.value !== "number") value.classList.add("hlth-value-qual");
 	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
 	value.textContent = formatRowValue(display.value, secondary);
 	return value;
@@ -588,18 +599,10 @@ function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement
 		return wrap;
 	}
 
-	const numericCount = primary.series.filter((point) => typeof point.value === "number").length;
-	if (numericCount < 2) {
-		const note = createDiv();
-		note.className = "hlth-single-note";
-		const readings = display.series
-			.map((point) => `${formatYear(point.date)} · ${formatRawValue(point.value)}${display.unit ? ` ${display.unit}` : ""}`)
-			.join(", ");
-		note.textContent = `Single reading so far — ${readings}. Trend appears after the next visit.`;
-		wrap.appendChild(note);
-		return wrap;
-	}
-
+	// A single reading still draws the full chart -- band + point position is useful on its own
+	// (buildHistoryChart's domain math already handles count === 1 fine), not just a trend line
+	// that needs a second visit to exist. computeDashboardModel drops markers with an empty series
+	// entirely, so a numeric row reaching here always has at least one point.
 	wrap.appendChild(
 		buildHistoryChart(display.series, secondary?.series, {
 			band: display.band,

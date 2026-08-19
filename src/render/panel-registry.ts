@@ -19,6 +19,7 @@ export const PANEL_LAYOUT: Record<string, PanelConfig> = {
 	blood: { column: 1, order: 0 },
 	urine: { column: 2, order: 0 },
 	antigen: { column: 2, order: 1 },
+	gyn: { column: 2, order: 2 },
 };
 
 export function columnForPanel(panel: string): 0 | 1 | 2 {

@@ -21,6 +21,10 @@ export interface MarkerNote {
 	altUnit?: string;
 	altFactor?: number;
 	panel: string;
+	/** Restricts this marker to one sex (e.g. a gynecological marker) -- unset means it applies to
+	 *  everyone. Separate from `ranges[].sex`, which picks a reference band for a marker every
+	 *  profile still sees; this decides whether the marker is shown at all. */
+	sex?: PersonSex;
 	concern: string[];
 	ranges?: MarkerRange[];
 	normal?: string | string[];

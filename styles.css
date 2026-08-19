@@ -241,7 +241,9 @@ svg.hlth-ic {
 
 .hlth-attn-items {
 	display: flex;
-	gap: 20px;
+	/* row-gap column-gap -- a single `gap` value would also space wrapped lines 20px apart
+	   vertically, same as items sit apart horizontally; row-gap stays tight on its own. */
+	gap: 6px 20px;
 	flex-wrap: wrap;
 }
 
@@ -664,13 +666,6 @@ svg.hlth-chart {
 	color: var(--hlth-fg1);
 }
 
-.hlth-single-note {
-	font-family: var(--hlth-fb);
-	font-size: 12.5px;
-	color: var(--hlth-fg3);
-	padding: 8px 0;
-}
-
 .hlth-empty {
 	font-family: var(--hlth-fb);
 	font-size: 14px;
@@ -736,6 +731,40 @@ svg.hlth-chart {
 	padding: 5px 8px;
 	box-shadow: none;
 	min-width: 150px;
+}
+
+.hlth-editor-search {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin-bottom: 14px;
+	padding: 5px 8px;
+	border: 1px solid var(--hlth-border);
+	border-radius: 4px;
+	background: var(--hlth-bg2);
+	color: var(--hlth-fg3);
+}
+
+.hlth-editor-search svg.hlth-ic {
+	flex: none;
+	width: 13px;
+	height: 13px;
+}
+
+.hlth-editor-search-input {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-family: var(--hlth-fb);
+	font-size: 12.5px;
+	color: var(--hlth-fg1);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+}
+
+.hlth-editor-search-input::placeholder {
+	color: var(--hlth-fg4);
 }
 
 /* One card per panel -- the physical lab report's own grouping (CLAUDE.md: panel is the
@@ -885,12 +914,12 @@ svg.hlth-chart {
 }
 
 .hlth-editor-qualitative {
-	font-size: 12px;
+	font-size: 12.5px;
 	color: var(--hlth-fg1);
 	background: var(--hlth-bg2);
 	border: 1px solid var(--hlth-border);
 	border-radius: 4px;
-	padding: 3px 6px;
+	padding: 2px 5px;
 	max-width: 120px;
 }
 

@@ -13,6 +13,10 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
 - Marker `panel` (drives the Add Visit form's grouping, mirroring the physical lab report's
   sections) and `concern` (drives dashboard column grouping, clinical/thematic) are
   intentionally separate axes over the same markers. Do not collapse them.
+- `MarkerNote.sex` (`m`/`f`, optional — unset means everyone) restricts whether a marker shows at
+  all, filtered in `computeDashboardModel` and the visit editor's `buildFields`. Separate axis
+  from `ranges[].sex`, which only picks which reference band resolves for a marker every profile
+  still sees.
 - New marker notes default to `curated: false` (hidden until "Show all") and no `direction`
   (neutral gray trend arrow) unless set explicitly — easy to forget both when authoring.
 - A marker's `type:` (numeric vs qualitative) must match how the source lab actually reports
@@ -20,6 +24,11 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
   user's lab (dipstick, not quantitative) always reports it as text ("Normal"), which
   hard-blocked saving until retyped `qualitative`. Check real recorded values before trusting
   a newly-scaffolded marker's `type:`.
+- A lab report's own red/"out of range" flagging doesn't always mean "needs attention" here — for
+  a `higher_better` marker with only a floor (`ranges[].low`, e.g. an antibody titer like `hbsab`),
+  the reference interval's low bound is often the *protective* threshold, so clearing it is the
+  good outcome even though the report flags it red for being "outside the interval." Don't mirror
+  the report's literal flagging without checking which direction is actually clinically better.
 - Command ids are not slugs of display names: "Open dashboard" → `open-health-dashboard`.
   Others: `open-health-planner`, `add-lab-visit`.
 - Visit values are stored raw-as-reported (not canonical) with unit noted in a `<id>_unit`
@@ -81,8 +90,18 @@ fallback). This exists because `getFileCache` can return pre-write data after
   were scoped to `.hlth-dash` only for a while, so Planner/Editor buttons silently rendered
   with Obsidian's default button skin instead of the plugin's. When adding a 4th view to
   this family, extend both lists, not just the token one.
+- `.hlth-hidden` (`display: none`) is scoped `.hlth-row.hlth-hidden`, not a general-purpose hide
+  utility — toggling it on any other element type (an input, a span) silently does nothing.
+  Use inline `style.display` for one-off visibility toggles outside dashboard rows.
+- A conditionally-empty flex child (e.g. an arrow span with `textContent === ""`) still consumes
+  its own `gap` slot on both sides. Skip appending it entirely when there's nothing to show,
+  rather than rendering it empty — don't fight the gap with margins.
 - `IconSuggest` (`src/render/icon-suggest.ts`, ported from linear-calendar) already exists
   for Lucide-icon text fields. Reuse it.
+- Don't use Obsidian's `Setting` class inside the dashboard/planner/visit-editor family — its rows
+  render full-settings-page-sized, clashing with the compact `.hlth-editor-*` language. Build
+  inputs directly with `.hlth-editor-field`/`.hlth-editor-select` instead (see `visit-editor-view.ts`'s
+  Person/Date/Facility row for the pattern).
 - `mountHealthWidget` (`main.ts`) is the guest side of the dashboard handshake;
   `obsidian-lhak-dashboard/src/panels/HealthPanel.ts` is the host side.
 - `.hlth-widget { zoom: 0.9 }` is intentional, not an oversight — Obsidian is

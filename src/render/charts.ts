@@ -64,13 +64,30 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 	const pad = 2;
 	const primary = numericPoints(series);
 	const svg = svgEl("svg", { class: "hlth-spk", viewBox: `0 0 ${width} ${height}` });
-	if (primary.length < 2) {
-		// No trend line to draw (qualitative marker, or a single reading) -- an entirely empty
-		// track reads as a big dead gap between the name and value columns. A faint dash gives
-		// that stretch some visual weight without implying a trend that isn't there. Right-flush
-		// (ending at width-pad, same x as a real trend line's last point) so its end lines up
-		// with every other row's sparkline endpoint instead of stopping short in the middle.
+	if (primary.length === 0) {
+		// No numeric reading to place at all (qualitative marker) -- an entirely empty track reads
+		// as a big dead gap between the name and value columns. A faint dash gives that stretch some
+		// visual weight without implying a trend that isn't there. Right-flush (ending at width-pad,
+		// same x as a real trend line's last point) so its end lines up with every other row's
+		// sparkline endpoint instead of stopping short in the middle.
 		svg.appendChild(svgEl("line", { x1: width - pad - 16, y1: height / 2, x2: width - pad, y2: height / 2, stroke: "var(--text-faint)", "stroke-width": 1.3, "stroke-linecap": "round", opacity: 0.5 }));
+		return svg;
+	}
+
+	if (primary.length === 1) {
+		// One reading still places the band + dot -- where it sits inside the reference range is
+		// useful on its own, not just a trend that needs a second visit to draw a line between.
+		const only = primary[0];
+		const allValues = [only.value];
+		if (band.low !== undefined) allValues.push(band.low);
+		if (band.high !== undefined) allValues.push(band.high);
+		const [min, max] = paddedDomain(allValues, 0.18);
+		const y = scaleY(min, max, height - pad, pad);
+
+		const bandRect = buildBandRect(band, y, width, pad, height - pad);
+		if (bandRect) svg.appendChild(bandRect);
+
+		svg.appendChild(svgEl("circle", { cx: width - pad, cy: y(only.value).toFixed(1), r: 2.4, fill: dotColor }));
 		return svg;
 	}
 

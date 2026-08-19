@@ -39,6 +39,7 @@ export const CONCERN_CONFIG: Record<string, ConcernConfig> = {
 	metabolic: { icon: "activity", column: 2, label: "Metabolic" },
 	kidney: { icon: "droplet", column: 2, label: "Kidney" },
 	liver: { icon: "flask-conical", column: 2, label: "Liver" },
+	gynecological: { icon: "venus", column: 0, label: "Gynecological", order: 4, mediumLaneGroup: 1 },
 };
 
 export function iconNameForConcern(key: string): string {

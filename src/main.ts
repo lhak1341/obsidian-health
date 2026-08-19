@@ -76,10 +76,11 @@ export default class HealthPlugin extends Plugin {
 		);
 	}
 
-	async openVisitEditor(initialDate?: string, mode: "add" | "edit" = "add"): Promise<void> {
+	async openVisitEditor(initialDate?: string, mode: "add" | "edit" = "add", person?: string): Promise<void> {
 		const snapshot = await this.scanVault();
-		const defaultPerson = resolveDefaultProfile(snapshot.profiles, this.settings.defaultProfile)?.person;
-		if (!defaultPerson) {
+		const requestedPerson = person && snapshot.profiles.some((p) => p.person === person) ? person : undefined;
+		const targetPerson = requestedPerson ?? resolveDefaultProfile(snapshot.profiles, this.settings.defaultProfile)?.person;
+		if (!targetPerson) {
 			new Notice("Add a profile note before recording a lab visit.");
 			return;
 		}
@@ -89,7 +90,7 @@ export default class HealthPlugin extends Plugin {
 		await leaf.setViewState({
 			type: HEALTH_VISIT_EDITOR_VIEW_TYPE,
 			active: true,
-			state: { person: defaultPerson, initialDate, mode },
+			state: { person: targetPerson, initialDate, mode },
 		});
 		await workspace.revealLeaf(leaf);
 	}
@@ -147,11 +148,13 @@ export default class HealthPlugin extends Plugin {
 		});
 	}
 
-	async activateView(): Promise<void> {
+	async activateView(person?: string): Promise<void> {
 		const { workspace } = this.app;
 
 		const leaf = this.findHealthLeaf(HEALTH_VIEW_TYPE) ?? workspace.getLeaf("tab");
-		if (leaf.view.getViewType() !== HEALTH_VIEW_TYPE) await leaf.setViewState({ type: HEALTH_VIEW_TYPE, active: true });
+		if (leaf.view.getViewType() !== HEALTH_VIEW_TYPE) {
+			await leaf.setViewState({ type: HEALTH_VIEW_TYPE, active: true, state: person ? { person } : undefined });
+		}
 
 		await workspace.revealLeaf(leaf);
 	}

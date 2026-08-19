@@ -4,6 +4,7 @@ import type {
 	MarkerKind,
 	MarkerNote,
 	MarkerRange,
+	PersonSex,
 	PlanNote,
 	Priority,
 	ProfileNote,
@@ -93,6 +94,7 @@ const MARKER_KINDS: MarkerKind[] = ["numeric", "qualitative", "derived"];
 const DIRECTIONS: Direction[] = ["lower_better", "higher_better", "within"];
 const PRIORITIES: Priority[] = ["essential", "lifestyle", "secondary"];
 const RANGE_SEXES: RangeSex[] = ["m", "f", "any"];
+const PERSON_SEXES: PersonSex[] = ["m", "f"];
 
 function parseMarkerNote(id: string, fm: Record<string, unknown>, blurb: string): MarkerNote | null {
 	if (typeof fm.name !== "string") return null;
@@ -107,6 +109,7 @@ function parseMarkerNote(id: string, fm: Record<string, unknown>, blurb: string)
 		altUnit: asOptionalString(fm.alt_unit),
 		altFactor: asOptionalNumber(fm.alt_factor),
 		panel: typeof fm.panel === "string" ? fm.panel : "",
+		sex: PERSON_SEXES.includes(fm.sex as PersonSex) ? (fm.sex as PersonSex) : undefined,
 		concern: asStringArray(fm.concern),
 		ranges: parseRanges(fm.ranges),
 		normal: parseNormal(fm.normal),

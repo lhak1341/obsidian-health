@@ -26,6 +26,7 @@ export function computeDashboardModel(
 	// object identity instead of re-deriving it a second time per marker during the sort.
 	const magnitudeByInfo = new Map<MarkerStatusInfo, number>();
 	for (const marker of markers) {
+		if (marker.sex && marker.sex !== profile.sex) continue;
 		const series = buildSeries(marker, sortedVisits);
 		if (series.length === 0) continue;
 
@@ -125,12 +126,18 @@ function statusTier(status: Status): number {
 	}
 }
 
+/** Keeps a legacy string reading on an otherwise-numeric marker (e.g. `hbsab: Immune` recorded
+ *  back when that assay was only ever reported qualitatively) instead of dropping it -- every
+ *  numeric-only consumer downstream (deriveArrow, buildHistoryChart's numericPoints, deriveStatus's
+ *  `typeof latest.value !== "number"` guard) already filters/degrades safely on a mixed series, so
+ *  dropping it here only cost the row its visibility: `series.length === 0` skips the marker
+ *  entirely below, so a marker whose *only* history is a legacy string value vanished from the
+ *  dashboard outright instead of just not plotting on the trend line. */
 function buildSeries(marker: MarkerNote, visits: VisitNote[]): SeriesPoint[] {
 	const points: SeriesPoint[] = [];
 	for (const visit of visits) {
 		const raw = visit.values[marker.id];
 		if (raw === undefined) continue;
-		if (marker.type === "numeric" && typeof raw !== "number") continue;
 		const value = typeof raw === "number" ? toCanonicalReading(raw, visit.units?.[marker.id], marker) : raw;
 		points.push({ date: visit.date, value });
 	}

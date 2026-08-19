@@ -1,4 +1,4 @@
-import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, TFile, WorkspaceLeaf, type ViewStateResult } from "obsidian";
 import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
 import type { DashboardModel } from "./core/model";
 import type { ProfileNote } from "./core/types";
@@ -35,6 +35,19 @@ export class HealthView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		await this.reload();
+	}
+
+	/** Fires after `onOpen()` when this leaf's view type is switched to `HEALTH_VIEW_TYPE` in place
+	 *  (e.g. navigating back from the visit editor) -- `onOpen` runs first with no state, so the
+	 *  default profile wins there; this carries the caller's requested person on top via `repaint()`
+	 *  (snapshot's already loaded, no need to rescan). */
+	async setState(state: unknown, result: ViewStateResult): Promise<void> {
+		const person = (state as { person?: string } | undefined)?.person;
+		if (person) {
+			this.viewState.activePerson = person;
+			this.repaint();
+		}
+		await super.setState(state, result);
 	}
 
 	async onClose(): Promise<void> {
@@ -84,8 +97,8 @@ export class HealthView extends ItemView {
 		this.contentEl.addClass("health-dashboard-outer");
 
 		renderDashboard(this.contentEl, model, {
-			onAddVisit: () => void this.plugin.openVisitEditor(),
-			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit") : undefined,
+			onAddVisit: () => void this.plugin.openVisitEditor(undefined, "add", profile.person),
+			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit", profile.person) : undefined,
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
 			onOpenConcern: (key, label) => this.openConcernBase(key, label),
 			onToggleCurated: (markerId) => void this.toggleCurated(markerId),

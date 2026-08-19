@@ -54,6 +54,7 @@ export class HealthVisitEditorView extends ItemView {
 		facility: "",
 		dirty: false,
 		errors: [],
+		search: "",
 	};
 
 	private readonly opts: VisitEditorOptions = {
@@ -116,10 +117,10 @@ export class HealthVisitEditorView extends ItemView {
 
 	private handleBack(dirty: boolean): void {
 		if (!dirty) {
-			void this.plugin.activateView();
+			void this.plugin.activateView(this.state.person);
 			return;
 		}
-		new DiscardChangesModal(this.app, () => void this.plugin.activateView()).open();
+		new DiscardChangesModal(this.app, () => void this.plugin.activateView(this.state.person)).open();
 	}
 
 	private markersById(): Map<string, MarkerNote> {

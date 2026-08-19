@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "src/core/dashboard.ts": {
-    "mtime": 1787067077.5663574,
-    "ast_hash": "f97520302c64b57ea1b38441de1ac28a",
+    "mtime": 1787100883.3549037,
+    "ast_hash": "99d8fe009b4f1e1915a974df4e96633d",
     "semantic_hash": ""
   },
   "src/core/entry.ts": {
@@ -40,13 +40,13 @@
     "semantic_hash": "2278705a8f6b54341ed77b902d734fda"
   },
   "src/core/types.ts": {
-    "mtime": 1787043735.5503616,
-    "ast_hash": "de99979385eaf264441db335c61b6c63",
+    "mtime": 1787099315.991684,
+    "ast_hash": "06ea7471f3e3e733c5d5af5ca7d2cc30",
     "semantic_hash": ""
   },
   "src/main.ts": {
-    "mtime": 1787067098.06094,
-    "ast_hash": "4dc01f507cf97b193a660cdb89dc704e",
+    "mtime": 1787095912.3521764,
+    "ast_hash": "4a2fb0404d688211daf6a998cc87c2c6",
     "semantic_hash": ""
   },
   "src/planner-view.ts": {
@@ -60,18 +60,18 @@
     "semantic_hash": ""
   },
   "src/render/charts.ts": {
-    "mtime": 1787046263.7018375,
-    "ast_hash": "57afefdc22c9fc7a5f4606062c02698e",
+    "mtime": 1787096453.55301,
+    "ast_hash": "e4b5268588cfcc8358e29f7644bac1e5",
     "semantic_hash": ""
   },
   "src/render/concern-registry.ts": {
-    "mtime": 1787092261.3919234,
-    "ast_hash": "5d87e60d7cb63e87ecc63b81424e3cea",
+    "mtime": 1787097576.5482128,
+    "ast_hash": "bea97635444da914931e108515f2f0ed",
     "semantic_hash": ""
   },
   "src/render/dashboard-view.ts": {
-    "mtime": 1787092468.9709892,
-    "ast_hash": "e42bd9370d884c965a00c94bf2ddb69d",
+    "mtime": 1787101003.8086863,
+    "ast_hash": "3e77e78740276dd64b33500cf573a4a8",
     "semantic_hash": ""
   },
   "src/render/drag-reorder.ts": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "src/vault/reader.ts": {
-    "mtime": 1787043741.3268948,
-    "ast_hash": "0be84ba2caae829ee12ded9ede88be3a",
+    "mtime": 1787099331.2908242,
+    "ast_hash": "b1f23672797c4affa0a2f7e5e1b0a3ff",
     "semantic_hash": ""
   },
   "src/vault/writer.ts": {
@@ -170,8 +170,8 @@
     "semantic_hash": "4a9adeb63132679ce77dcbaf789a35fe"
   },
   "CLAUDE.md": {
-    "mtime": 1787093156.435117,
-    "ast_hash": "880f4d36d731ff770e9450d4aa84309c",
+    "mtime": 1787101492.766291,
+    "ast_hash": "29a5adf6aec82f2764e09c5d3b794357",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -190,8 +190,8 @@
     "semantic_hash": "f2bcc0add8458c40358eb4188c45d1e3"
   },
   "src/dashboard-view.ts": {
-    "mtime": 1787070984.9937797,
-    "ast_hash": "bafcf263a0601a4d8bc7f1f69e69a36a",
+    "mtime": 1787095919.9269748,
+    "ast_hash": "9e28d9565eebbfa69fb82de390804bee",
     "semantic_hash": ""
   },
   "docs/adr/0001-no-shared-rename-helper-in-settings-sections.md": {
@@ -215,18 +215,18 @@
     "semantic_hash": ""
   },
   "src/visit-editor-view.ts": {
-    "mtime": 1787092712.315963,
-    "ast_hash": "b398c8f87ca62c68a97346962d5e116e",
+    "mtime": 1787099628.2832465,
+    "ast_hash": "27a456ad30ecd2e9517751fa05aea7c8",
     "semantic_hash": ""
   },
   "src/render/panel-registry.ts": {
-    "mtime": 1787060145.023283,
-    "ast_hash": "8133ca8de591027cb297ce4b23dffe38",
+    "mtime": 1787097222.425913,
+    "ast_hash": "44ffa82d343155f35bc985978dc3eab7",
     "semantic_hash": ""
   },
   "src/render/visit-editor-view.ts": {
-    "mtime": 1787092704.615523,
-    "ast_hash": "fe2b0d7c66b1a90060ae2902a883db1d",
+    "mtime": 1787100106.2540507,
+    "ast_hash": "4e373a76a0956962d9002b1276a0f422",
     "semantic_hash": ""
   },
   "src/render/tier-lanes.ts": {

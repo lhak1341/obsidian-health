@@ -1,6 +1,5 @@
 {
   "0": "Chart Rendering",
-  "1": "Planner Backlog Logic",
   "2": "Visit Entry Validation",
   "3": "Concern Grouping & Registry",
   "4": "Bases View & Dashboard Model",
@@ -8,7 +7,6 @@
   "6": "Plugin Lifecycle & Views",
   "7": "Package Dependencies",
   "8": "TypeScript Config",
-  "9": "IconSuggest",
   "10": "Frontmatter & Cache Write-Lag Gotchas",
   "11": "Concern/Panel Axes & Multi-Profile",
   "12": "Domain Core & Test Fixtures",
@@ -106,7 +104,6 @@
   "104": "dashboard.ts",
   "105": "deploy.mjs",
   "106": "writer.ts",
-  "107": "tier-lanes.ts",
   "108": "0003-curated-view-layout-is-a-generic-weight-based-packer.md",
   "109": "0004-defer-grouping-dashboardrenderoptions-callbacks.md"
 }
