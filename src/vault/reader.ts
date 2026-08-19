@@ -59,7 +59,7 @@ async function collect<T>(
 	for (const file of filesUnder(app, folder)) {
 		const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
 		if (!frontmatter) continue;
-		const parsed = await parse(file, frontmatter);
+		const parsed = await Promise.resolve(parse(file, frontmatter));
 		if (parsed) results.push(parsed);
 	}
 	return results;
@@ -194,7 +194,8 @@ function parseRanges(raw: unknown): MarkerRange[] | undefined {
 
 function parseAgeBand(raw: unknown): [number, number] | undefined {
 	if (!Array.isArray(raw) || raw.length !== 2) return undefined;
-	const [low, high] = raw as unknown[];
+	const low: unknown = raw[0];
+	const high: unknown = raw[1];
 	if (typeof low !== "number" || typeof high !== "number") return undefined;
 	return [low, high];
 }

@@ -143,8 +143,8 @@ export async function renameConcern(app: App, settings: HealthPluginSettings, ma
 			.filter((file): file is TFile => file !== null)
 			.map((file) =>
 				writeFrontmatter(app, file, (frontmatter) => {
-					const concern = Array.isArray(frontmatter.concern) ? (frontmatter.concern as string[]) : [];
-					frontmatter.concern = [...new Set(concern.map((c) => (normalizeConcernKey(c) === oldConcern ? newConcern : c)))];
+					const concern: unknown[] = Array.isArray(frontmatter.concern) ? frontmatter.concern : [];
+					frontmatter.concern = [...new Set(concern.map((c) => (normalizeConcernKey(String(c)) === oldConcern ? newConcern : c)))];
 				}),
 			),
 	);

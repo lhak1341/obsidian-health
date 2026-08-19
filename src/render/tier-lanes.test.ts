@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ConcernGroup, MarkerStatusInfo } from "../core/model";
-import type { MarkerNote } from "../core/types";
 import { CONCERN_CONFIG } from "./concern-registry";
 import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
 
 function markerInfo(id: string): MarkerStatusInfo {
-	return { marker: { id, name: id, aliases: [], type: "numeric", panel: "", concern: [], curated: false, blurb: "" } as MarkerNote, status: "good", band: {}, series: [] };
+	return { marker: { id, name: id, aliases: [], type: "numeric", panel: "", concern: [], curated: false, blurb: "" }, status: "good", band: {}, series: [] };
 }
 
 function group(concern: string): ConcernGroup {
