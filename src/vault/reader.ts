@@ -163,7 +163,20 @@ function parseProfileNote(person: string, fm: Record<string, unknown>): ProfileN
 		bloodType: asOptionalString(fm.blood_type),
 		allergies: fm.allergies === undefined ? undefined : asStringArray(fm.allergies),
 		order: asOptionalNumber(fm.order),
+		targets: parseTargets(fm.targets),
 	};
+}
+
+function parseTargets(raw: unknown): Record<string, { low?: number; high?: number }> | undefined {
+	if (typeof raw !== "object" || raw === null) return undefined;
+
+	const targets: Record<string, { low?: number; high?: number }> = {};
+	for (const [markerId, value] of Object.entries(raw as Record<string, unknown>)) {
+		if (typeof value !== "object" || value === null) continue;
+		const record = value as Record<string, unknown>;
+		targets[markerId] = { low: asOptionalNumber(record.low), high: asOptionalNumber(record.high) };
+	}
+	return Object.keys(targets).length > 0 ? targets : undefined;
 }
 
 function parsePlanNote(fm: Record<string, unknown>, body: string, path: string): PlanNote | null {

@@ -4,7 +4,13 @@ import { CONCERN_CONFIG } from "./concern-registry";
 import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
 
 function markerInfo(id: string): MarkerStatusInfo {
-	return { marker: { id, name: id, aliases: [], type: "numeric", panel: "", concern: [], curated: false, blurb: "" }, status: "good", band: {}, series: [] };
+	return {
+		marker: { id, name: id, aliases: [], type: "numeric", panel: "", concern: [], curated: false, blurb: "" },
+		status: "good",
+		band: {},
+		target: {},
+		series: [],
+	};
 }
 
 function group(concern: string): ConcernGroup {

@@ -60,6 +60,11 @@ export interface ProfileNote {
 	bloodType?: string;
 	allergies?: string[];
 	order?: number;
+	/** Per-marker personal target override, keyed by marker id. A whole-pair replacement of the
+	 *  marker's global `optimalLow`/`optimalHigh` -- setting only one bound leaves the other absent
+	 *  for this profile rather than inheriting the marker's global value for the missing side.
+	 *  Absent entry falls back to the marker's global optimal fields. */
+	targets?: Record<string, { low?: number; high?: number }>;
 }
 
 export interface PlanNote {

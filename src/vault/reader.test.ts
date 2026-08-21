@@ -65,6 +65,32 @@ describe("scanVault marker parsing", () => {
 	});
 });
 
+describe("scanVault profile parsing", () => {
+	it("parses a `targets` map keyed by marker id", async () => {
+		const app = createFakeApp([{ path: "profiles/khoa.md", frontmatter: { sex: "m", targets: { ldl: { low: 0.5, high: 2 } } } }]);
+
+		const { profiles } = await scanVault(app, paths);
+
+		expect(profiles[0].targets).toEqual({ ldl: { low: 0.5, high: 2 } });
+	});
+
+	it("keeps a partial override's unset side absent rather than defaulting it", async () => {
+		const app = createFakeApp([{ path: "profiles/khoa.md", frontmatter: { sex: "m", targets: { ldl: { low: 0.5 } } } }]);
+
+		const { profiles } = await scanVault(app, paths);
+
+		expect(profiles[0].targets).toEqual({ ldl: { low: 0.5, high: undefined } });
+	});
+
+	it("leaves `targets` undefined when the profile has none", async () => {
+		const app = createFakeApp([{ path: "profiles/khoa.md", frontmatter: { sex: "m" } }]);
+
+		const { profiles } = await scanVault(app, paths);
+
+		expect(profiles[0].targets).toBeUndefined();
+	});
+});
+
 describe("scanVault visit parsing", () => {
 	it("splits `<id>_unit` sibling keys out of values into their own `units` map", async () => {
 		const app = createFakeApp([

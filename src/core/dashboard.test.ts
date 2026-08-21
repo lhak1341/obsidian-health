@@ -8,6 +8,7 @@ import {
 	isToggleable,
 	resolve,
 	resolveDefaultProfile,
+	resolveTarget,
 	toDisplay,
 } from "./dashboard";
 import { realVaultFixture } from "./fixtures/real-vault";
@@ -78,6 +79,34 @@ describe("resolve", () => {
 		const band = resolve(m, profile({ sex: "m" }), "2025-01-01");
 
 		expect(band).toEqual({});
+	});
+});
+
+describe("resolveTarget", () => {
+	it("returns both bounds undefined when neither an override nor a marker global is set", () => {
+		const m = marker();
+
+		expect(resolveTarget(m, profile())).toEqual({ low: undefined, high: undefined });
+	});
+
+	it("falls back to the marker's global optimal fields when the profile has no override", () => {
+		const m = marker({ optimalLow: 1, optimalHigh: 3 });
+
+		expect(resolveTarget(m, profile())).toEqual({ low: 1, high: 3 });
+	});
+
+	it("uses the profile's override for both bounds when present", () => {
+		const m = marker({ id: "ldl", optimalLow: 1, optimalHigh: 3 });
+		const p = profile({ targets: { ldl: { low: 0.5, high: 2 } } });
+
+		expect(resolveTarget(m, p)).toEqual({ low: 0.5, high: 2 });
+	});
+
+	it("leaves the unset side absent when the override only sets one bound, not inherited from the marker's global", () => {
+		const m = marker({ id: "ldl", optimalLow: 1, optimalHigh: 3 });
+		const p = profile({ targets: { ldl: { low: 0.5 } } });
+
+		expect(resolveTarget(m, p)).toEqual({ low: 0.5, high: undefined });
 	});
 });
 
@@ -196,6 +225,7 @@ function statusInfo(overrides: Partial<MarkerStatusInfo> = {}): MarkerStatusInfo
 		marker: marker(),
 		status: "good",
 		band: { low: 10, high: 50 },
+		target: {},
 		series: [{ date: "2025-01-01", value: 20 }],
 		latest: { date: "2025-01-01", value: 20 },
 		...overrides,
@@ -206,17 +236,23 @@ describe("toDisplay", () => {
 	const toggleable = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555, optimalHigh: 40 });
 
 	it("passes canonical values through unchanged when not toggled", () => {
-		const info = statusInfo({ marker: toggleable, band: { low: 10, high: 50 }, latest: { date: "2025-01-01", value: 20 } });
+		const info = statusInfo({
+			marker: toggleable,
+			band: { low: 10, high: 50 },
+			target: { high: 40 },
+			latest: { date: "2025-01-01", value: 20 },
+		});
 
 		const display = toDisplay(info, false);
 
-		expect(display).toEqual({ value: 20, unit: "mmol/L", series: info.series, band: { low: 10, high: 50 }, target: 40 });
+		expect(display).toEqual({ value: 20, unit: "mmol/L", series: info.series, band: { low: 10, high: 50 }, target: { high: 40 } });
 	});
 
 	it("converts value, series, band, and target together when toggled", () => {
 		const info = statusInfo({
 			marker: toggleable,
 			band: { low: 10, high: 50 },
+			target: { high: 40 },
 			series: [{ date: "2025-01-01", value: 20 }],
 			latest: { date: "2025-01-01", value: 20 },
 		});
@@ -228,7 +264,15 @@ describe("toDisplay", () => {
 		expect(display.series[0].value).toBeCloseTo(convertTo(20, "mg/dL", toggleable));
 		expect(display.band.low).toBeCloseTo(convertTo(10, "mg/dL", toggleable));
 		expect(display.band.high).toBeCloseTo(convertTo(50, "mg/dL", toggleable));
-		expect(display.target).toBeCloseTo(convertTo(40, "mg/dL", toggleable));
+		expect(display.target.high).toBeCloseTo(convertTo(40, "mg/dL", toggleable));
+	});
+
+	it("converts the resolved (profile-overridden) target, not the marker's global optimal value", () => {
+		const info = statusInfo({ marker: toggleable, target: { high: 15 }, latest: { date: "2025-01-01", value: 20 } });
+
+		const display = toDisplay(info, true);
+
+		expect(display.target.high).toBeCloseTo(convertTo(15, "mg/dL", toggleable));
 	});
 
 	it("stays canonical when toggled but the marker has no alt unit", () => {
@@ -318,6 +362,32 @@ describe("computeDashboardModel — numeric status", () => {
 		const model = computeDashboardModel([m], [visit("2025-01-01", { ldl: 6 })], profile(), settings);
 
 		expect(model.markers[0].status).toBe("high");
+	});
+
+	it("flags watch against a profile's personal target override instead of the marker's global optimal value", () => {
+		const m = marker({
+			id: "ldl",
+			direction: "lower_better",
+			ranges: [{ sex: "any", low: 0, high: 5 }],
+			optimalHigh: 4,
+		});
+		const p = profile({ targets: { ldl: { high: 2 } } });
+		const model = computeDashboardModel([m], [visit("2025-01-01", { ldl: 3 })], p, settings);
+
+		expect(model.markers[0].status).toBe("watch");
+	});
+
+	it("stays good against a marker's global optimal value when the profile's override relaxed it", () => {
+		const m = marker({
+			id: "ldl",
+			direction: "lower_better",
+			ranges: [{ sex: "any", low: 0, high: 5 }],
+			optimalHigh: 2,
+		});
+		const p = profile({ targets: { ldl: { high: 4 } } });
+		const model = computeDashboardModel([m], [visit("2025-01-01", { ldl: 3 })], p, settings);
+
+		expect(model.markers[0].status).toBe("good");
 	});
 });
 

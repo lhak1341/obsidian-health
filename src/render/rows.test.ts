@@ -18,7 +18,7 @@ function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
 }
 
 function info(markerOverrides: Partial<MarkerNote> = {}, extra: Partial<Omit<MarkerStatusInfo, "marker">> = {}): MarkerStatusInfo {
-	return { marker: marker(markerOverrides), status: "good", band: {}, series: [], ...extra };
+	return { marker: marker(markerOverrides), status: "good", band: {}, target: {}, series: [], ...extra };
 }
 
 function model(markers: MarkerStatusInfo[], attentionOrder: string[]): DashboardModel {

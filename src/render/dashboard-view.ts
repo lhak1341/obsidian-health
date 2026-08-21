@@ -522,7 +522,7 @@ function buildNameCell(info: MarkerStatusInfo, display: DisplayReading, showAll:
 		cell.appendChild(bookmark);
 	}
 
-	const targetText = formatTargetText(marker, display.target) || undefined;
+	const targetText = formatTargetText(display.target) || undefined;
 	const rangeText = `Normal ${formatRangeText(display.band, marker, display.unit)}${targetText ? ` · ${targetText}` : ""}`;
 
 	// Skip the tooltip when this row is already unfolded -- the detail panel (buildDetailContent)
@@ -606,8 +606,8 @@ function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement
 	wrap.appendChild(
 		buildHistoryChart(display.series, secondary?.series, {
 			band: display.band,
-			target: display.target,
-			targetLabel: formatTargetText(marker, display.target) || undefined,
+			target: display.target.high ?? display.target.low,
+			targetLabel: formatTargetText(display.target) || undefined,
 			statusColor: statusColor(primary.status),
 			pairFormat: secondary ? (p, s) => `${formatRawValue(p)}${s !== undefined ? `/${formatRawValue(s)}` : ""}` : undefined,
 		}),

@@ -64,11 +64,12 @@ export function formatRangeText(band: ResolvedRange, marker: MarkerNote, unitOve
 /** `target` overrides the number shown (e.g. already converted to a toggled alt unit) -- the
  *  ≤/≥ direction always comes from which of `optimalHigh`/`optimalLow` the marker itself defines,
  *  since that's a fact about the marker, not about which unit it's currently displayed in. */
-export function formatTargetText(marker: MarkerNote, target?: number): string {
-	const resolved = target ?? marker.optimalHigh ?? marker.optimalLow;
-	if (resolved === undefined) return "";
-	if (marker.optimalHigh !== undefined) return `your target ≤ ${formatRawValue(resolved)}`;
-	if (marker.optimalLow !== undefined) return `your target ≥ ${formatRawValue(resolved)}`;
+export function formatTargetText(target: ResolvedRange): string {
+	if (target.low !== undefined && target.high !== undefined) {
+		return `your target ${formatRawValue(target.low)} – ${formatRawValue(target.high)}`;
+	}
+	if (target.high !== undefined) return `your target ≤ ${formatRawValue(target.high)}`;
+	if (target.low !== undefined) return `your target ≥ ${formatRawValue(target.low)}`;
 	return "";
 }
 

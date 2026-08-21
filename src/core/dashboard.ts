@@ -32,10 +32,11 @@ export function computeDashboardModel(
 
 		const latest = series[series.length - 1];
 		const band = marker.type === "numeric" ? resolve(marker, profile, latest.date) : {};
-		const { status, excess } = deriveStatus(marker, band, latest);
+		const target = marker.type === "numeric" ? resolveTarget(marker, profile) : {};
+		const { status, excess } = deriveStatus(marker, band, target, latest);
 		const arrow = deriveArrow(marker, series, settings);
 
-		const info: MarkerStatusInfo = { marker, status, band, series, latest, arrow };
+		const info: MarkerStatusInfo = { marker, status, band, target, series, latest, arrow };
 		markerInfos.push(info);
 		magnitudeByInfo.set(info, marker.type === "qualitative" ? (status === "good" ? 0 : Number.POSITIVE_INFINITY) : excess);
 	}
@@ -165,7 +166,12 @@ function toCanonicalReading(raw: number, unit: string | undefined, marker: Marke
 	}
 }
 
-function deriveStatus(marker: MarkerNote, band: ResolvedRange, latest: SeriesPoint): { status: Status; excess: number } {
+function deriveStatus(
+	marker: MarkerNote,
+	band: ResolvedRange,
+	target: ResolvedRange,
+	latest: SeriesPoint,
+): { status: Status; excess: number } {
 	if (marker.type === "qualitative") {
 		const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
 		const status: Status = normal.includes(String(latest.value)) ? "good" : "high";
@@ -179,11 +185,11 @@ function deriveStatus(marker: MarkerNote, band: ResolvedRange, latest: SeriesPoi
 
 	if (band.low !== undefined && value < band.low) return { status: "low", excess: (band.low - value) / width };
 	if (band.high !== undefined && value > band.high) return { status: "high", excess: (value - band.high) / width };
-	if (marker.optimalHigh !== undefined && value > marker.optimalHigh) {
-		return { status: "watch", excess: (value - marker.optimalHigh) / width };
+	if (target.high !== undefined && value > target.high) {
+		return { status: "watch", excess: (value - target.high) / width };
 	}
-	if (marker.optimalLow !== undefined && value < marker.optimalLow) {
-		return { status: "watch", excess: (marker.optimalLow - value) / width };
+	if (target.low !== undefined && value < target.low) {
+		return { status: "watch", excess: (target.low - value) / width };
 	}
 	return { status: "good", excess: 0 };
 }
@@ -204,6 +210,16 @@ export function resolve(marker: MarkerNote, profile: ProfileNote, atDate: string
 
 	if (!best) return {};
 	return { low: best.low, high: best.high };
+}
+
+/** Resolves a marker's effective personal target for a profile: the profile's `targets`
+ *  override if one exists for this marker (whole-pair replacement of the marker's global
+ *  optimal fields -- a partial override does not inherit the missing side from the global
+ *  value), else the marker's global `optimalLow`/`optimalHigh`. */
+export function resolveTarget(marker: MarkerNote, profile: ProfileNote): ResolvedRange {
+	const override = profile.targets?.[marker.id];
+	if (override) return { low: override.low, high: override.high };
+	return { low: marker.optimalLow, high: marker.optimalHigh };
 }
 
 function rangeScore(range: MarkerRange, sex: ProfileNote["sex"]): number {
@@ -252,8 +268,12 @@ export function toDisplay(info: MarkerStatusInfo, toggled: boolean): DisplayRead
 				high: info.band.high !== undefined ? convertTo(info.band.high, altUnit, marker) : undefined,
 			};
 
-	const rawTarget = marker.optimalHigh ?? marker.optimalLow;
-	const target = canConvert && rawTarget !== undefined ? convertTo(rawTarget, altUnit, marker) : rawTarget;
+	const target = !canConvert
+		? info.target
+		: {
+				low: info.target.low !== undefined ? convertTo(info.target.low, altUnit, marker) : undefined,
+				high: info.target.high !== undefined ? convertTo(info.target.high, altUnit, marker) : undefined,
+			};
 
 	return { value, unit: canConvert ? altUnit : marker.unit, series, band, target };
 }

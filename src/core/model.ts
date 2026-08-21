@@ -23,6 +23,9 @@ export interface MarkerStatusInfo {
 	marker: MarkerNote;
 	status: Status;
 	band: ResolvedRange;
+	/** Effective personal target (profile override, else the marker's global optimal fields) --
+	 *  see `resolveTarget` in dashboard.ts. */
+	target: ResolvedRange;
 	series: SeriesPoint[];
 	latest?: SeriesPoint;
 	arrow?: Arrow;
@@ -56,5 +59,5 @@ export interface DisplayReading {
 	unit: string | undefined;
 	series: SeriesPoint[];
 	band: ResolvedRange;
-	target: number | undefined;
+	target: ResolvedRange;
 }
