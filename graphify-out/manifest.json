@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "src/core/dashboard.ts": {
-    "mtime": 1787284558.5518537,
-    "ast_hash": "8f1adfabc3380d830abdb15923d08f09",
+    "mtime": 1787317757.6778557,
+    "ast_hash": "81d6127de8b7c1251805988ab09b5b44",
     "semantic_hash": ""
   },
   "src/core/entry.ts": {
@@ -40,13 +40,13 @@
     "semantic_hash": "2278705a8f6b54341ed77b902d734fda"
   },
   "src/core/types.ts": {
-    "mtime": 1787278582.8618655,
-    "ast_hash": "241ec90ade67cbcfb8b31986fb873d08",
+    "mtime": 1787317736.1140125,
+    "ast_hash": "bccbbbd52ce014502c1b447586daac5a",
     "semantic_hash": ""
   },
   "src/main.ts": {
-    "mtime": 1787095912.3521764,
-    "ast_hash": "4a2fb0404d688211daf6a998cc87c2c6",
+    "mtime": 1787318095.321723,
+    "ast_hash": "ae33e400cecb9fc9fbfa48e377130074",
     "semantic_hash": ""
   },
   "src/planner-view.ts": {
@@ -140,18 +140,18 @@
     "semantic_hash": ""
   },
   "src/settings-tab.ts": {
-    "mtime": 1785980611.1544354,
-    "ast_hash": "726148a0b9362d8f2b770e34b1ec3f40",
+    "mtime": 1787318252.2143838,
+    "ast_hash": "a8cbd6d0114e6b04729777c7461f1c04",
     "semantic_hash": ""
   },
   "src/settings.ts": {
-    "mtime": 1785942031.7964604,
-    "ast_hash": "175e818b876120f25eee3fdc28096c11",
+    "mtime": 1787318080.7315888,
+    "ast_hash": "53941287b5856790fff27f6cfd628d8f",
     "semantic_hash": ""
   },
   "src/vault/reader.ts": {
-    "mtime": 1787278670.2769065,
-    "ast_hash": "d5d7aa45b78a270528e1e085a18cf33a",
+    "mtime": 1787317740.1228337,
+    "ast_hash": "da9909ce35183867fec8f70f5c41e679",
     "semantic_hash": ""
   },
   "src/vault/writer.ts": {
@@ -170,8 +170,8 @@
     "semantic_hash": "4a9adeb63132679ce77dcbaf789a35fe"
   },
   "CLAUDE.md": {
-    "mtime": 1787295529.202722,
-    "ast_hash": "38cfc447e9c4cfc6fea219f6abb96990",
+    "mtime": 1787318871.3771152,
+    "ast_hash": "b26428f3c14f76ecdc8e5e3b9e6934f5",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -190,8 +190,8 @@
     "semantic_hash": "f2bcc0add8458c40358eb4188c45d1e3"
   },
   "src/dashboard-view.ts": {
-    "mtime": 1787284634.0567422,
-    "ast_hash": "f42e9a270dcaaef2239c4e167922905e",
+    "mtime": 1787317779.0041335,
+    "ast_hash": "f8cfbff72bc577a4ba15ddf1eadcde71",
     "semantic_hash": ""
   },
   "docs/adr/0001-no-shared-rename-helper-in-settings-sections.md": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "eslint.config.mjs": {
-    "mtime": 1787046784.381357,
-    "ast_hash": "440ce66bd045c60e75d56ec4cf364ccb",
+    "mtime": 1787318425.828259,
+    "ast_hash": "d4e926961c78fe6ec676e0f241313107",
     "semantic_hash": ""
   },
   "README.md": {
@@ -257,6 +257,21 @@
   "docs/agents/issue-tracker.md": {
     "mtime": 1787273025.6456892,
     "ast_hash": "cc6a0a5bc8a5b379f44f16ec81650811",
+    "semantic_hash": ""
+  },
+  "src/base-view-sync-modal.ts": {
+    "mtime": 1787318244.7167559,
+    "ast_hash": "75825e443fb5fdf6caf6773a75b91066",
+    "semantic_hash": ""
+  },
+  "src/core/base-views.ts": {
+    "mtime": 1787318025.355574,
+    "ast_hash": "47f4c2ff6449b4efbd9d3dc7fe0192ef",
+    "semantic_hash": ""
+  },
+  "src/vault/base-view-sync.ts": {
+    "mtime": 1787318287.1435695,
+    "ast_hash": "7d0bcc19707db9846e7228914e9b1efc",
     "semantic_hash": ""
   }
 }

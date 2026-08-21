@@ -16,6 +16,10 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
 - Marker `panel` (drives the Add Visit form's grouping, mirroring the physical lab report's
   sections) and `concern` (drives dashboard column grouping, clinical/thematic) are
   intentionally separate axes over the same markers. Do not collapse them.
+- `MarkerNote.baseOrder` (Base-table column sequencing, `core/base-views.ts`) is a separate axis
+  from `MarkerNote.order` (dashboard curated-row + visit-editor field sequencing) — checked real
+  vault data before assuming reuse was safe: Kidney's `order` values reflect attention priority
+  (`uric_acid` first), not the lab-report column sequence (`creatinine` first). Don't collapse them.
 - `MarkerNote.sex` (`m`/`f`, optional — unset means everyone) restricts whether a marker shows at
   all, filtered in `computeDashboardModel` and the visit editor's `buildFields`. Separate axis
   from `ranges[].sex`, which only picks which reference band resolves for a marker every profile
@@ -69,7 +73,8 @@ fallback). This exists because `getFileCache` can return pre-write data after
 - `src/vault/fixtures/fake-app.ts` — minimal in-memory `App` fake (the `vault` /
   `metadataCache` / `fileManager` subset `reader.ts` and `writer.ts` use). Supports
   injecting a mid-batch write failure via `failOn`, and simulating re-index lag via
-  `deferIndexing` + `flushMetadataCache(path)`. Reuse it rather than rebuilding.
+  `deferIndexing` + `flushMetadataCache(path)`. Also has `vault.read`/`vault.modify` for raw
+  (non-frontmatter) file content, e.g. a `.base` file. Reuse it rather than rebuilding.
 - `src/core/fixtures/real-vault.ts` is a small anonymized sample, **not** the full vault.
   Before hardcoding a lookup keyed on frontmatter values (e.g. `concern` ids), enumerate
   the real values from `09 about-me/markers/*.md` — the fixture alone missed the literal

@@ -29,6 +29,7 @@ export default class HealthPlugin extends Plugin {
 		// would otherwise stay reference-shared with the DEFAULT_SETTINGS module constant.
 		this.settings.concernViewOverrides = { ...DEFAULT_SETTINGS.concernViewOverrides, ...saved?.concernViewOverrides };
 		this.settings.concernIcons = { ...DEFAULT_SETTINGS.concernIcons, ...saved?.concernIcons };
+		this.settings.managedBaseViews = [...(saved?.managedBaseViews ?? DEFAULT_SETTINGS.managedBaseViews)];
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
 		this.registerView(HEALTH_PLANNER_VIEW_TYPE, (leaf) => new HealthPlannerView(leaf, this));

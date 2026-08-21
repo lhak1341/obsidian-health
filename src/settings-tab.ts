@@ -1,11 +1,14 @@
-import { normalizePath, PluginSettingTab, Setting } from "obsidian";
+import { Notice, normalizePath, PluginSettingTab, Setting } from "obsidian";
 import type { App } from "obsidian";
+import { BaseViewSyncModal, notifySyncAborted, notifySyncResult } from "./base-view-sync-modal";
 import type HealthPlugin from "./main";
 import { ConcernSection } from "./settings-concern-section";
 import type { SettingsSectionContext } from "./settings-context";
 import { SettingsDirtyTracker } from "./settings-dirty-tracker";
 import { ProfileSection } from "./settings-profile-section";
 import type { WidgetTier } from "./settings";
+import { applyBaseViewSync, planBaseViewSync, type BaseViewSyncPlan } from "./vault/base-view-sync";
+import type { DesiredBaseView } from "./core/base-views";
 import type { VaultSnapshot } from "./vault/reader";
 
 export class HealthSettingTab extends PluginSettingTab {
@@ -104,6 +107,38 @@ export class HealthSettingTab extends PluginSettingTab {
 					void this.save();
 				}),
 			);
+
+		new Setting(items)
+			.setName("Sync base views")
+			.setDesc(
+				"Generates/updates the concern and per-profile views in the base file above from current markers and profiles. Shows what would change before writing anything.",
+			)
+			.addButton((button) => button.setButtonText("Sync base views").onClick(() => void this.syncBaseViews()));
+	}
+
+	/** Adapter for the settings-tab "Sync Base views" button: builds the plan, shows it in a confirm
+	 *  modal, and on confirm applies it -- see `vault/base-view-sync.ts` for the plan/apply split and
+	 *  ticket 08's Resolution for the full design rationale (surgical splice, ownership manifest,
+	 *  single preview-then-confirm, re-verify-before-write). */
+	private async syncBaseViews(): Promise<void> {
+		if (!this.snapshot) return;
+		const plan = await planBaseViewSync(this.app, this.plugin.settings, this.snapshot.markers, this.snapshot.profiles);
+		if (!plan) {
+			new Notice(`Base file not found: ${this.plugin.settings.basePath}`);
+			return;
+		}
+
+		new BaseViewSyncModal(this.app, plan, (collisionsApproved) => void this.confirmBaseViewSync(plan, collisionsApproved)).open();
+	}
+
+	private async confirmBaseViewSync(plan: BaseViewSyncPlan, collisionsApproved: DesiredBaseView[]): Promise<void> {
+		const ok = await applyBaseViewSync(this.app, this.plugin.settings, plan, collisionsApproved);
+		if (!ok) {
+			notifySyncAborted();
+			return;
+		}
+		notifySyncResult(plan.diff);
+		await this.save();
 	}
 
 	private renderDashboardSettings(root: HTMLElement): void {

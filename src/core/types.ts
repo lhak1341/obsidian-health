@@ -35,6 +35,12 @@ export interface MarkerNote {
 	formula?: string;
 	pair?: string;
 	order?: number;
+	/** Column position within its concern's generated Base view (`core/base-views.ts`) --
+	 *  deliberately separate from `order`, which drives dashboard curated-row and visit-editor field
+	 *  order. The two diverge in practice: `order` reflects attention/curation priority, while a
+	 *  lab-report-style Base table wants the physical report's column sequence. Unset markers sort
+	 *  alphabetically by id after every marker that has one. */
+	baseOrder?: number;
 	status?: CandidateStatus;
 	cost?: number;
 	priority?: Priority;

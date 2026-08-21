@@ -103,6 +103,20 @@ export function createFakeApp(initialFiles: FakeNoteInput[], opts?: { failOn?: (
 			getMarkdownFiles: () => [...notes.keys()].map(toFakeFile),
 			getAbstractFileByPath,
 			cachedRead: async (file: FakeFile) => notes.get(file.path)?.body ?? "",
+			// `read`/`modify` operate on raw file content (`body`), not frontmatter -- the path a
+			// non-frontmatter file like a `.base` uses (see base-view-sync.test.ts). No metadataCache
+			// indexing concept applies: `.base` files aren't frontmatter-tracked, so a `modify` here
+			// is immediate, matching real Obsidian.
+			read: async (file: FakeFile) => {
+				const entry = notes.get(file.path);
+				if (!entry) throw new Error(`no such file: ${file.path}`);
+				return entry.body;
+			},
+			modify: async (file: FakeFile, content: string): Promise<void> => {
+				const entry = notes.get(file.path);
+				if (!entry) throw new Error(`no such file: ${file.path}`);
+				entry.body = content;
+			},
 			create: async (path: string, content: string): Promise<FakeFile> => {
 				notes.set(path, { committed: {}, cached: {}, body: content });
 				return toFakeFile(path);

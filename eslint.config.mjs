@@ -26,7 +26,7 @@ export default tseslint.config(
 	{
 		// `obsidian` ships no runtime (package.json "main" is ""), so importing TFile
 		// as a value for `instanceof` breaks vitest, which loads these modules directly.
-		files: ["src/vault/writer.ts", "src/vault/writer.test.ts", "src/vault/reader.ts"],
+		files: ["src/vault/writer.ts", "src/vault/writer.test.ts", "src/vault/reader.ts", "src/vault/base-view-sync.ts", "src/vault/base-view-sync.test.ts"],
 		rules: {
 			"obsidianmd/no-tfile-tfolder-cast": "off",
 		},

@@ -21,6 +21,11 @@ export interface HealthPluginSettings extends VaultPaths {
 	 *  Purely cosmetic, no vault write. */
 	concernIcons: Record<string, string>;
 	defaultProfile?: string;
+	/** Exact Base view names the "Sync Base views" settings action wrote last run -- the ownership
+	 *  manifest deciding which views it may safely regenerate/remove (ticket 08's Resolution,
+	 *  decision 3). A same-named view NOT in this list is a pre-existing/hand-authored one and is
+	 *  never silently touched -- see `core/base-views.ts`'s `diffBaseViews`. */
+	managedBaseViews: string[];
 }
 
 /** Renames a concern's key in both settings maps -- the settings-side half of a concern rename
@@ -56,4 +61,5 @@ export const DEFAULT_SETTINGS: HealthPluginSettings = {
 	concernViewOverrides: {},
 	concernIcons: {},
 	defaultProfile: undefined,
+	managedBaseViews: [],
 };

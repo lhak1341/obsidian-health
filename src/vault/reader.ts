@@ -120,6 +120,7 @@ function parseMarkerNote(id: string, fm: Record<string, unknown>, blurb: string)
 		formula: asOptionalString(fm.formula),
 		pair: asOptionalString(fm.pair),
 		order: asOptionalNumber(fm.order),
+		baseOrder: asOptionalNumber(fm.base_order),
 		status: fm.status === "candidate" ? (fm.status) : undefined,
 		cost: asOptionalNumber(fm.cost),
 		priority: PRIORITIES.includes(fm.priority as Priority) ? (fm.priority as Priority) : undefined,

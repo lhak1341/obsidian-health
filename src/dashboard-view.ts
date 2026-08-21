@@ -1,5 +1,5 @@
 import { ItemView, Modal, Setting, TFile, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
-import { computeDashboardModel, concernViewNameForProfile, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
+import { computeDashboardModel, concernViewNameForProfile, resolveConcernViewName, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
 import type { DashboardModel } from "./core/model";
 import type { MarkerNote, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
@@ -204,9 +204,9 @@ export class HealthView extends ItemView {
 	 *  per-profile view that hasn't been hand-authored yet isn't checked for here -- Obsidian's own
 	 *  Bases renderer shows an inline "not found" state rather than silently substituting another
 	 *  view or mixed data (confirmed live), so no extra existence check is needed. */
-	private openConcernBase(key: string, label: string, person: string): boolean {
+	private openConcernBase(key: string, _label: string, person: string): boolean {
 		const settings = this.plugin.settings;
-		const viewName = concernViewNameForProfile(settings.concernViewOverrides[key]?.trim() || label, person);
+		const viewName = concernViewNameForProfile(resolveConcernViewName(key, settings.concernViewOverrides), person);
 
 		const file = this.app.vault.getAbstractFileByPath(settings.basePath);
 		if (!(file instanceof TFile)) return false;
