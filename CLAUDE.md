@@ -130,3 +130,15 @@ After finishing a ticket, check off its boxes in `tickets.md` and commit separat
 Architecture decisions live in `docs/adr/` (`0001-*.md`, `0002-*.md`, ...) -- check there before
 redesigning something that already has a record; write one when a decision is hard to reverse,
 non-obvious without context, and a real trade-off.
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown under `.scratch/<feature-slug>/` (`MAP.md` + `tickets/`) -- established by the
+`.scratch/health-dashboard/` map that produced this plugin's original PRD. See
+`docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
