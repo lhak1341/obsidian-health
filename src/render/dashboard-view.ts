@@ -29,6 +29,8 @@ export interface DashboardRenderOptions {
 	onAddVisit: () => void;
 	onEditVisit?: () => void;
 	onOpenPlanner: () => void;
+	/** Exports a full (Show all, not Curated) screenshot of the dashboard to a PNG file. */
+	onExportScreenshot: () => void;
 	/** Tries to switch the single configured Base file to the concern's view (key = normalized identity
 	 *  for override lookup, label = display text and default view name); resolves false when the Base
 	 *  file doesn't exist (caller degrades to in-plugin expand). */
@@ -162,10 +164,21 @@ function buildHeader(opts: DashboardRenderOptions, hasMarkers: boolean): HTMLEle
 	const actions = createDiv();
 	actions.className = "hlth-top-actions";
 
+	if (hasMarkers) {
+		const exportButton = createEl("button");
+		exportButton.type = "button";
+		exportButton.className = "hlth-showall-btn";
+		exportButton.appendChild(iconFor("camera"));
+		exportButton.appendChild(document.createTextNode("Export"));
+		exportButton.addEventListener("click", () => opts.onExportScreenshot());
+		actions.appendChild(exportButton);
+	}
+
 	const plannerButton = createEl("button");
 	plannerButton.type = "button";
 	plannerButton.className = "hlth-showall-btn";
-	plannerButton.textContent = "Planner";
+	plannerButton.appendChild(iconFor("clipboard-list"));
+	plannerButton.appendChild(document.createTextNode("Planner"));
 	plannerButton.addEventListener("click", () => opts.onOpenPlanner());
 	actions.appendChild(plannerButton);
 
@@ -466,7 +479,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 	header.className = "hlth-row";
 	if (hidden) header.classList.add("hlth-hidden");
 
-	header.appendChild(buildNameCell(primary, display, opts.viewState.showAll));
+	header.appendChild(buildNameCell(primary, display));
 
 	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
 
@@ -517,7 +530,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 	return { header, detail };
 }
 
-function buildNameCell(info: MarkerStatusInfo, display: DisplayReading, showAll: boolean): HTMLElement {
+function buildNameCell(info: MarkerStatusInfo, display: DisplayReading): HTMLElement {
 	const marker = info.marker;
 	const cell = createDiv();
 	cell.className = "hlth-name";
@@ -526,13 +539,6 @@ function buildNameCell(info: MarkerStatusInfo, display: DisplayReading, showAll:
 	text.className = "hlth-name-text";
 	text.textContent = marker.name;
 	cell.appendChild(text);
-
-	// Curated flag is only worth flagging in Show all -- the Curated view already implies it.
-	if (showAll && marker.curated) {
-		const bookmark = iconFor("bookmark");
-		bookmark.classList.add("hlth-curated-badge");
-		cell.appendChild(bookmark);
-	}
 
 	const targetText = formatTargetText(display.target) || undefined;
 	const rangeText = `Normal ${formatRangeText(display.band, marker, display.unit)}${targetText ? ` · ${targetText}` : ""}`;

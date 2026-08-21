@@ -1,4 +1,5 @@
-import { ItemView, Modal, Setting, TFile, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
+import { toPng } from "html-to-image";
+import { ItemView, Modal, Notice, Platform, Setting, TFile, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
 import { computeDashboardModel, concernViewNameForProfile, resolveConcernViewName, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
 import type { DashboardModel } from "./core/model";
 import type { MarkerNote, ProfileNote } from "./core/types";
@@ -156,6 +157,7 @@ export class HealthView extends ItemView {
 			onAddVisit: () => void this.plugin.openVisitEditor(undefined, "add", profile.person),
 			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit", profile.person) : undefined,
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
+			onExportScreenshot: () => void this.exportScreenshot(profile),
 			onOpenConcern: (key, label) => this.openConcernBase(key, label, profile.person),
 			onToggleCurated: (markerId) => void this.toggleCurated(markerId),
 			onEditTarget: (markerId) => this.editTarget(profile, markerId),
@@ -196,6 +198,83 @@ export class HealthView extends ItemView {
 		await this.reload();
 	}
 
+	/** Renders a full (Show all, not Curated) screenshot of the dashboard and saves it via a native
+	 *  save dialog. Show all and Curated are two independent lane-layout systems (docs/adr/0003), so
+	 *  this can't just hide rows in place -- it forces the real `showAll` toggle, repaints, captures,
+	 *  then restores whatever the user had before. `.hlth-dash` is `overflow-y: auto` at a fixed
+	 *  `height: 100%` normally (see styles.css) -- temporarily overridden to its natural full height
+	 *  so the capture isn't clipped to whatever fit on screen. */
+	private async exportScreenshot(profile: ProfileNote): Promise<void> {
+		if (!Platform.isDesktop) {
+			new Notice("Exporting a screenshot requires the desktop app.");
+			return;
+		}
+
+		// html-to-image walks every stylesheet loaded in the whole Obsidian window (core + every
+		// theme/snippet/plugin, not just this view) to inline styles for the clone -- confirmed live
+		// this can take 10-30+ seconds depending on how much CSS is loaded, unrelated to dashboard
+		// size. `deleteAfter: 0` keeps the notice up until `.hide()` below, so it covers the whole wait.
+		const rendering = new Notice("Rendering screenshot… this can take up to 30 seconds.", 0);
+
+		const wasShowAll = this.viewState.showAll;
+		this.viewState.showAll = true;
+		this.repaint();
+		await nextFrame();
+		await nextFrame();
+
+		const outer = this.contentEl;
+		const dash = outer.querySelector<HTMLElement>(".hlth-dash");
+		if (!dash) {
+			rendering.hide();
+			this.viewState.showAll = wasShowAll;
+			this.repaint();
+			return;
+		}
+
+		const prevOuterHeight = outer.style.height;
+		const prevOuterOverflow = outer.style.overflow;
+		const prevDashHeight = dash.style.height;
+		const prevDashOverflowY = dash.style.overflowY;
+
+		outer.setCssStyles({ height: "auto", overflow: "visible" });
+		dash.setCssStyles({ height: "auto", overflowY: "visible" });
+		await nextFrame();
+
+		try {
+			const width = outer.getBoundingClientRect().width;
+			const height = outer.scrollHeight;
+			// `skipFonts` skips html-to-image re-fetching every @font-face across every stylesheet
+			// loaded in the whole Obsidian window (core + all themes/snippets, not just this view) to
+			// re-embed them as portable data URIs -- unnecessary since the fonts are already loaded and
+			// rendering correctly live. The remaining ~10-12s (confirmed live, 3-run benchmark) is the
+			// per-element style-walk over this view's own DOM, not fonts or the pixelRatio-2 raster --
+			// pixelRatio 1 only shaves ~25-30% off that and halves output resolution, not worth it.
+			const dataUrl = await toPng(outer, { width, height, pixelRatio: 2, skipFonts: true });
+
+			const electron = getElectronRemote();
+			const date = new Date().toISOString().slice(0, 10);
+			const result = await electron.remote.dialog.showSaveDialog(electron.remote.getCurrentWindow(), {
+				title: "Export health dashboard screenshot",
+				defaultPath: `Health - ${profile.person} - Show all - ${date}.png`,
+				filters: [{ name: "PNG Image", extensions: ["png"] }],
+			});
+			if (result.canceled || !result.filePath) return;
+
+			const fs = getNodeFs();
+			await fs.promises.writeFile(result.filePath, getNodeBuffer().from(dataUrl.split(",")[1], "base64"));
+			new Notice(`Saved screenshot to ${result.filePath}`);
+		} catch (err) {
+			console.error("Health: failed to export screenshot", err);
+			new Notice("Failed to export screenshot.");
+		} finally {
+			rendering.hide();
+			outer.setCssStyles({ height: prevOuterHeight, overflow: prevOuterOverflow });
+			dash.setCssStyles({ height: prevDashHeight, overflowY: prevDashOverflowY });
+			this.viewState.showAll = wasShowAll;
+			this.repaint();
+		}
+	}
+
 	/** A concern header opens the single configured Base file (settings.basePath), switching to the
 	 *  view named after the concern's label -- or the per-concern override (keyed by the normalized
 	 *  identity, not the display label) when the view name differs -- suffixed with the active
@@ -224,4 +303,36 @@ export class HealthView extends ItemView {
 		const viewState = leaf.getViewState();
 		await leaf.setViewState({ ...viewState, state: { ...viewState.state, viewName } });
 	}
+}
+
+function nextFrame(): Promise<void> {
+	return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+}
+
+interface ElectronRemote {
+	remote: {
+		dialog: {
+			showSaveDialog(
+				win: unknown,
+				opts: { title: string; defaultPath: string; filters: { name: string; extensions: string[] }[] },
+			): Promise<{ canceled: boolean; filePath?: string }>;
+		};
+		getCurrentWindow(): unknown;
+	};
+}
+
+/** Desktop-only (native save dialog) -- Obsidian's main renderer runs with Node integration on,
+ *  so `window.require` reaches real Electron/Node modules exactly like live `eval` debugging does
+ *  (see the `obsidian-plugin-dev` skill's debugging notes). Not available on mobile; callers must
+ *  expect this to throw there. */
+function getElectronRemote(): ElectronRemote {
+	return (window as unknown as { require: (id: string) => ElectronRemote }).require("electron");
+}
+
+function getNodeFs(): { promises: { writeFile(path: string, data: Uint8Array): Promise<void> } } {
+	return (window as unknown as { require: (id: string) => { promises: { writeFile(path: string, data: Uint8Array): Promise<void> } } }).require("fs");
+}
+
+function getNodeBuffer(): { from(data: string, encoding: string): Uint8Array } {
+	return (window as unknown as { require: (id: string) => { Buffer: { from(data: string, encoding: string): Uint8Array } } }).require("buffer").Buffer;
 }

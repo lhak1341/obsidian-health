@@ -141,6 +141,12 @@ fallback). This exists because `getFileCache` can return pre-write data after
   pinned-column system (`WIDE_LANES`/`MEDIUM_LANES`/`NARROW_LANES` in `tier-lanes.ts`); Curated view
   uses a dynamic weight-based packer (`packLanes`, same file — see `docs/adr/0003`) that ignores the
   pin entirely, including a `pinFirst` exception for Vitals. A change to one doesn't touch the other.
+- Any raw SVG attribute (`fill=`/`stroke=`, set via `setAttribute`, not `.style`) that uses `var(--foo)`
+  needs an explicit fallback (`var(--foo, #hexvalue)`) — `html-to-image` (screenshot export) only bakes
+  computed `style` properties into its clone, so an attribute-level `var()` with no fallback resolves to
+  nothing in the isolated export and silently renders black instead of the theme color. Every chart color
+  in `charts.ts` and every `statusColor()`/`arrowColor()` (`format.ts`) carries a hardcoded hex fallback
+  for exactly this reason — keep that pattern for any new SVG color.
 
 ## Process
 

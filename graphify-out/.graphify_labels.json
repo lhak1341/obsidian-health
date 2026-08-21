@@ -5,6 +5,7 @@
   "3": "Concern Grouping & Registry",
   "4": "Bases View & Dashboard Model",
   "5": "Health Widget (main.ts side)",
+  "6": "reader.ts",
   "7": "Package Dependencies",
   "8": "TypeScript Config",
   "9": "Issue tracker: Local Markdown",
@@ -108,5 +109,6 @@
   "107": "IconSuggest",
   "108": "0003-curated-view-layout-is-a-generic-weight-based-packer.md",
   "109": "0004-defer-grouping-dashboardrenderoptions-callbacks.md",
-  "110": "Domain Docs"
+  "110": "Domain Docs",
+  "111": "DiscardChangesModal"
 }

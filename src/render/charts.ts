@@ -32,7 +32,7 @@ export function scaleY(min: number, max: number, bottom: number, top: number): (
 // `--background-secondary-alt` can compute nearly identical to `--background-primary` in some
 // themes, making the reference band invisible. Tinting relative to `--text-faint` instead
 // guarantees visible-but-subtle contrast against any background, in either theme.
-const BAND_FILL = "color-mix(in srgb, var(--text-faint) 16%, transparent)";
+const BAND_FILL = "color-mix(in srgb, var(--text-faint, #8a8a8a) 16%, transparent)";
 
 function buildBandRect(band: ResolvedRange, y: (v: number) => number, width: number, top: number, bottom: number): SVGRectElement | undefined {
 	if (band.low === undefined && band.high === undefined) return undefined;
@@ -55,7 +55,7 @@ function buildSecondaryPath(
 		})
 		.filter((segment): segment is string => segment !== null);
 	if (segments.length < 2) return undefined;
-	return svgEl("path", { d: segments.join(" "), fill: "none", stroke: "var(--text-faint)", "stroke-width": strokeWidth, "stroke-dasharray": "3 2" });
+	return svgEl("path", { d: segments.join(" "), fill: "none", stroke: "var(--text-faint, #8a8a8a)", "stroke-width": strokeWidth, "stroke-dasharray": "3 2" });
 }
 
 export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotColor: string, secondary?: SeriesPoint[]): SVGSVGElement {
@@ -70,7 +70,7 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 		// visual weight without implying a trend that isn't there. Right-flush (ending at width-pad,
 		// same x as a real trend line's last point) so its end lines up with every other row's
 		// sparkline endpoint instead of stopping short in the middle.
-		svg.appendChild(svgEl("line", { x1: width - pad - 16, y1: height / 2, x2: width - pad, y2: height / 2, stroke: "var(--text-faint)", "stroke-width": 1.3, "stroke-linecap": "round", opacity: 0.5 }));
+		svg.appendChild(svgEl("line", { x1: width - pad - 16, y1: height / 2, x2: width - pad, y2: height / 2, stroke: "var(--text-faint, #8a8a8a)", "stroke-width": 1.3, "stroke-linecap": "round", opacity: 0.5 }));
 		return svg;
 	}
 
@@ -107,7 +107,7 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 	if (secondaryPath) svg.appendChild(secondaryPath);
 
 	const d = primary.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(" ");
-	svg.appendChild(svgEl("path", { d, fill: "none", stroke: "var(--text-muted)", "stroke-width": 1.3, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+	svg.appendChild(svgEl("path", { d, fill: "none", stroke: "var(--text-muted, #4a4a4a)", "stroke-width": 1.3, "stroke-linejoin": "round", "stroke-linecap": "round" }));
 
 	const last = primary[primary.length - 1];
 	svg.appendChild(svgEl("circle", { cx: x(primary.length - 1).toFixed(1), cy: y(last.value).toFixed(1), r: 2.4, fill: dotColor }));
@@ -156,13 +156,13 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 	for (const bound of targetBounds) {
 		const ty = y(bound);
 		svg.appendChild(
-			svgEl("line", { x1: 0, y1: ty.toFixed(1), x2: width, y2: ty.toFixed(1), stroke: "var(--color-orange)", "stroke-width": 1, "stroke-dasharray": "4 3", opacity: 0.85 }),
+			svgEl("line", { x1: 0, y1: ty.toFixed(1), x2: width, y2: ty.toFixed(1), stroke: "var(--color-orange, #ec7500)", "stroke-width": 1, "stroke-dasharray": "4 3", opacity: 0.85 }),
 		);
 	}
 	if (targetBounds.length > 0) {
 		const labelValue = targetBounds[targetBounds.length - 1];
 		const ty = y(labelValue);
-		const label = svgEl("text", { x: width - 4, y: (ty - 4).toFixed(1), "text-anchor": "end", "font-family": "var(--font-monospace)", "font-size": 9, fill: "var(--color-orange)" });
+		const label = svgEl("text", { x: width - 4, y: (ty - 4).toFixed(1), "text-anchor": "end", "font-family": "var(--font-monospace, monospace)", "font-size": 9, fill: "var(--color-orange, #ec7500)" });
 		label.textContent = opts.targetLabel ?? `target ${formatRawValue(labelValue)}`;
 		svg.appendChild(label);
 	}
@@ -171,19 +171,19 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 	if (secondaryPath) svg.appendChild(secondaryPath);
 
 	const linePath = primary.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(" ");
-	svg.appendChild(svgEl("path", { d: linePath, fill: "none", stroke: "var(--text-muted)", "stroke-width": 1.8, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+	svg.appendChild(svgEl("path", { d: linePath, fill: "none", stroke: "var(--text-muted, #4a4a4a)", "stroke-width": 1.8, "stroke-linejoin": "round", "stroke-linecap": "round" }));
 
 	primary.forEach((point, i) => {
 		const last = i === primary.length - 1;
-		svg.appendChild(svgEl("circle", { cx: x(i).toFixed(1), cy: y(point.value).toFixed(1), r: last ? 3.4 : 2.4, fill: last ? opts.statusColor : "var(--text-faint)" }));
+		svg.appendChild(svgEl("circle", { cx: x(i).toFixed(1), cy: y(point.value).toFixed(1), r: last ? 3.4 : 2.4, fill: last ? opts.statusColor : "var(--text-faint, #8a8a8a)" }));
 
 		const tick = svgEl("text", {
 			x: last ? width - padR : x(i).toFixed(1),
 			y: height - 6,
 			"text-anchor": last ? "end" : "middle",
-			"font-family": "var(--font-monospace)",
+			"font-family": "var(--font-monospace, monospace)",
 			"font-size": 9,
-			fill: "var(--text-faint)",
+			fill: "var(--text-faint, #8a8a8a)",
 		});
 		tick.textContent = formatYear(point.date);
 		svg.appendChild(tick);
@@ -196,10 +196,10 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 			x: last ? Math.min(x(i), width - padR).toFixed(1) : x(i).toFixed(1),
 			y: (y(point.value) - 8).toFixed(1),
 			"text-anchor": last ? "end" : "middle",
-			"font-family": "var(--font-interface)",
+			"font-family": "var(--font-interface, sans-serif)",
 			"font-weight": last ? 700 : 500,
 			"font-size": last ? 10 : 8.5,
-			fill: last ? opts.statusColor : "var(--text-faint)",
+			fill: last ? opts.statusColor : "var(--text-faint, #8a8a8a)",
 		});
 		label.textContent = opts.pairFormat ? opts.pairFormat(point.value, secondaryAtPoint) : formatRawValue(point.value);
 		svg.appendChild(label);

@@ -462,11 +462,6 @@ svg.hlth-ic {
 	min-width: 0;
 }
 
-.hlth-curated-badge {
-	color: var(--color-orange);
-	flex: none;
-}
-
 /* Appended directly to `document.body` (see dashboard-view.ts `getSharedTooltip`) so it escapes
    both `.hlth-dash`'s scroll clip and any transformed ancestor in Obsidian's own workspace chrome.
    That also puts it OUTSIDE `.health-dashboard-outer`'s scope, where the `--hlth-*` token aliases

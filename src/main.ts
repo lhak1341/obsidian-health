@@ -46,18 +46,6 @@ export default class HealthPlugin extends Plugin {
 			name: "Open dashboard",
 			callback: () => this.activateView(),
 		});
-
-		this.addCommand({
-			id: "open-health-planner",
-			name: "Open planner",
-			callback: () => this.activatePlannerView(),
-		});
-
-		this.addCommand({
-			id: "add-lab-visit",
-			name: "Add lab visit",
-			callback: () => void this.openVisitEditor(),
-		});
 	}
 
 	async saveSettings(): Promise<void> {

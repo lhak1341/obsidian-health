@@ -54,7 +54,7 @@ export const DEFAULT_SETTINGS: HealthPluginSettings = {
 	...DEFAULT_VAULT_PATHS,
 	deadbandPct: 0.03,
 	widgetTier: "list",
-	widgetMaxRows: 5,
+	widgetMaxRows: 4,
 	widgetShowSparkline: true,
 	showAllDefault: false,
 	basePath: "base/Health.base",
