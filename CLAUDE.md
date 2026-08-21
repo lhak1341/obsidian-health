@@ -10,6 +10,9 @@ specificity, `metadataCache` write-lag, live debugging. Only repo-specific facts
 
 Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}`.
 
+- Before editing real vault data directly (not through the app), read the
+  `obsidian-plugin-dev` skill's `references/debugging.md` for the vault path first — do not
+  `find`/guess; decoy copies of the vault exist on disk.
 - Marker `panel` (drives the Add Visit form's grouping, mirroring the physical lab report's
   sections) and `concern` (drives dashboard column grouping, clinical/thematic) are
   intentionally separate axes over the same markers. Do not collapse them.
@@ -21,7 +24,10 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
   profile override, e.g. `optimalLow`/`optimalHigh` → `resolveTarget`/`ProfileNote.targets`),
   grep every reader of the old field before shipping — TypeScript won't catch one still reading
   `marker.optimalHigh` directly, since both are same-shaped numbers. Missed this in
-  `format.ts`'s `formatTargetText`; code review caught it, not tsc or tests.
+  `format.ts`'s `formatTargetText`; code review caught it, not tsc or tests. A marker's
+  body/blurb (tooltip prose) is a separate read path from the resolved target — it can keep
+  a stale hardcoded number even after every code reader of the old field is fixed, since
+  it's prose, not a TS reader `grep` would catch.
 - New marker notes default to `curated: false` (hidden until "Show all") and no `direction`
   (neutral gray trend arrow) unless set explicitly — easy to forget both when authoring.
 - A marker's `type:` (numeric vs qualitative) must match how the source lab actually reports
@@ -89,8 +95,9 @@ fallback). This exists because `getFileCache` can return pre-write data after
   `settings-tab.ts` directly.
 - The `--hlth-*` tokens in `styles.css` are scoped to `.health-dashboard-outer`,
   `.health-planner-outer`, and `.health-visit-editor-outer` (one selector list — the three
-  ItemViews sharing the plugin's visual language). Anything mounted into a host plugin
-  cannot see them — use raw Obsidian vars there. Interactive-element classes
+  ItemViews sharing the plugin's visual language). Anything mounted into a host plugin, or into
+  a `Modal`'s `contentEl` (also outside that DOM subtree), cannot see them — use raw Obsidian
+  vars/`Setting` there instead of `.hlth-editor-*`. Interactive-element classes
   (`.hlth-showall-btn`, `.hlth-pill`) need the same three-selector list separately — they
   were scoped to `.hlth-dash` only for a while, so Planner/Editor buttons silently rendered
   with Obsidian's default button skin instead of the plugin's. When adding a 4th view to
@@ -106,7 +113,10 @@ fallback). This exists because `getFileCache` can return pre-write data after
 - Don't use Obsidian's `Setting` class inside the dashboard/planner/visit-editor family — its rows
   render full-settings-page-sized, clashing with the compact `.hlth-editor-*` language. Build
   inputs directly with `.hlth-editor-field`/`.hlth-editor-select` instead (see `visit-editor-view.ts`'s
-  Person/Date/Facility row for the pattern).
+  Person/Date/Facility row for the pattern). This restriction is scoped to those three views' own
+  DOM — a `Modal` opened from any of them sits outside that tree anyway (see the `--hlth-*` note
+  above), so `Setting` is the right choice there instead (see `EditTargetModal` in
+  `dashboard-view.ts`).
 - `mountHealthWidget` (`main.ts`) is the guest side of the dashboard handshake;
   `obsidian-lhak-dashboard/src/panels/HealthPanel.ts` is the host side.
 - `.hlth-widget { zoom: 0.9 }` is intentional, not an oversight — Obsidian is
