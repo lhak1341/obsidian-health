@@ -4,6 +4,7 @@ import {
 	buildVisitFrontmatter,
 	buildVisitValues,
 	checkDuplicateMarkerId,
+	evaluateBoundField,
 	evaluateNumericField,
 	evaluateQualitativeField,
 	evaluateVisitFields,
@@ -162,6 +163,30 @@ describe("checkDuplicateMarkerId", () => {
 
 	it("allows an id that doesn't exist yet", () => {
 		expect(checkDuplicateMarkerId("new-marker", ["alt", "ast"])).toBe(false);
+	});
+});
+
+describe("evaluateBoundField", () => {
+	it("omits a blank field", () => {
+		expect(evaluateBoundField("")).toEqual({ kind: "omitted" });
+	});
+
+	it("omits a whitespace-only field", () => {
+		expect(evaluateBoundField("   ")).toEqual({ kind: "omitted" });
+	});
+
+	it("hard-blocks non-numeric input", () => {
+		const result = evaluateBoundField("abc");
+		expect(result.kind).toBe("blocked");
+	});
+
+	it("hard-blocks non-finite literals", () => {
+		const result = evaluateBoundField("1e309");
+		expect(result.kind).toBe("blocked");
+	});
+
+	it("parses a valid number with no unit conversion or band involved", () => {
+		expect(evaluateBoundField("5.2")).toEqual({ kind: "ok", value: 5.2 });
 	});
 });
 

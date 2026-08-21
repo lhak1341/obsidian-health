@@ -8,7 +8,7 @@ import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, form
 import { iconFor, iconForConcern } from "./icons";
 import { buildArrowCell, collectGroupRows, countVisibleRows, flaggedRows, formatRowValue, indexPairs, rowOrder, type RowEntry } from "./rows";
 import { renderInlineMarkdown } from "./rich-text";
-import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, type Segment, WIDE_LANES } from "./tier-lanes";
+import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
 import { hideTooltip, showTooltip } from "./tooltip";
 
 /** Session-only UI state that must survive a repaint instead of resetting -- owned by the adapter
@@ -356,23 +356,10 @@ function makeLanes(tier: HTMLElement, count: number): HTMLElement[] {
 	return lanes;
 }
 
-/** Builds one responsive tier from a lane table -- each entry in `lanes` is one lane's ordered
- *  segment list (see `resolveLane`). Flex, not CSS grid -- grid's row tracks are shared across
- *  every column, so a very tall item in one lane would inflate every other lane's row height at
- *  that index; flex has no such cross-lane coupling. Used for Show all, which keeps the
- *  pinned-column system; Curated view uses `buildPackedTier` instead (see docs/adr/0003). */
-function buildTier(className: string, sorted: ConcernGroup[], build: (group: ConcernGroup) => HTMLElement, lanes: Segment[][]): HTMLElement {
-	const tier = createDiv();
-	tier.className = `hlth-tier ${className}`;
-	const laneEls = makeLanes(tier, lanes.length);
-	lanes.forEach((segments, i) => {
-		for (const group of resolveLane(sorted, segments)) laneEls[i].appendChild(build(group));
-	});
-	return tier;
-}
-
-/** Builds one responsive tier from `packLanes`' already-assigned lane groups (Curated view only). */
-function buildPackedTier(className: string, laneGroups: ConcernGroup[][], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
+/** Builds one responsive tier from already-assigned lane groups. Flex, not CSS grid -- grid's row
+ *  tracks are shared across every column, so a very tall item in one lane would inflate every
+ *  other lane's row height at that index; flex has no such cross-lane coupling. */
+function buildTier(className: string, laneGroups: ConcernGroup[][], build: (group: ConcernGroup) => HTMLElement): HTMLElement {
 	const tier = createDiv();
 	tier.className = `hlth-tier ${className}`;
 	const laneEls = makeLanes(tier, laneGroups.length);
@@ -392,14 +379,17 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 	const build = (group: ConcernGroup) => buildGroup(group, opts, curated, rowByMarkerId, rowOpen);
 
 	if (opts.viewState.showAll) {
-		container.appendChild(buildTier("hlth-tier-wide", sorted, build, WIDE_LANES));
-		container.appendChild(buildTier("hlth-tier-medium", sorted, build, MEDIUM_LANES));
-		container.appendChild(buildTier("hlth-tier-narrow", sorted, build, NARROW_LANES));
+		// Show all keeps the pinned-column system: each tier's lane table is a fixed list of
+		// segments (WIDE_LANES/MEDIUM_LANES/NARROW_LANES), resolved against `sorted` per lane.
+		container.appendChild(buildTier("hlth-tier-wide", WIDE_LANES.map((segments) => resolveLane(sorted, segments)), build));
+		container.appendChild(buildTier("hlth-tier-medium", MEDIUM_LANES.map((segments) => resolveLane(sorted, segments)), build));
+		container.appendChild(buildTier("hlth-tier-narrow", NARROW_LANES.map((segments) => resolveLane(sorted, segments)), build));
 	} else {
+		// Curated view replaces the pinned-column system with a weight-based packer (docs/adr/0003).
 		const visibleRows = countVisibleRows(sorted, rowByMarkerId, curated);
-		container.appendChild(buildPackedTier("hlth-tier-wide", packLanes(sorted, visibleRows, 3, "vitals"), build));
-		container.appendChild(buildPackedTier("hlth-tier-medium", packLanes(sorted, visibleRows, 2, "vitals"), build));
-		container.appendChild(buildPackedTier("hlth-tier-narrow", packLanes(sorted, visibleRows, 1, "vitals"), build));
+		container.appendChild(buildTier("hlth-tier-wide", packLanes(sorted, visibleRows, 3, "vitals"), build));
+		container.appendChild(buildTier("hlth-tier-medium", packLanes(sorted, visibleRows, 2, "vitals"), build));
+		container.appendChild(buildTier("hlth-tier-narrow", packLanes(sorted, visibleRows, 1, "vitals"), build));
 	}
 
 	return container;

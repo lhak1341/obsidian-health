@@ -143,6 +143,22 @@ export function evaluateNumericField(raw: string, unit: string, marker: MarkerNo
 	return { kind: "ok", value: parsed, softWarn: isSoftWarn(canonical, band) };
 }
 
+export type BoundOutcome = { kind: "omitted" } | { kind: "blocked"; reason: string } | { kind: "ok"; value: number };
+
+/** Numeric parsing for a personal target bound (`EditTargetModal`'s Low/High fields) -- no unit
+ *  conversion, no band soft-warn, since a target bound isn't a reading compared against a
+ *  reference range the way a visit value is. Shares only the blank/parse/finite core with
+ *  `evaluateNumericField`. */
+export function evaluateBoundField(raw: string): BoundOutcome {
+	const trimmed = raw.trim();
+	if (trimmed === "") return { kind: "omitted" };
+
+	const parsed = Number(trimmed);
+	if (!Number.isFinite(parsed)) return { kind: "blocked", reason: `"${raw}" is not a number.` };
+
+	return { kind: "ok", value: parsed };
+}
+
 export function evaluateQualitativeField(raw: string): FieldOutcome {
 	const trimmed = raw.trim();
 	if (trimmed === "") return { kind: "omitted" };

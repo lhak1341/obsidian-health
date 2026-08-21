@@ -1,6 +1,7 @@
 import { toPng } from "html-to-image";
 import { ItemView, Modal, Notice, Platform, Setting, TFile, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
 import { computeDashboardModel, concernViewNameForProfile, resolveConcernViewName, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
+import { evaluateBoundField } from "./core/entry";
 import type { DashboardModel } from "./core/model";
 import type { MarkerNote, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
@@ -9,15 +10,6 @@ import type { VaultSnapshot } from "./vault/reader";
 import { saveMarkerTarget, toggleMarkerCurated } from "./vault/writer";
 
 export const HEALTH_VIEW_TYPE = "health-dashboard";
-
-/** Blank -> absent (clears that bound); anything non-finite (`"abc"`, overflowing literals like
- *  `"1e309"` which parse to `Infinity`) -> also absent, matching `evaluateNumericField`'s
- *  `Number.isFinite` guard in core/entry.ts rather than accepting it as a real bound. */
-function parseTargetBound(raw: string): number | undefined {
-	if (raw.trim() === "") return undefined;
-	const parsed = Number(raw);
-	return Number.isFinite(parsed) ? parsed : undefined;
-}
 
 /** Form for a marker's personal target override, scoped to whichever profile is active on the
  *  dashboard -- opened from the marker row's "Edit target…" context menu item. Prefills with the
@@ -54,8 +46,17 @@ class EditTargetModal extends Modal {
 		buttons
 			.createEl("button", { text: "Save", cls: "mod-cta" })
 			.addEventListener("click", () => {
-				const low = parseTargetBound(lowText);
-				const high = parseTargetBound(highText);
+				const lowOutcome = evaluateBoundField(lowText);
+				if (lowOutcome.kind === "blocked") return void new Notice(lowOutcome.reason);
+				const highOutcome = evaluateBoundField(highText);
+				if (highOutcome.kind === "blocked") return void new Notice(highOutcome.reason);
+
+				const low = lowOutcome.kind === "ok" ? lowOutcome.value : undefined;
+				const high = highOutcome.kind === "ok" ? highOutcome.value : undefined;
+				if (low !== undefined && high !== undefined && low > high) {
+					return void new Notice(`Low (${low}) must not exceed High (${high}).`);
+				}
+
 				this.close();
 				this.onSave({ low, high });
 			});
@@ -199,11 +200,9 @@ export class HealthView extends ItemView {
 	}
 
 	/** Renders a full (Show all, not Curated) screenshot of the dashboard and saves it via a native
-	 *  save dialog. Show all and Curated are two independent lane-layout systems (docs/adr/0003), so
-	 *  this can't just hide rows in place -- it forces the real `showAll` toggle, repaints, captures,
-	 *  then restores whatever the user had before. `.hlth-dash` is `overflow-y: auto` at a fixed
-	 *  `height: 100%` normally (see styles.css) -- temporarily overridden to its natural full height
-	 *  so the capture isn't clipped to whatever fit on screen. */
+	 *  save dialog. Orchestrates three phases: force the layout into a capturable state
+	 *  (`prepareForCapture`), rasterize it (`rasterize`), then prompt and write the file
+	 *  (`promptAndSave`) -- `prepareForCapture`'s restore closure always runs via `finally`. */
 	private async exportScreenshot(profile: ProfileNote): Promise<void> {
 		if (!Platform.isDesktop) {
 			new Notice("Exporting a screenshot requires the desktop app.");
@@ -216,6 +215,31 @@ export class HealthView extends ItemView {
 		// size. `deleteAfter: 0` keeps the notice up until `.hide()` below, so it covers the whole wait.
 		const rendering = new Notice("Rendering screenshot… this can take up to 30 seconds.", 0);
 
+		const prepared = await this.prepareForCapture();
+		if (!prepared) {
+			rendering.hide();
+			return;
+		}
+
+		try {
+			const dataUrl = await this.rasterize(prepared.outer);
+			await this.promptAndSave(dataUrl, profile);
+		} catch (err) {
+			console.error("Health: failed to export screenshot", err);
+			new Notice("Failed to export screenshot.");
+		} finally {
+			rendering.hide();
+			prepared.restore();
+		}
+	}
+
+	/** Show all and Curated are two independent lane-layout systems (docs/adr/0003), so capture
+	 *  can't just hide rows in place -- forces the real `showAll` toggle and repaints. `.hlth-dash`
+	 *  is `overflow-y: auto` at a fixed `height: 100%` normally (see styles.css) -- temporarily
+	 *  overridden to its natural full height so the capture isn't clipped to whatever fit on screen.
+	 *  Returns `undefined` if `.hlth-dash` isn't in the DOM (and restores `showAll` itself in that
+	 *  case); otherwise returns the element to rasterize plus a restore closure the caller must run. */
+	private async prepareForCapture(): Promise<{ outer: HTMLElement; restore: () => void } | undefined> {
 		const wasShowAll = this.viewState.showAll;
 		this.viewState.showAll = true;
 		this.repaint();
@@ -225,10 +249,9 @@ export class HealthView extends ItemView {
 		const outer = this.contentEl;
 		const dash = outer.querySelector<HTMLElement>(".hlth-dash");
 		if (!dash) {
-			rendering.hide();
 			this.viewState.showAll = wasShowAll;
 			this.repaint();
-			return;
+			return undefined;
 		}
 
 		const prevOuterHeight = outer.style.height;
@@ -240,39 +263,42 @@ export class HealthView extends ItemView {
 		dash.setCssStyles({ height: "auto", overflowY: "visible" });
 		await nextFrame();
 
-		try {
-			const width = outer.getBoundingClientRect().width;
-			const height = outer.scrollHeight;
-			// `skipFonts` skips html-to-image re-fetching every @font-face across every stylesheet
-			// loaded in the whole Obsidian window (core + all themes/snippets, not just this view) to
-			// re-embed them as portable data URIs -- unnecessary since the fonts are already loaded and
-			// rendering correctly live. The remaining ~10-12s (confirmed live, 3-run benchmark) is the
-			// per-element style-walk over this view's own DOM, not fonts or the pixelRatio-2 raster --
-			// pixelRatio 1 only shaves ~25-30% off that and halves output resolution, not worth it.
-			const dataUrl = await toPng(outer, { width, height, pixelRatio: 2, skipFonts: true });
+		return {
+			outer,
+			restore: () => {
+				outer.setCssStyles({ height: prevOuterHeight, overflow: prevOuterOverflow });
+				dash.setCssStyles({ height: prevDashHeight, overflowY: prevDashOverflowY });
+				this.viewState.showAll = wasShowAll;
+				this.repaint();
+			},
+		};
+	}
 
-			const electron = getElectronRemote();
-			const date = new Date().toISOString().slice(0, 10);
-			const result = await electron.remote.dialog.showSaveDialog(electron.remote.getCurrentWindow(), {
-				title: "Export health dashboard screenshot",
-				defaultPath: `Health - ${profile.person} - Show all - ${date}.png`,
-				filters: [{ name: "PNG Image", extensions: ["png"] }],
-			});
-			if (result.canceled || !result.filePath) return;
+	private async rasterize(outer: HTMLElement): Promise<string> {
+		const width = outer.getBoundingClientRect().width;
+		const height = outer.scrollHeight;
+		// `skipFonts` skips html-to-image re-fetching every @font-face across every stylesheet
+		// loaded in the whole Obsidian window (core + all themes/snippets, not just this view) to
+		// re-embed them as portable data URIs -- unnecessary since the fonts are already loaded and
+		// rendering correctly live. The remaining ~10-12s (confirmed live, 3-run benchmark) is the
+		// per-element style-walk over this view's own DOM, not fonts or the pixelRatio-2 raster --
+		// pixelRatio 1 only shaves ~25-30% off that and halves output resolution, not worth it.
+		return toPng(outer, { width, height, pixelRatio: 2, skipFonts: true });
+	}
 
-			const fs = getNodeFs();
-			await fs.promises.writeFile(result.filePath, getNodeBuffer().from(dataUrl.split(",")[1], "base64"));
-			new Notice(`Saved screenshot to ${result.filePath}`);
-		} catch (err) {
-			console.error("Health: failed to export screenshot", err);
-			new Notice("Failed to export screenshot.");
-		} finally {
-			rendering.hide();
-			outer.setCssStyles({ height: prevOuterHeight, overflow: prevOuterOverflow });
-			dash.setCssStyles({ height: prevDashHeight, overflowY: prevDashOverflowY });
-			this.viewState.showAll = wasShowAll;
-			this.repaint();
-		}
+	private async promptAndSave(dataUrl: string, profile: ProfileNote): Promise<void> {
+		const electron = getElectronRemote();
+		const date = new Date().toISOString().slice(0, 10);
+		const result = await electron.remote.dialog.showSaveDialog(electron.remote.getCurrentWindow(), {
+			title: "Export health dashboard screenshot",
+			defaultPath: `Health - ${profile.person} - Show all - ${date}.png`,
+			filters: [{ name: "PNG Image", extensions: ["png"] }],
+		});
+		if (result.canceled || !result.filePath) return;
+
+		const fs = getNodeFs();
+		await fs.promises.writeFile(result.filePath, getNodeBuffer().from(dataUrl.split(",")[1], "base64"));
+		new Notice(`Saved screenshot to ${result.filePath}`);
 	}
 
 	/** A concern header opens the single configured Base file (settings.basePath), switching to the
