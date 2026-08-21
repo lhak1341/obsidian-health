@@ -75,6 +75,13 @@ export function resolveDefaultProfile(profiles: ProfileNote[], defaultPerson: st
 	return (defaultPerson && profiles.find((p) => p.person === defaultPerson)) || profiles[0];
 }
 
+/** Composes a concern header's already-resolved Base view name (label, or a `concernViewOverrides`
+ *  entry) with the active profile, so a concern click opens a per-profile view instead of the
+ *  single shared one. */
+export function concernViewNameForProfile(viewName: string, person: string): string {
+	return `${viewName} — ${person}`;
+}
+
 /** Folds a raw frontmatter concern string to its identity key -- the single definition of "same
  *  concern" regardless of authored casing/whitespace. Display text is a presentation concern
  *  (render/concern-registry.ts's labelForConcern), kept separate so this stays Obsidian-free. */

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { computeDashboardModel, convert, convertTo, isSoftWarn, isToggleable, resolve, resolveDefaultProfile, toDisplay } from "./dashboard";
+import {
+	computeDashboardModel,
+	concernViewNameForProfile,
+	convert,
+	convertTo,
+	isSoftWarn,
+	isToggleable,
+	resolve,
+	resolveDefaultProfile,
+	toDisplay,
+} from "./dashboard";
 import { realVaultFixture } from "./fixtures/real-vault";
 import type { DashboardSettings, MarkerStatusInfo } from "./model";
 import type { MarkerNote, ProfileNote, VisitNote } from "./types";
@@ -157,6 +167,16 @@ describe("resolveDefaultProfile", () => {
 
 	it("returns undefined when there are no profiles at all", () => {
 		expect(resolveDefaultProfile([], "alice")).toBeUndefined();
+	});
+});
+
+describe("concernViewNameForProfile", () => {
+	it("appends the person to a plain label", () => {
+		expect(concernViewNameForProfile("Vitals", "Khoa")).toBe("Vitals — Khoa");
+	});
+
+	it("appends the person to a concernViewOverrides-resolved name the same way", () => {
+		expect(concernViewNameForProfile("Liver Panel", "Maru")).toBe("Liver Panel — Maru");
 	});
 });
 

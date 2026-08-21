@@ -1,5 +1,5 @@
 import { ItemView, TFile, WorkspaceLeaf, type ViewStateResult } from "obsidian";
-import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
+import { computeDashboardModel, concernViewNameForProfile, resolveDefaultProfile } from "./core/dashboard";
 import type { DashboardModel } from "./core/model";
 import type { ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
@@ -100,7 +100,7 @@ export class HealthView extends ItemView {
 			onAddVisit: () => void this.plugin.openVisitEditor(undefined, "add", profile.person),
 			onEditVisit: lastVisitDate ? () => void this.plugin.openVisitEditor(lastVisitDate, "edit", profile.person) : undefined,
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
-			onOpenConcern: (key, label) => this.openConcernBase(key, label),
+			onOpenConcern: (key, label) => this.openConcernBase(key, label, profile.person),
 			onToggleCurated: (markerId) => void this.toggleCurated(markerId),
 			profiles: this.snapshot.profiles.map((p) => p.person),
 			profile,
@@ -125,11 +125,15 @@ export class HealthView extends ItemView {
 
 	/** A concern header opens the single configured Base file (settings.basePath), switching to the
 	 *  view named after the concern's label -- or the per-concern override (keyed by the normalized
-	 *  identity, not the display label) when the view name differs. Returns false if the Base file
-	 *  doesn't exist so the caller can degrade to in-plugin expand. */
-	private openConcernBase(key: string, label: string): boolean {
+	 *  identity, not the display label) when the view name differs -- suffixed with the active
+	 *  profile so each profile gets its own filtered view instead of one shared, mixed one. Returns
+	 *  false if the Base file doesn't exist so the caller can degrade to in-plugin expand. A
+	 *  per-profile view that hasn't been hand-authored yet isn't checked for here -- Obsidian's own
+	 *  Bases renderer shows an inline "not found" state rather than silently substituting another
+	 *  view or mixed data (confirmed live), so no extra existence check is needed. */
+	private openConcernBase(key: string, label: string, person: string): boolean {
 		const settings = this.plugin.settings;
-		const viewName = settings.concernViewOverrides[key]?.trim() || label;
+		const viewName = concernViewNameForProfile(settings.concernViewOverrides[key]?.trim() || label, person);
 
 		const file = this.app.vault.getAbstractFileByPath(settings.basePath);
 		if (!(file instanceof TFile)) return false;
