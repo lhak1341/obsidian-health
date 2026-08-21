@@ -35,6 +35,9 @@ export interface DashboardRenderOptions {
 	onOpenConcern: (key: string, label: string) => boolean | Promise<boolean>;
 	/** Right-click on a row -- flips the marker note's `curated:` frontmatter, then rescans. */
 	onToggleCurated: (markerId: string) => void;
+	/** Right-click "Edit target…" on a numeric marker row -- opens a form for that marker's
+	 *  personal target override, scoped to the active profile. */
+	onEditTarget: (markerId: string) => void;
 	profiles: string[];
 	profile: ProfileNote;
 	lastVisitDate?: string;
@@ -497,6 +500,15 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 				.setIcon("bookmark")
 				.onClick(() => opts.onToggleCurated(markerId)),
 		);
+		// Low/high targets only apply to numeric markers -- a qualitative marker has no band to edit.
+		if (primary.marker.type === "numeric") {
+			menu.addItem((item) =>
+				item
+					.setTitle("Edit target…")
+					.setIcon("target")
+					.onClick(() => opts.onEditTarget(markerId)),
+			);
+		}
 		menu.showAtMouseEvent(evt);
 	});
 	rowOpen.register(markerId, { header, detail });
@@ -606,7 +618,7 @@ function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement
 	wrap.appendChild(
 		buildHistoryChart(display.series, secondary?.series, {
 			band: display.band,
-			target: display.target.high ?? display.target.low,
+			target: display.target,
 			targetLabel: formatTargetText(display.target) || undefined,
 			statusColor: statusColor(primary.status),
 			pairFormat: secondary ? (p, s) => `${formatRawValue(p)}${s !== undefined ? `/${formatRawValue(s)}` : ""}` : undefined,

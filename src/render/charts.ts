@@ -117,7 +117,7 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 
 export interface HistoryChartOptions {
 	band: ResolvedRange;
-	target?: number;
+	target?: ResolvedRange;
 	targetLabel?: string;
 	statusColor: string;
 	pairFormat?: (primary: number, secondary?: number) => string;
@@ -139,7 +139,8 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 	const allValues = primary.map((p) => p.value).concat(secondaryPoints.map((p) => p.value));
 	if (band.low !== undefined) allValues.push(band.low);
 	if (band.high !== undefined) allValues.push(band.high);
-	if (target !== undefined) allValues.push(target);
+	if (target?.low !== undefined) allValues.push(target.low);
+	if (target?.high !== undefined) allValues.push(target.high);
 
 	const [min, max] = paddedDomain(allValues, 0.15);
 	const x = scaleX(primary.length, padL, width - padR);
@@ -148,13 +149,21 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 	const bandRect = buildBandRect(band, y, width, padT, height - padB);
 	if (bandRect) svg.appendChild(bandRect);
 
-	if (target !== undefined) {
-		const ty = y(target);
+	// A two-bound target (both low and high set) draws a dashed line per bound so the chart
+	// matches `targetLabel`'s "low – high" text instead of silently dropping one side -- the label
+	// itself is only drawn once, next to the high bound (or the sole bound when only one is set).
+	const targetBounds = [target?.low, target?.high].filter((v): v is number => v !== undefined);
+	for (const bound of targetBounds) {
+		const ty = y(bound);
 		svg.appendChild(
 			svgEl("line", { x1: 0, y1: ty.toFixed(1), x2: width, y2: ty.toFixed(1), stroke: "var(--color-orange)", "stroke-width": 1, "stroke-dasharray": "4 3", opacity: 0.85 }),
 		);
+	}
+	if (targetBounds.length > 0) {
+		const labelValue = targetBounds[targetBounds.length - 1];
+		const ty = y(labelValue);
 		const label = svgEl("text", { x: width - 4, y: (ty - 4).toFixed(1), "text-anchor": "end", "font-family": "var(--font-monospace)", "font-size": 9, fill: "var(--color-orange)" });
-		label.textContent = opts.targetLabel ?? `target ${formatRawValue(target)}`;
+		label.textContent = opts.targetLabel ?? `target ${formatRawValue(labelValue)}`;
 		svg.appendChild(label);
 	}
 

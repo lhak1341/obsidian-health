@@ -17,6 +17,11 @@ Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}
   all, filtered in `computeDashboardModel` and the visit editor's `buildFields`. Separate axis
   from `ranges[].sex`, which only picks which reference band resolves for a marker every profile
   still sees.
+- When a marker field gains a per-profile resolved counterpart (global field + `resolve*()` +
+  profile override, e.g. `optimalLow`/`optimalHigh` → `resolveTarget`/`ProfileNote.targets`),
+  grep every reader of the old field before shipping — TypeScript won't catch one still reading
+  `marker.optimalHigh` directly, since both are same-shaped numbers. Missed this in
+  `format.ts`'s `formatTargetText`; code review caught it, not tsc or tests.
 - New marker notes default to `curated: false` (hidden until "Show all") and no `direction`
   (neutral gray trend arrow) unless set explicitly — easy to forget both when authoring.
 - A marker's `type:` (numeric vs qualitative) must match how the source lab actually reports

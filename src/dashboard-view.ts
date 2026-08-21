@@ -1,13 +1,69 @@
-import { ItemView, TFile, WorkspaceLeaf, type ViewStateResult } from "obsidian";
-import { computeDashboardModel, concernViewNameForProfile, resolveDefaultProfile } from "./core/dashboard";
+import { ItemView, Modal, Setting, TFile, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
+import { computeDashboardModel, concernViewNameForProfile, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
 import type { DashboardModel } from "./core/model";
-import type { ProfileNote } from "./core/types";
+import type { MarkerNote, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
 import { renderDashboard, type DashboardViewState } from "./render/dashboard-view";
 import type { VaultSnapshot } from "./vault/reader";
-import { toggleMarkerCurated } from "./vault/writer";
+import { saveMarkerTarget, toggleMarkerCurated } from "./vault/writer";
 
 export const HEALTH_VIEW_TYPE = "health-dashboard";
+
+/** Blank -> absent (clears that bound); anything non-finite (`"abc"`, overflowing literals like
+ *  `"1e309"` which parse to `Infinity`) -> also absent, matching `evaluateNumericField`'s
+ *  `Number.isFinite` guard in core/entry.ts rather than accepting it as a real bound. */
+function parseTargetBound(raw: string): number | undefined {
+	if (raw.trim() === "") return undefined;
+	const parsed = Number(raw);
+	return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/** Form for a marker's personal target override, scoped to whichever profile is active on the
+ *  dashboard -- opened from the marker row's "Edit target…" context menu item. Prefills with the
+ *  *effective* value (the profile's override if one exists, else the marker's global default);
+ *  clearing both fields removes the override on save. */
+class EditTargetModal extends Modal {
+	constructor(
+		app: App,
+		private readonly marker: MarkerNote,
+		private readonly profile: ProfileNote,
+		private readonly onSave: (target: { low?: number; high?: number }) => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const effective = resolveTarget(this.marker, this.profile);
+		let lowText = effective.low !== undefined ? String(effective.low) : "";
+		let highText = effective.high !== undefined ? String(effective.high) : "";
+
+		this.contentEl.createEl("h3", { text: `Edit target — ${this.marker.name}` });
+
+		new Setting(this.contentEl).setName("Low").addText((text) => {
+			text.inputEl.type = "number";
+			text.setValue(lowText).onChange((value) => (lowText = value));
+		});
+		new Setting(this.contentEl).setName("High").addText((text) => {
+			text.inputEl.type = "number";
+			text.setValue(highText).onChange((value) => (highText = value));
+		});
+
+		const buttons = this.contentEl.createDiv({ cls: "modal-button-container" });
+		buttons.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());
+		buttons
+			.createEl("button", { text: "Save", cls: "mod-cta" })
+			.addEventListener("click", () => {
+				const low = parseTargetBound(lowText);
+				const high = parseTargetBound(highText);
+				this.close();
+				this.onSave({ low, high });
+			});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
 
 export class HealthView extends ItemView {
 	private snapshot: VaultSnapshot = { markers: [], visits: [], profiles: [], plans: [] };
@@ -102,6 +158,7 @@ export class HealthView extends ItemView {
 			onOpenPlanner: () => void this.plugin.activatePlannerView(),
 			onOpenConcern: (key, label) => this.openConcernBase(key, label, profile.person),
 			onToggleCurated: (markerId) => void this.toggleCurated(markerId),
+			onEditTarget: (markerId) => this.editTarget(profile, markerId),
 			profiles: this.snapshot.profiles.map((p) => p.person),
 			profile,
 			lastVisitDate,
@@ -120,6 +177,22 @@ export class HealthView extends ItemView {
 	 *  derived from `snapshot.markers` at scan time, so a local repaint would keep showing stale state. */
 	private async toggleCurated(markerId: string): Promise<void> {
 		await toggleMarkerCurated(this.app, this.plugin.settings, markerId);
+		await this.reload();
+	}
+
+	/** Opens the target-editing form for a marker, scoped to whichever profile is active when the
+	 *  row's context menu was opened. */
+	private editTarget(profile: ProfileNote, markerId: string): void {
+		const marker = this.snapshot.markers.find((m) => m.id === markerId);
+		if (!marker) return;
+		new EditTargetModal(this.app, marker, profile, (target) => void this.saveTarget(profile, markerId, target)).open();
+	}
+
+	/** Writes a marker's personal target override (or clears it) on disk, then rescans -- resolved
+	 *  status/display derive from `snapshot.profiles` at scan time, so a local repaint would keep
+	 *  showing the stale target. */
+	private async saveTarget(profile: ProfileNote, markerId: string, target: { low?: number; high?: number }): Promise<void> {
+		await saveMarkerTarget(this.app, this.plugin.settings, profile, markerId, target);
 		await this.reload();
 	}
 

@@ -3,7 +3,7 @@ id: "07"
 title: "Edit a profile's marker target from the dashboard"
 type: wayfinder:task
 mode: AFK
-status: open
+status: closed
 labels: [ready-for-agent]
 assignee:
 blocked-by: ["06"]
@@ -32,18 +32,18 @@ and the spec (`../SPEC.md`, "Target-editing UI" / "Write path" implementation de
 
 ## Acceptance criteria
 
-- [ ] Right-clicking a marker row while a profile is active shows an "Edit target…" item
+- [x] Right-clicking a marker row while a profile is active shows an "Edit target…" item
       alongside the existing Curate/Un-curate item.
-- [ ] The item is absent (not present, not disabled) when no profile is active.
-- [ ] Selecting it opens a form with low/high fields prefilled with the currently effective
+- [x] The item is absent (not present, not disabled) when no profile is active.
+- [x] Selecting it opens a form with low/high fields prefilled with the currently effective
       value for that marker and profile.
-- [ ] Saving with values in both fields writes a `targets` override for that marker on the
+- [x] Saving with values in both fields writes a `targets` override for that marker on the
       active profile, through the same write path other profile-field edits already use.
-- [ ] Saving with both fields cleared removes the override for that marker, and the dashboard
+- [x] Saving with both fields cleared removes the override for that marker, and the dashboard
       reflects the marker's global default afterward.
-- [ ] The write path is covered by unit tests extending the existing profile-note-save test
+- [x] The write path is covered by unit tests extending the existing profile-note-save test
       suite, with a case that adds a target override and a case that removes one.
-- [ ] The context menu item and the modal itself are verified live/manually (not unit tested,
+- [x] The context menu item and the modal itself are verified live/manually (not unit tested,
       consistent with this repo's existing untested Obsidian-adapter code).
 
 ## Blocked by

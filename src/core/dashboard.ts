@@ -218,7 +218,7 @@ export function resolve(marker: MarkerNote, profile: ProfileNote, atDate: string
  *  value), else the marker's global `optimalLow`/`optimalHigh`. */
 export function resolveTarget(marker: MarkerNote, profile: ProfileNote): ResolvedRange {
 	const override = profile.targets?.[marker.id];
-	if (override) return { low: override.low, high: override.high };
+	if (override && (override.low !== undefined || override.high !== undefined)) return { low: override.low, high: override.high };
 	return { low: marker.optimalLow, high: marker.optimalHigh };
 }
 
@@ -261,21 +261,17 @@ export function toDisplay(info: MarkerStatusInfo, toggled: boolean): DisplayRead
 		? info.series
 		: info.series.map((point) => (typeof point.value === "number" ? { ...point, value: convertTo(point.value, altUnit, marker) } : point));
 
-	const band = !canConvert
-		? info.band
-		: {
-				low: info.band.low !== undefined ? convertTo(info.band.low, altUnit, marker) : undefined,
-				high: info.band.high !== undefined ? convertTo(info.band.high, altUnit, marker) : undefined,
-			};
-
-	const target = !canConvert
-		? info.target
-		: {
-				low: info.target.low !== undefined ? convertTo(info.target.low, altUnit, marker) : undefined,
-				high: info.target.high !== undefined ? convertTo(info.target.high, altUnit, marker) : undefined,
-			};
+	const band = !canConvert ? info.band : convertRange(info.band, altUnit, marker);
+	const target = !canConvert ? info.target : convertRange(info.target, altUnit, marker);
 
 	return { value, unit: canConvert ? altUnit : marker.unit, series, band, target };
+}
+
+function convertRange(range: ResolvedRange, altUnit: string, marker: MarkerNote): ResolvedRange {
+	return {
+		low: range.low !== undefined ? convertTo(range.low, altUnit, marker) : undefined,
+		high: range.high !== undefined ? convertTo(range.high, altUnit, marker) : undefined,
+	};
 }
 
 export function isSoftWarn(value: number, band: ResolvedRange): boolean {

@@ -1,7 +1,7 @@
 import type { App, TFile } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { createFakeApp } from "./fixtures/fake-app";
-import type { MarkerNote } from "../core/types";
+import type { MarkerNote, ProfileNote } from "../core/types";
 import { DEFAULT_SETTINGS, type HealthPluginSettings } from "../settings";
 import {
 	findMarkerFile,
@@ -10,6 +10,7 @@ import {
 	renameConcern,
 	renameProfile,
 	saveMarkerOrder,
+	saveMarkerTarget,
 	saveNewMarkerNote,
 	saveProfileNote,
 	saveProfileOrder,
@@ -378,6 +379,78 @@ describe("saveProfileNote", () => {
 
 		const f = file(app, "profiles/alice.md");
 		expect(app.metadataCache.getFileCache(f)?.frontmatter?.blood_type).toBeUndefined();
+	});
+
+	it("leaves an existing targets: entry untouched when the input omits targets entirely", async () => {
+		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f", targets: { weight: { low: 55, high: 65 } } } }]);
+
+		await saveProfileNote(app, paths, "alice", { sex: "f", dob: "1990-01-01" });
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toEqual({ weight: { low: 55, high: 65 } });
+	});
+
+	it("writes a targets: map when provided", async () => {
+		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f" } }]);
+
+		await saveProfileNote(app, paths, "alice", { sex: "f", targets: { weight: { low: 55, high: 65 } } });
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toEqual({ weight: { low: 55, high: 65 } });
+	});
+
+	it("removes targets: when the input passes an empty map", async () => {
+		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f", targets: { weight: { low: 55, high: 65 } } } }]);
+
+		await saveProfileNote(app, paths, "alice", { sex: "f", targets: {} });
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toBeUndefined();
+	});
+});
+
+describe("saveMarkerTarget", () => {
+	function aliceProfile(overrides: Partial<ProfileNote> = {}): ProfileNote {
+		return { person: "alice", sex: "f", ...overrides };
+	}
+
+	it("adds a target override for a marker, preserving other profile fields and other overrides", async () => {
+		const app = createFakeApp([
+			{ path: "profiles/alice.md", frontmatter: { sex: "f", blood_type: "A+", targets: { waist: { low: 60, high: 80 } } } },
+		]);
+		const profile = aliceProfile({ bloodType: "A+", targets: { waist: { low: 60, high: 80 } } });
+
+		await saveMarkerTarget(app, paths, profile, "weight", { low: 55, high: 65 });
+
+		const f = file(app, "profiles/alice.md");
+		const fm = app.metadataCache.getFileCache(f)?.frontmatter;
+		expect(fm?.blood_type).toBe("A+");
+		expect(fm?.targets).toEqual({
+			waist: { low: 60, high: 80 },
+			weight: { low: 55, high: 65 },
+		});
+	});
+
+	it("supports a partial override (one bound absent, not inherited from the global value)", async () => {
+		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f" } }]);
+		const profile = aliceProfile();
+
+		await saveMarkerTarget(app, paths, profile, "weight", { low: 55, high: undefined });
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toEqual({ weight: { low: 55 } });
+	});
+
+	it("removes a target override for a marker when both bounds are undefined, leaving other overrides intact", async () => {
+		const app = createFakeApp([
+			{ path: "profiles/alice.md", frontmatter: { sex: "f", targets: { waist: { low: 60, high: 80 }, weight: { low: 55, high: 65 } } } },
+		]);
+		const profile = aliceProfile({ targets: { waist: { low: 60, high: 80 }, weight: { low: 55, high: 65 } } });
+
+		await saveMarkerTarget(app, paths, profile, "weight", { low: undefined, high: undefined });
+
+		const f = file(app, "profiles/alice.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toEqual({ waist: { low: 60, high: 80 } });
 	});
 });
 

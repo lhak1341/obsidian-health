@@ -108,6 +108,13 @@ describe("resolveTarget", () => {
 
 		expect(resolveTarget(m, p)).toEqual({ low: 0.5, high: undefined });
 	});
+
+	it("falls back to the marker's global optimal fields when the override entry sets neither bound", () => {
+		const m = marker({ id: "ldl", optimalLow: 1, optimalHigh: 3 });
+		const p = profile({ targets: { ldl: {} } });
+
+		expect(resolveTarget(m, p)).toEqual({ low: 1, high: 3 });
+	});
 });
 
 describe("convert", () => {

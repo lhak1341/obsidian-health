@@ -1,7 +1,7 @@
 import type { App, TFile } from "obsidian";
 import { normalizeConcernKey } from "../core/dashboard";
 import { buildVisitFrontmatter } from "../core/entry";
-import type { MarkerKind, MarkerNote, PersonSex } from "../core/types";
+import type { MarkerKind, MarkerNote, PersonSex, ProfileNote } from "../core/types";
 import { renameConcernInSettings, type HealthPluginSettings } from "../settings";
 import { filesUnder, type VaultPaths } from "./reader";
 
@@ -156,6 +156,10 @@ export interface ProfileInput {
 	dob?: string;
 	bloodType?: string;
 	allergies?: string[];
+	/** Per-marker personal target overrides. Omitted entirely leaves the profile's existing
+	 *  `targets` frontmatter untouched (e.g. an edit to sex/dob/etc that doesn't concern targets);
+	 *  an empty object clears every override. */
+	targets?: Record<string, { low?: number; high?: number }>;
 }
 
 /** Locates the profile note file for a person (file basename = person id), if one already exists. */
@@ -173,6 +177,40 @@ export async function saveProfileNote(app: App, paths: VaultPaths, person: strin
 		setOrDeleteKey(frontmatter, "dob", input.dob);
 		setOrDeleteKey(frontmatter, "blood_type", input.bloodType);
 		setOrDeleteKey(frontmatter, "allergies", input.allergies);
+		if (input.targets !== undefined) {
+			if (Object.keys(input.targets).length > 0) frontmatter.targets = input.targets;
+			else delete frontmatter.targets;
+		}
+	});
+}
+
+/** Sets or clears one marker's personal target override on a profile note, leaving every other
+ *  target entry and every other profile field untouched -- reuses `saveProfileNote`'s write path
+ *  (`ProfileInput` / `writeFrontmatter()`), not a new seam. Passing both bounds as `undefined`
+ *  clears that marker's override, falling back to the marker's global `optimalLow`/`optimalHigh`. */
+export async function saveMarkerTarget(
+	app: App,
+	paths: VaultPaths,
+	profile: ProfileNote,
+	markerId: string,
+	target: { low?: number; high?: number },
+): Promise<void> {
+	const targets = { ...profile.targets };
+	if (target.low === undefined && target.high === undefined) {
+		delete targets[markerId];
+	} else {
+		const entry: { low?: number; high?: number } = {};
+		if (target.low !== undefined) entry.low = target.low;
+		if (target.high !== undefined) entry.high = target.high;
+		targets[markerId] = entry;
+	}
+
+	await saveProfileNote(app, paths, profile.person, {
+		sex: profile.sex,
+		dob: profile.dob,
+		bloodType: profile.bloodType,
+		allergies: profile.allergies,
+		targets,
 	});
 }
 
