@@ -20,7 +20,8 @@ Single-context repo:
 │   ├── 0001-no-shared-rename-helper-in-settings-sections.md
 │   ├── 0002-defer-typed-interface-for-dashboardviewstate.md
 │   ├── 0003-curated-view-layout-is-a-generic-weight-based-packer.md
-│   └── 0004-defer-grouping-dashboardrenderoptions-callbacks.md
+│   ├── 0004-defer-grouping-dashboardrenderoptions-callbacks.md
+│   └── 0005-adapter-methods-split-in-file-until-a-second-caller.md
 └── src/
 ```
 
