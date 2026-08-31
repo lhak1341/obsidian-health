@@ -18,7 +18,9 @@
   attribute-level `var()` with no fallback resolves to nothing in the isolated export and
   silently renders black instead of the theme color. Every chart color in `charts.ts` and
   every `statusColor()`/`arrowColor()` (`format.ts`) carries a hardcoded hex fallback for
-  exactly this reason — keep that pattern for any new SVG color.
+  exactly this reason. `svg-var-fallback.test.ts` scans `src/**/*.ts` for a fallback-less
+  `var()` on any line that is not a `.style`/`setProperty` assignment, so a new SVG color that
+  forgets one fails the suite.
 - `.hlth-hidden` (`display: none`) is scoped `.hlth-row.hlth-hidden`, not a general-purpose
   hide utility — toggling it on any other element type (an input, a span) silently does
   nothing. Use inline `style.display` for one-off visibility toggles outside dashboard rows.

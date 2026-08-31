@@ -5,11 +5,12 @@
 	"description": "Health Dashboard Obsidian plugin",
 	"type": "module",
 	"scripts": {
+		"prepare": "git config core.hooksPath .githooks",
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc --noEmit && node esbuild.config.mjs production",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
-		"lint": "eslint .",
+		"lint": "eslint . --max-warnings 0",
 		"lint:fix": "eslint . --fix",
 		"deploy": "bun run build && bun run scripts/deploy.mjs"
 	},

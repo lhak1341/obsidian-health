@@ -40,6 +40,15 @@ export default tseslint.config(
 		},
 	},
 	{
+		// Source-scanning tests (`svg-var-fallback`, `styles-scope-parity`) read files off disk with
+		// node:fs. The mobile-compat rule protects shipped plugin code; test files never load inside
+		// Obsidian, so it is scoped wider than the thing it protects.
+		files: ["**/*.test.ts"],
+		rules: {
+			"obsidianmd/no-nodejs-modules": "off",
+		},
+	},
+	{
 		// vitest/jest matchers like expect.objectContaining() are typed `any` by design;
 		// that's not a real type-safety hole in the test itself.
 		files: ["**/*.test.ts"],

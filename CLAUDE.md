@@ -11,9 +11,13 @@ editing it directly (not through the app), read the `obsidian-plugin-dev` skill'
 `references/debugging.md` for the vault path first — do not `find`/guess; decoy copies of the
 vault exist on disk.
 
-A new marker needs wiring in 3 places to be fully visible: the marker note, the visit note's
-value, and `03 base/Health.base`'s matching view's `order:` list (keyed by the marker's
-`concern`) — the in-plugin dashboard works without step 3, so it's easy to forget.
+A new marker needs a marker note and a value in the visit note. Its `03 base/Health.base` view
+`order:` list is derived, not hand-maintained — `vault/base-view-sync.ts` computes the desired
+views from vault state and the settings tab applies them behind a diff-preview confirm.
+
+`bun install` points `core.hooksPath` at `.githooks/` (package.json's `prepare` script), so
+`typecheck`/`lint`/`test` run on every commit. Nothing here needs remembering; `--no-verify`
+is the only bypass.
 
 After finishing a ticket, check off its boxes in `tickets.md` and commit separately
 (`docs: check off ticket N`).

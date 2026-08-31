@@ -1,0 +1,14 @@
+#!/bin/sh
+# Runs the three checks that were previously opt-in on a human remembering to type them.
+# Activated by `bun install` via package.json's `prepare` script (`git config core.hooksPath
+# .githooks`) -- there is no separate setup step to forget.
+#
+# `--no-verify` bypasses this deliberately; nothing else does.
+set -e
+
+echo "pre-commit: typecheck"
+bun run typecheck
+echo "pre-commit: lint"
+bun run lint
+echo "pre-commit: test"
+bun run test

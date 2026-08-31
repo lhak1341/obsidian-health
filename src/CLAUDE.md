@@ -31,14 +31,13 @@
   ItemViews sharing the plugin's visual language). Anything mounted into a host plugin, or
   into a `Modal`'s `contentEl` (also outside that DOM subtree), cannot see them — use raw
   Obsidian vars/`Setting` there instead. Interactive-element classes (`.hlth-showall-btn`,
-  `.hlth-pill`) need the same three-selector list separately. When adding a 4th view to this
-  family, extend both lists, not just the token one.
+  `.hlth-pill`) carry their own parallel list, keyed on the inner `.hlth-dash`/`.hlth-planner`/
+  `.hlth-visit-editor` containers rather than the outer roots; `styles-scope-parity.test.ts`
+  fails if the two lists stop covering the same number of views.
 - `mountHealthWidget` (`main.ts`) is the guest side of the dashboard handshake;
   `obsidian-lhak-dashboard/src/panels/HealthPanel.ts` is the host side. `.hlth-widget { zoom:
   0.9 }` is intentional, not an oversight — Obsidian is Chromium-only.
 - Command ids are not slugs of display names: "Open dashboard" → `open-health-dashboard`.
   Others: `open-health-planner`, `add-lab-visit`.
-- `vitest.config.ts`'s `include` covers `src/core|vault|render/**`. A test file outside those
-  globs is silently skipped by `bun run test`.
 - `IconSuggest` (`render/icon-suggest.ts`, ported from linear-calendar) already exists for
   Lucide-icon text fields. Reuse it.

@@ -7,7 +7,10 @@
   `writer.ts` write can trust the result — no manual in-memory patching.
 - Marker frontmatter keys are snake_case for camelCase `MarkerNote` fields (`alt_unit`,
   `alt_factor`, `source_url`, `year_planned`, `optimal_high`/`optimal_low`) — get the casing
-  wrong and the field silently parses as `undefined`, no error.
+  wrong and the field silently parses as `undefined`, no error. Stayed prose (mechanize sweep
+  2026-08-31): the typo happens in hand-authored vault notes, outside the repo, so no build-time
+  gate can see it. Reversed by a read-time validator in `reader.ts` that warns on an unknown
+  camelCase key — a product change, not a gate.
 - `fixtures/fake-app.ts` — minimal in-memory `App` fake (the `vault` / `metadataCache` /
   `fileManager` subset `reader.ts` and `writer.ts` use). Supports injecting a mid-batch write
   failure via `failOn`, and simulating re-index lag via `deferIndexing` +
