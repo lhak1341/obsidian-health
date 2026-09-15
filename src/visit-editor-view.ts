@@ -113,6 +113,7 @@ export class HealthVisitEditorView extends ItemView {
 
 	private paint(): void {
 		renderVisitEditor(this.contentEl, this.state, this.opts);
+		this.plugin.applyFontVarsTo(this.contentEl);
 	}
 
 	private handleBack(dirty: boolean): void {

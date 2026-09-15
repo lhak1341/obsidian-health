@@ -7,6 +7,23 @@ import { renderInlineMarkdown } from "./rich-text";
 // no clipping container.
 let sharedTooltip: HTMLElement | undefined;
 
+// The tooltip is appended to document.body (see above), outside the `.health-*-outer` scope
+// that declares --hlth-fh/fb/fm -- it has no ancestor carrying those tokens, so its font
+// choice is pushed in from main.ts's applyFonts() instead of being inherited.
+let headingFontVar: string | null = null;
+
+function applyFontVarTo(el: HTMLElement): void {
+	if (headingFontVar) el.style.setProperty("--hlth-fh", headingFontVar);
+	else                el.style.removeProperty("--hlth-fh");
+}
+
+/** Called from main.ts whenever the Heading font setting changes (and once at load) --
+ *  updates the already-created tooltip, if any, and the value future ones are created with. */
+export function applyTooltipFonts(fh: string | null): void {
+	headingFontVar = fh;
+	if (sharedTooltip) applyFontVarTo(sharedTooltip);
+}
+
 function getSharedTooltip(): HTMLElement {
 	if (sharedTooltip?.isConnected) return sharedTooltip;
 	const tip = createDiv();
@@ -16,6 +33,7 @@ function getSharedTooltip(): HTMLElement {
 	const range = createSpan();
 	range.className = "hlth-tip-range";
 	tip.append(meaning, range);
+	applyFontVarTo(tip);
 	document.body.appendChild(tip);
 	sharedTooltip = tip;
 	return tip;

@@ -1,7 +1,9 @@
-import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { HEALTH_BASES_VIEW_TYPE, HealthBasesView } from "./bases-view";
 import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
+import { resolveFontVar } from "./fonts";
 import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
+import { applyTooltipFonts } from "./render/tooltip";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
 import { DEFAULT_SETTINGS, type HealthPluginSettings, type WidgetTier } from "./settings";
@@ -30,6 +32,7 @@ export default class HealthPlugin extends Plugin {
 		this.settings.concernViewOverrides = { ...DEFAULT_SETTINGS.concernViewOverrides, ...saved?.concernViewOverrides };
 		this.settings.concernIcons = { ...DEFAULT_SETTINGS.concernIcons, ...saved?.concernIcons };
 		this.settings.managedBaseViews = [...(saved?.managedBaseViews ?? DEFAULT_SETTINGS.managedBaseViews)];
+		this.applyFonts();
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
 		this.registerView(HEALTH_PLANNER_VIEW_TYPE, (leaf) => new HealthPlannerView(leaf, this));
@@ -89,6 +92,34 @@ export default class HealthPlugin extends Plugin {
 			const view = leaf.view;
 			if (view instanceof HealthView) void view.reload();
 		}
+	}
+
+	/** Sets --hlth-fh/fb/fm (from current settings) as inline style on `el` -- inline style on
+	 *  the element itself always wins over the `.health-*-outer` class rule that declares the
+	 *  theme-following defaults, so this is a no-op visually until a non-default font is chosen. */
+	applyFontVarsTo(el: HTMLElement): void {
+		const { fontHeading, fontHeadingCustom, fontBody, fontBodyCustom, fontMono, fontMonoCustom } = this.settings;
+		const set = (prop: string, choice: HealthPluginSettings["fontHeading"], custom: string) => {
+			const v = resolveFontVar(choice, custom);
+			if (v) el.style.setProperty(prop, v);
+			else   el.style.removeProperty(prop);
+		};
+		set("--hlth-fh", fontHeading, fontHeadingCustom);
+		set("--hlth-fb", fontBody, fontBodyCustom);
+		set("--hlth-fm", fontMono, fontMonoCustom);
+	}
+
+	/** Applies current font settings to every already-open Dashboard/Planner/Visit-editor leaf
+	 *  and the shared tooltip -- called after a font setting changes. Freshly-opened views apply
+	 *  their own fonts via `applyFontVarsTo` in their render entry point, so this only needs to
+	 *  cover the "already open while settings changed" case. */
+	applyFonts(): void {
+		for (const type of [HEALTH_VIEW_TYPE, HEALTH_PLANNER_VIEW_TYPE, HEALTH_VISIT_EDITOR_VIEW_TYPE]) {
+			for (const leaf of this.app.workspace.getLeavesOfType(type)) {
+				if (leaf.view instanceof ItemView) this.applyFontVarsTo(leaf.view.contentEl);
+			}
+		}
+		applyTooltipFonts(resolveFontVar(this.settings.fontHeading, this.settings.fontHeadingCustom));
 	}
 
 	scanVault(paths?: VaultPaths): Promise<VaultSnapshot> {

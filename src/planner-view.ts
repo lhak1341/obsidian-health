@@ -40,6 +40,7 @@ export class HealthPlannerView extends ItemView {
 
 		this.contentEl.empty();
 		this.contentEl.addClass("health-planner-outer");
+		this.plugin.applyFontVarsTo(this.contentEl);
 
 		renderPlanner(this.contentEl, {
 			backlog: computePlannerBacklog(snapshot.markers, snapshot.visits),

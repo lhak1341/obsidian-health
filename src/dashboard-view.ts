@@ -122,6 +122,7 @@ export class HealthView extends ItemView {
 
 	/** Recomputes the model from the already-loaded snapshot and repaints -- no vault I/O. */
 	repaint(): void {
+		this.plugin.applyFontVarsTo(this.contentEl);
 		// The active profile is session-only: it survives a repaint (e.g. after a unit toggle)
 		// but resets to the configured default whenever it no longer resolves to a real profile.
 		const current = this.viewState.activePerson && this.snapshot.profiles.find((p) => p.person === this.viewState.activePerson);

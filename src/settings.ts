@@ -4,7 +4,15 @@ import { DEFAULT_VAULT_PATHS, type VaultPaths } from "./vault/reader";
 
 export type WidgetTier = "chip" | "list";
 
+export type FontChoice = "health" | "obsidian-interface" | "obsidian-text" | "obsidian-monospace" | "custom";
+
 export interface HealthPluginSettings extends VaultPaths {
+	fontHeading: FontChoice;
+	fontHeadingCustom: string;
+	fontBody: FontChoice;
+	fontBodyCustom: string;
+	fontMono: FontChoice;
+	fontMonoCustom: string;
 	deadbandPct: number;
 	widgetTier: WidgetTier;
 	widgetMaxRows: number;
@@ -52,6 +60,12 @@ export function renameConcernInSettings(settings: HealthPluginSettings, oldConce
 
 export const DEFAULT_SETTINGS: HealthPluginSettings = {
 	...DEFAULT_VAULT_PATHS,
+	fontHeading: "health",
+	fontHeadingCustom: "",
+	fontBody: "health",
+	fontBodyCustom: "",
+	fontMono: "health",
+	fontMonoCustom: "",
 	deadbandPct: 0.03,
 	widgetTier: "list",
 	widgetMaxRows: 4,

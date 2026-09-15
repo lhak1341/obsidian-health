@@ -30,7 +30,18 @@
   `.health-planner-outer`, and `.health-visit-editor-outer` (one selector list — the three
   ItemViews sharing the plugin's visual language). Anything mounted into a host plugin, or
   into a `Modal`'s `contentEl` (also outside that DOM subtree), cannot see them — use raw
-  Obsidian vars/`Setting` there instead. Interactive-element classes (`.hlth-showall-btn`,
+  Obsidian vars/`Setting` there instead.
+- Font settings live in `settings.ts` (`FontChoice`, `fontHeading`/`fontBody`/`fontMono` +
+  `*Custom`), resolved by `fonts.ts`'s `resolveFontVar`. `HealthPlugin.applyFontVarsTo(el)`
+  sets `--hlth-fh/fb/fm` as inline style on a view's `contentEl` — inline wins over the
+  `.health-*-outer` class rule that declares the theme-following ("Health") default, so choosing
+  that default is a no-op removeProperty, not an explicit override. `applyFonts()` re-applies to
+  every open Dashboard/Planner/Visit-editor leaf on a settings change; each view's own render
+  entry point (`repaint`/`refresh`/`paint`) calls `applyFontVarsTo` too, for the "freshly opened"
+  case `applyFonts()`'s leaf loop can't reach. The shared tooltip (`render/tooltip.ts`) is the one
+  exception to the `.health-*-outer` scope rule above — `--hlth-fh` reaches it via
+  `applyTooltipFonts()`, not inheritance, since it mounts on `document.body`. It only takes the
+  heading font (name + secondary line both use it, no body/mono split there). Interactive-element classes (`.hlth-showall-btn`,
   `.hlth-pill`) carry their own parallel list, keyed on the inner `.hlth-dash`/`.hlth-planner`/
   `.hlth-visit-editor` containers rather than the outer roots; `styles-scope-parity.test.ts`
   fails if the two lists stop covering the same number of views.

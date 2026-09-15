@@ -6,10 +6,18 @@ import { ConcernSection } from "./settings-concern-section";
 import type { SettingsSectionContext } from "./settings-context";
 import { SettingsDirtyTracker } from "./settings-dirty-tracker";
 import { ProfileSection } from "./settings-profile-section";
-import type { WidgetTier } from "./settings";
+import type { FontChoice, WidgetTier } from "./settings";
 import { applyBaseViewSync, planBaseViewSync, type BaseViewSyncPlan } from "./vault/base-view-sync";
 import type { DesiredBaseView } from "./core/base-views";
 import type { VaultSnapshot } from "./vault/reader";
+
+const FONT_OPTIONS: Record<FontChoice, string> = {
+	"health":             "Health default (theme fonts)",
+	"obsidian-interface": "Obsidian: Interface font",
+	"obsidian-text":      "Obsidian: Text font",
+	"obsidian-monospace": "Obsidian: Monospace font",
+	"custom":             "Custom…",
+};
 
 export class HealthSettingTab extends PluginSettingTab {
 	private snapshot?: VaultSnapshot;
@@ -70,6 +78,7 @@ export class HealthSettingTab extends PluginSettingTab {
 		root.empty();
 
 		this.renderVaultPaths(root);
+		this.renderAppearanceSettings(root);
 		this.renderDashboardSettings(root);
 		this.renderWidgetSettings(root);
 		this.concernSection.render(root, this.snapshot);
@@ -139,6 +148,72 @@ export class HealthSettingTab extends PluginSettingTab {
 		}
 		notifySyncResult(plan.diff);
 		await this.save();
+	}
+
+	private renderAppearanceSettings(root: HTMLElement): void {
+		new Setting(root).setName("Appearance").setHeading();
+		const items = root.createDiv("setting-group").createDiv("setting-items");
+
+		this.renderFontPicker(items, {
+			name: "Heading font",
+			desc: "Font for marker names, concern headers, and the tooltip.",
+			getValue: () => this.plugin.settings.fontHeading,
+			setValue: value => { this.plugin.settings.fontHeading = value; },
+			getCustom: () => this.plugin.settings.fontHeadingCustom,
+			setCustom: value => { this.plugin.settings.fontHeadingCustom = value; },
+		});
+		this.renderFontPicker(items, {
+			name: "Body font",
+			desc: "Font for descriptions and other body text.",
+			getValue: () => this.plugin.settings.fontBody,
+			setValue: value => { this.plugin.settings.fontBody = value; },
+			getCustom: () => this.plugin.settings.fontBodyCustom,
+			setCustom: value => { this.plugin.settings.fontBodyCustom = value; },
+		});
+		this.renderFontPicker(items, {
+			name: "Monospace font",
+			desc: "Font for lab values and other numeric/data-style text.",
+			getValue: () => this.plugin.settings.fontMono,
+			setValue: value => { this.plugin.settings.fontMono = value; },
+			getCustom: () => this.plugin.settings.fontMonoCustom,
+			setCustom: value => { this.plugin.settings.fontMonoCustom = value; },
+		});
+	}
+
+	private renderFontPicker(items: HTMLElement, opts: {
+		name: string;
+		desc: string;
+		getValue: () => FontChoice;
+		setValue: (value: FontChoice) => void;
+		getCustom: () => string;
+		setCustom: (value: string) => void;
+	}): void {
+		let customFontEl: Setting;
+		new Setting(items)
+			.setName(opts.name)
+			.setDesc(opts.desc)
+			.addDropdown((drop) => {
+				Object.entries(FONT_OPTIONS).forEach(([v, label]) => { drop.addOption(v, label); });
+				drop.setValue(opts.getValue()).onChange((value) => {
+					opts.setValue(value as FontChoice);
+					customFontEl.settingEl.style.display = value === "custom" ? "" : "none";
+					void this.save();
+					this.plugin.applyFonts();
+				});
+			});
+		customFontEl = new Setting(items)
+			.setName("")
+			.addText((text) =>
+				text
+					.setPlaceholder("Font family name")
+					.setValue(opts.getCustom())
+					.onChange((value) => {
+						opts.setCustom(value.trim());
+						void this.save();
+						this.plugin.applyFonts();
+					}),
+			);
+		customFontEl.settingEl.style.display = opts.getValue() === "custom" ? "" : "none";
 	}
 
 	private renderDashboardSettings(root: HTMLElement): void {
