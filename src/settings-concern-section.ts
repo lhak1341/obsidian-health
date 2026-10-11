@@ -1,7 +1,7 @@
 import { Notice, Setting } from "obsidian";
-import { groupByConcern, normalizeConcernKey } from "./core/dashboard";
+import { groupByConcern, normalizeConcernKey } from "./core/concern";
 import type { MarkerNote } from "./core/types";
-import { labelForConcern } from "./render/concern-registry";
+import { labelForConcern } from "./core/concern-registry";
 import { renderDragReorderList } from "./render/drag-reorder";
 import { IconSuggest } from "./render/icon-suggest";
 import { iconForConcern } from "./render/icons";
@@ -86,7 +86,7 @@ export class ConcernSection {
 	}
 
 	/** Which dashboard column (left/center/right) a concern lands in is NOT configurable here --
-	 *  it's a hardcoded, deliberately-stable pin (CONCERN_CONFIG in render/concern-registry.ts).
+	 *  it's a hardcoded, deliberately-stable pin (CONCERN_CONFIG in core/concern-registry.ts).
 	 *  Row order below only controls marker order within a concern. */
 	private renderRowOrder(root: HTMLElement, snapshot: VaultSnapshot | undefined): void {
 		new Setting(root).setName("Row order").setHeading();

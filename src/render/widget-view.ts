@@ -1,8 +1,8 @@
-import type { DashboardModel } from "../core/model";
+import type { DashboardModel, DashboardRow } from "../core/model";
 import type { WidgetTier } from "../settings";
 import { statusColor } from "./format";
 import { iconFor } from "./icons";
-import { fillMarkerRowContent, flaggedRows, type RowEntry } from "./rows";
+import { fillMarkerRowContent } from "./rows";
 
 export interface WidgetRenderOptions {
 	tier: WidgetTier;
@@ -15,7 +15,7 @@ export interface WidgetRenderOptions {
 export function renderHealthWidget(root: HTMLElement, model: DashboardModel, opts: WidgetRenderOptions): void {
 	root.textContent = "";
 
-	const rows = flaggedRows(model);
+	const rows = model.flagged;
 	if (opts.tier === "chip") {
 		// The chip is a self-contained pill (heart + count + pips), not a card -- no "Health"
 		// header/chevron row above it like the list tier gets.
@@ -93,7 +93,7 @@ function fillAllClear(el: HTMLElement): void {
 	el.appendChild(document.createTextNode("All clear"));
 }
 
-function buildChip(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
+function buildChip(rows: DashboardRow[], opts: WidgetRenderOptions): HTMLElement {
 	const chip = createEl("button");
 	chip.type = "button";
 	chip.className = "hlth-widget-chip";
@@ -120,7 +120,7 @@ function buildChip(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 		for (const row of rows) {
 			const pip = createSpan();
 			pip.className = "hlth-dot";
-			pip.style.background = statusColor(row.primary.status);
+			pip.style.background = statusColor(row.status);
 			pips.appendChild(pip);
 		}
 		chip.appendChild(pips);
@@ -129,7 +129,7 @@ function buildChip(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 	return chip;
 }
 
-function buildList(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
+function buildList(rows: DashboardRow[], opts: WidgetRenderOptions): HTMLElement {
 	const list = createDiv();
 	list.className = "hlth-widget-list";
 
@@ -157,14 +157,14 @@ function buildList(rows: RowEntry[], opts: WidgetRenderOptions): HTMLElement {
 	return list;
 }
 
-function buildListRow(row: RowEntry, opts: WidgetRenderOptions): HTMLElement {
+function buildListRow(row: DashboardRow, opts: WidgetRenderOptions): HTMLElement {
 	const { primary, secondary } = row;
 
 	const el = createEl("button");
 	el.type = "button";
 	el.className = "hlth-widget-row";
 	el.addEventListener("click", () => opts.onOpenMarker?.(primary.marker.id));
-	fillMarkerRowContent(el, primary, secondary, { showSparkline: opts.showSparkline, colorValue: false });
+	fillMarkerRowContent(el, primary, secondary, { status: row.status, showSparkline: opts.showSparkline, colorValue: false });
 
 	return el;
 }

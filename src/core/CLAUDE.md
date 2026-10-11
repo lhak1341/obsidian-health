@@ -9,7 +9,9 @@
   priority (`uric_acid` first), not the lab-report column sequence (`creatinine` first).
   Don't collapse them.
 - `MarkerNote.sex` (`m`/`f`, optional — unset means everyone) restricts whether a marker shows
-  at all, filtered in `computeDashboardModel` and the visit editor's `buildFields`. Separate
+  at all, via `markerAppliesToSex` (`marker.ts`), used by `computeDashboardModel` and the visit
+  editor's `buildFields`. `MarkerNote.normal` is `string | string[]`: read it only through
+  `normalValues`/`isNormalValue` (`marker.ts`), never re-normalise it by hand. Separate
   axis from `ranges[].sex`, which only picks which reference band resolves for a marker every
   profile still sees.
 - When a marker field gains a per-profile resolved counterpart (global field + `resolve*()` +
@@ -21,7 +23,9 @@
   stale hardcoded number even after every code reader of the old field is fixed, since it's
   prose, not a TS reader `grep` would catch.
 - New marker notes default to `curated: false` (hidden until "Show all") and no `direction`
-  (neutral gray trend arrow) unless set explicitly — easy to forget both when authoring.
+  (neutral gray trend arrow) unless set explicitly — easy to forget both when authoring. The
+  entry form's add-marker path gets these from `buildNewMarker` (`entry.ts`), which also rejects
+  filename-unsafe and case-insensitively duplicate ids (the id is the note's filename).
 - A marker's `type:` (numeric vs qualitative) must match how the source lab actually reports
   it, not just the assay's nominal capability — `uro_ubg` was scaffolded `numeric` but this
   user's lab (dipstick, not quantitative) always reports it as text ("Normal"), which
@@ -37,10 +41,13 @@
   sibling key on `VisitNote.values`; conversion to canonical happens read-time in
   `dashboard.ts`'s `buildSeries`/`toCanonicalReading`. Don't reintroduce write-time conversion.
 - A paired marker's `pair:` frontmatter is a shared group key (e.g. both twins carry
-  `pair: bp`), not the partner's `id` — `pairByPartner` (`entry.ts`) matches on equal `pair`
+  `pair: bp`), not the partner's `id` — `pairByPartner` (`pairing.ts`) matches on equal `pair`
   values, not an id-to-pair-id lookup. Get this backwards in a test fixture and the pair
   silently splits into two solo rows instead of failing loudly.
 - `fixtures/real-vault.ts` is a small anonymized sample, **not** the full vault. Before
   hardcoding a lookup keyed on frontmatter values (e.g. `concern` ids), enumerate the real
   values from `09 about-me/markers/*.md` — the fixture alone missed the literal `Blood Count`
   concern and broke column placement for that whole group.
+- `src/core/` imports nothing from `render/`, `vault/`, adapters or `obsidian` — enforced by
+  `no-restricted-imports` in `eslint.config.mjs`. Shared static config (e.g. `concern-registry.ts`)
+  lives here so everything above can import it downward.

@@ -16,6 +16,39 @@ export default tseslint.config(
 		},
 	},
 	{
+		// The domain core is Obsidian-free and sits below render/vault/adapters (CONTEXT.md "Domain
+		// core"): it may not import upward. Tests are exempt -- they may reach anywhere.
+		files: ["src/core/*.ts"],
+		ignores: ["**/*.test.ts"],
+		rules: {
+			"no-restricted-imports": [
+				"error",
+				{
+					patterns: [
+						{ group: ["obsidian"], message: "src/core is Obsidian-free." },
+						{ group: ["../*"], message: "src/core may not import from outside src/core (render/, vault/, adapters)." },
+					],
+				},
+			],
+		},
+	},
+	{
+		// Same rule for core's fixtures, one directory deeper: `../` still lands inside src/core.
+		files: ["src/core/fixtures/*.ts"],
+		ignores: ["**/*.test.ts"],
+		rules: {
+			"no-restricted-imports": [
+				"error",
+				{
+					patterns: [
+						{ group: ["obsidian"], message: "src/core is Obsidian-free." },
+						{ group: ["../../*"], message: "src/core may not import from outside src/core (render/, vault/, adapters)." },
+					],
+				},
+			],
+		},
+	},
+	{
 		// writer.ts's timeout guards no popout-window UI, and vault tests run this
 		// module without a `window` global.
 		files: ["src/vault/writer.ts"],

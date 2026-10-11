@@ -70,8 +70,7 @@ export default class HealthPlugin extends Plugin {
 
 	async openVisitEditor(initialDate?: string, mode: "add" | "edit" = "add", person?: string): Promise<void> {
 		const snapshot = await this.scanVault();
-		const requestedPerson = person && snapshot.profiles.some((p) => p.person === person) ? person : undefined;
-		const targetPerson = requestedPerson ?? resolveDefaultProfile(snapshot.profiles, this.settings.defaultProfile)?.person;
+		const targetPerson = resolveDefaultProfile(snapshot.profiles, this.settings.defaultProfile, person)?.person;
 		if (!targetPerson) {
 			new Notice("Add a profile note before recording a lab visit.");
 			return;

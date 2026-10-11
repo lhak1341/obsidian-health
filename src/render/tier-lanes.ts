@@ -1,5 +1,5 @@
 import type { ConcernGroup } from "../core/model";
-import { columnForConcern, mediumLaneGroupForConcern, orderForConcern } from "./concern-registry";
+import { columnForConcern, mediumLaneGroupForConcern, orderForConcern } from "../core/concern-registry";
 
 export interface Segment {
 	include: (concern: string) => boolean;

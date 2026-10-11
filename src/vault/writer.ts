@@ -1,7 +1,7 @@
 import type { App, TFile } from "obsidian";
-import { normalizeConcernKey } from "../core/dashboard";
+import { normalizeConcernKey } from "../core/concern";
 import { buildVisitFrontmatter } from "../core/entry";
-import type { MarkerKind, MarkerNote, PersonSex, ProfileNote } from "../core/types";
+import type { MarkerNote, PersonSex } from "../core/types";
 import { renameConcernInSettings, type HealthPluginSettings } from "../settings";
 import { filesUnder, type VaultPaths } from "./reader";
 
@@ -78,28 +78,20 @@ export async function saveVisitNote(app: App, paths: VaultPaths, person: string,
 	});
 }
 
-export interface NewMarkerInput {
-	id: string;
-	name: string;
-	type: MarkerKind;
-	unit?: string;
-	panel: string;
-	concern: string[];
-	curated: boolean;
-}
-
-/** Creates a new marker note inline from the entry modal's add-marker mini-form. */
-export async function saveNewMarkerNote(app: App, paths: VaultPaths, input: NewMarkerInput): Promise<void> {
+/** Creates a new marker note inline from the entry modal's add-marker mini-form (`buildNewMarker`
+ *  in core/entry.ts builds the marker). Only the fields a new note needs are written -- empty
+ *  `aliases`/`blurb` stay out of the frontmatter. */
+export async function saveNewMarkerNote(app: App, paths: VaultPaths, marker: MarkerNote): Promise<void> {
 	await ensureFolder(app, paths.markersFolder);
-	const file = await app.vault.create(`${paths.markersFolder}/${input.id}.md`, "");
+	const file = await app.vault.create(`${paths.markersFolder}/${marker.id}.md`, "");
 
 	await writeFrontmatter(app, file, (frontmatter) => {
-		frontmatter.name = input.name;
-		frontmatter.type = input.type;
-		if (input.unit) frontmatter.unit = input.unit;
-		frontmatter.panel = input.panel;
-		frontmatter.concern = input.concern;
-		frontmatter.curated = input.curated;
+		frontmatter.name = marker.name;
+		frontmatter.type = marker.type;
+		if (marker.unit) frontmatter.unit = marker.unit;
+		frontmatter.panel = marker.panel;
+		frontmatter.concern = marker.concern;
+		frontmatter.curated = marker.curated;
 	});
 }
 
@@ -184,33 +176,38 @@ export async function saveProfileNote(app: App, paths: VaultPaths, person: strin
 	});
 }
 
-/** Sets or clears one marker's personal target override on a profile note, leaving every other
- *  target entry and every other profile field untouched -- reuses `saveProfileNote`'s write path
- *  (`ProfileInput` / `writeFrontmatter()`), not a new seam. Passing both bounds as `undefined`
- *  clears that marker's override, falling back to the marker's global `optimalLow`/`optimalHigh`. */
+/** Sets or clears one marker's personal target override on a profile note. A patch on the live
+ *  frontmatter, like `saveMarkerOrder`: every other key and every other marker's target entry is
+ *  left exactly as it is on disk -- no round-trip through a parsed `ProfileNote`, which could write
+ *  a stale snapshot over a newer edit or drop what the reader doesn't model. Passing both bounds as
+ *  `undefined` clears that marker's override, falling back to the marker's global
+ *  `optimalLow`/`optimalHigh`; clearing the last one removes `targets` entirely. No-op when the
+ *  profile note doesn't exist. */
 export async function saveMarkerTarget(
 	app: App,
 	paths: VaultPaths,
-	profile: ProfileNote,
+	person: string,
 	markerId: string,
 	target: { low?: number; high?: number },
 ): Promise<void> {
-	const targets = { ...profile.targets };
-	if (target.low === undefined && target.high === undefined) {
-		delete targets[markerId];
-	} else {
-		const entry: { low?: number; high?: number } = {};
-		if (target.low !== undefined) entry.low = target.low;
-		if (target.high !== undefined) entry.high = target.high;
-		targets[markerId] = entry;
-	}
+	const file = findProfileFile(app, paths, person);
+	if (!file) return;
 
-	await saveProfileNote(app, paths, profile.person, {
-		sex: profile.sex,
-		dob: profile.dob,
-		bloodType: profile.bloodType,
-		allergies: profile.allergies,
-		targets,
+	await writeFrontmatter(app, file, (frontmatter) => {
+		const current = frontmatter.targets;
+		const targets: Record<string, unknown> = typeof current === "object" && current !== null ? { ...current } : {};
+
+		if (target.low === undefined && target.high === undefined) {
+			delete targets[markerId];
+		} else {
+			const entry: { low?: number; high?: number } = {};
+			if (target.low !== undefined) entry.low = target.low;
+			if (target.high !== undefined) entry.high = target.high;
+			targets[markerId] = entry;
+		}
+
+		if (Object.keys(targets).length > 0) frontmatter.targets = targets;
+		else delete frontmatter.targets;
 	});
 }
 

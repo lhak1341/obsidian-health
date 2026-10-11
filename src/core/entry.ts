@@ -1,6 +1,7 @@
 import { convert, isSoftWarn, resolve } from "./dashboard";
 import type { ResolvedRange } from "./model";
-import type { MarkerNote, ProfileNote, VisitNote } from "./types";
+import { pairByPartner } from "./pairing";
+import type { MarkerKind, MarkerNote, ProfileNote, VisitNote } from "./types";
 
 export interface PanelGroup {
 	panel: string;
@@ -29,43 +30,6 @@ export interface MarkerRow {
 	secondary?: MarkerNote;
 }
 
-/** Pairs items sharing a partner key (e.g. BP systolic/diastolic sharing a `pair` id) into one row,
- *  ordered by `getOrder` (missing order treated as primary=0/secondary=1). Shared by the entry
- *  form's marker pairing and the render layer's row pairing -- same algorithm, different types. */
-export function pairByPartner<T>(
-	items: T[],
-	getId: (item: T) => string,
-	getPair: (item: T) => string | undefined,
-	getOrder: (item: T) => number | undefined,
-): { primary: T; secondary?: T }[] {
-	const consumed = new Set<string>();
-	const rows: { primary: T; secondary?: T }[] = [];
-
-	for (const item of items) {
-		const id = getId(item);
-		if (consumed.has(id)) continue;
-		consumed.add(id);
-
-		const pairKey = getPair(item);
-		// Excludes already-consumed candidates (which, since `id` is already in `consumed` at this
-		// point, also excludes self-matching): without this, a 3rd+ item sharing the same pair id
-		// (a plausible typo since `pair` is unvalidated free text) could re-match an already-paired
-		// item, producing two rows that both contain it instead of one item falling back to solo.
-		const partner = pairKey ? items.find((other) => !consumed.has(getId(other)) && getPair(other) === pairKey) : undefined;
-
-		if (partner) {
-			consumed.add(getId(partner));
-			const order = getOrder(item) ?? 0;
-			const partnerOrder = getOrder(partner) ?? 1;
-			rows.push(order <= partnerOrder ? { primary: item, secondary: partner } : { primary: partner, secondary: item });
-		} else {
-			rows.push({ primary: item });
-		}
-	}
-
-	return rows;
-}
-
 /** Pairs markers sharing a `pair` id (e.g. BP systolic/diastolic) into one form row, ordered by `order`. */
 export function pairMarkerNotes(markers: MarkerNote[]): MarkerRow[] {
 	return pairByPartner(
@@ -74,6 +38,16 @@ export function pairMarkerNotes(markers: MarkerNote[]): MarkerRow[] {
 		(m) => m.pair,
 		(m) => m.order,
 	);
+}
+
+/** A person's recorded visit dates, newest first -- the edit picker's list, whose head is the
+ *  dashboard's "Last record". */
+export function visitDatesFor(visits: VisitNote[], person: string): string[] {
+	return visits
+		.filter((visit) => visit.person === person)
+		.map((visit) => visit.date)
+		.sort()
+		.reverse();
 }
 
 /** Create-or-edit lookup: an existing visit for this person+date, if any. */
@@ -107,8 +81,59 @@ export function validateDate(raw: string): string | undefined {
 	return undefined;
 }
 
-export function checkDuplicateMarkerId(id: string, existingIds: string[]): boolean {
-	return existingIds.includes(id);
+/** Panel a new marker lands in when the add-marker form leaves it blank. */
+export const DEFAULT_NEW_MARKER_PANEL = "misc";
+
+/** What the entry form's add-marker mini-form collects. */
+export interface NewMarkerDraft {
+	id: string;
+	name: string;
+	type: MarkerKind;
+	unit: string;
+	panel: string;
+}
+
+export type NewMarkerResult = { marker: MarkerNote } | { error: string };
+
+// The id becomes the note's filename (`<markersFolder>/<id>.md`) and the reader reads it back as
+// the marker id, so it must be a single, filename-safe path segment.
+const UNSAFE_ID_CHARS = /[\\/:*?"<>|]/;
+
+/** Builds a complete new `MarkerNote` from the add-marker draft -- defaults (`curated: false`,
+ *  no concern, blank blurb) live here so the in-memory marker and the note the writer creates are
+ *  the same object. The id check is case-insensitive: the vault's filesystem is, so `ALT` would
+ *  collide with an existing `alt.md` even though the strings differ. */
+export function buildNewMarker(draft: NewMarkerDraft, existingIds: string[]): NewMarkerResult {
+	const id = draft.id.trim();
+	const name = draft.name.trim();
+	if (!id || !name) return { error: "A new marker needs both a name and an ID." };
+	if (UNSAFE_ID_CHARS.test(id) || id.startsWith(".")) {
+		return { error: `Marker ID "${id}" can't contain / \\ : * ? " < > | or start with a dot.` };
+	}
+	const lowered = id.toLowerCase();
+	if (existingIds.some((existing) => existing.toLowerCase() === lowered)) return { error: `Marker "${id}" already exists.` };
+
+	return {
+		marker: {
+			id,
+			name,
+			aliases: [],
+			type: draft.type,
+			unit: draft.unit.trim() || undefined,
+			panel: draft.panel.trim() || DEFAULT_NEW_MARKER_PANEL,
+			concern: [],
+			curated: false,
+			blurb: "",
+		},
+	};
+}
+
+/** Today's date as local `YYYY-MM-DD`. `toISOString().slice(0, 10)` is the UTC date, which is
+ *  yesterday for the first hours of every local day east of UTC. */
+export function localDateISO(date: Date = new Date()): string {
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export type FieldOutcome =

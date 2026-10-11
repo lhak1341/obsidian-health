@@ -16,3 +16,5 @@
   failure via `failOn`, and simulating re-index lag via `deferIndexing` +
   `flushMetadataCache(path)`. Also has `vault.read`/`vault.modify` for raw (non-frontmatter)
   file content, e.g. a `.base` file. Reuse it rather than rebuilding.
+- Patch, don't round-trip: a writer that changes one field mutates only that key inside the live `writeFrontmatter` callback (`saveMarkerOrder`, `saveMarkerTarget`). Rebuilding the note from a parsed
+  `ProfileNote`/`MarkerNote` writes a stale snapshot over newer edits and drops keys the reader doesn't model. Full-form saves (`saveProfileNote`) are the exception.

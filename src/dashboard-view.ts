@@ -1,7 +1,8 @@
 import { toPng } from "html-to-image";
 import { ItemView, Modal, Notice, Platform, Setting, TFile, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
-import { computeDashboardModel, concernViewNameForProfile, resolveConcernViewName, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
-import { evaluateBoundField } from "./core/entry";
+import { computeDashboardModel, resolveDefaultProfile, resolveTarget } from "./core/dashboard";
+import { concernViewNameForProfile, resolveConcernViewName } from "./core/concern";
+import { evaluateBoundField, localDateISO, visitDatesFor } from "./core/entry";
 import type { DashboardModel } from "./core/model";
 import type { MarkerNote, ProfileNote } from "./core/types";
 import type HealthPlugin from "./main";
@@ -125,8 +126,7 @@ export class HealthView extends ItemView {
 		this.plugin.applyFontVarsTo(this.contentEl);
 		// The active profile is session-only: it survives a repaint (e.g. after a unit toggle)
 		// but resets to the configured default whenever it no longer resolves to a real profile.
-		const current = this.viewState.activePerson && this.snapshot.profiles.find((p) => p.person === this.viewState.activePerson);
-		const profile = current || resolveDefaultProfile(this.snapshot.profiles, this.plugin.settings.defaultProfile);
+		const profile = resolveDefaultProfile(this.snapshot.profiles, this.plugin.settings.defaultProfile, this.viewState.activePerson);
 		this.viewState.activePerson = profile?.person;
 
 		if (!profile) {
@@ -137,11 +137,7 @@ export class HealthView extends ItemView {
 		}
 
 		const model = computeDashboardModel(this.snapshot.markers, this.snapshot.visits, profile, { deadbandPct: this.plugin.settings.deadbandPct });
-		const lastVisitDate = this.snapshot.visits
-			.filter((v) => v.person === profile.person)
-			.map((v) => v.date)
-			.sort()
-			.at(-1);
+		const lastVisitDate = visitDatesFor(this.snapshot.visits, profile.person)[0];
 
 		this.paint(model, profile, lastVisitDate);
 	}
@@ -196,7 +192,7 @@ export class HealthView extends ItemView {
 	 *  status/display derive from `snapshot.profiles` at scan time, so a local repaint would keep
 	 *  showing the stale target. */
 	private async saveTarget(profile: ProfileNote, markerId: string, target: { low?: number; high?: number }): Promise<void> {
-		await saveMarkerTarget(this.app, this.plugin.settings, profile, markerId, target);
+		await saveMarkerTarget(this.app, this.plugin.settings, profile.person, markerId, target);
 		await this.reload();
 	}
 
@@ -289,7 +285,7 @@ export class HealthView extends ItemView {
 
 	private async promptAndSave(dataUrl: string, profile: ProfileNote): Promise<void> {
 		const electron = getElectronRemote();
-		const date = new Date().toISOString().slice(0, 10);
+		const date = localDateISO();
 		const result = await electron.remote.dialog.showSaveDialog(electron.remote.getCurrentWindow(), {
 			title: "Export health dashboard screenshot",
 			defaultPath: `Health - ${profile.person} - Show all - ${date}.png`,

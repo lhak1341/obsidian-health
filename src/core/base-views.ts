@@ -1,4 +1,4 @@
-import { concernViewNameForProfile, normalizeConcernKey, resolveConcernViewName } from "./dashboard";
+import { concernViewNameForProfile, normalizeConcernKey, resolveConcernViewName } from "./concern";
 import type { MarkerNote, ProfileNote } from "./types";
 
 export interface DesiredBaseView {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConcernGroup, MarkerStatusInfo } from "../core/model";
-import { CONCERN_CONFIG } from "./concern-registry";
+import { CONCERN_CONFIG } from "../core/concern-registry";
 import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
 
 function markerInfo(id: string): MarkerStatusInfo {
@@ -14,7 +14,7 @@ function markerInfo(id: string): MarkerStatusInfo {
 }
 
 function group(concern: string): ConcernGroup {
-	return { concern, status: "good", markers: [] };
+	return { concern, status: "good", markers: [], rows: [] };
 }
 
 // Deliberately scrambled -- not alphabetical, not column order -- to stand in for buildGroups'
@@ -158,12 +158,12 @@ describe("groupRank", () => {
 			["alt", 0],
 			["ast", 5],
 		]);
-		const group: ConcernGroup = { concern: "liver", status: "high", markers: [markerInfo("ast"), markerInfo("alt")] };
+		const group: ConcernGroup = { concern: "liver", status: "high", markers: [markerInfo("ast"), markerInfo("alt")], rows: [] };
 		expect(groupRank(group, rankIndex)).toBe(0);
 	});
 
 	it("sorts a group with no ranked markers last (+Infinity)", () => {
-		const group: ConcernGroup = { concern: "liver", status: "good", markers: [markerInfo("unranked")] };
+		const group: ConcernGroup = { concern: "liver", status: "good", markers: [markerInfo("unranked")], rows: [] };
 		expect(groupRank(group, new Map())).toBe(Number.POSITIVE_INFINITY);
 	});
 });

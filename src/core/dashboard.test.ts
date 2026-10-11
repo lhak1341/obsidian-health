@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
 	computeDashboardModel,
-	concernViewNameForProfile,
 	convert,
 	convertTo,
 	isSoftWarn,
@@ -204,15 +203,25 @@ describe("resolveDefaultProfile", () => {
 	it("returns undefined when there are no profiles at all", () => {
 		expect(resolveDefaultProfile([], "alice")).toBeUndefined();
 	});
-});
 
-describe("concernViewNameForProfile", () => {
-	it("appends the person to a plain label", () => {
-		expect(concernViewNameForProfile("Vitals", "Khoa")).toBe("Vitals — Khoa");
-	});
+	describe("with a requested person", () => {
+		const profiles = [profile({ person: "alice" }), profile({ person: "bob" }), profile({ person: "carol" })];
 
-	it("appends the person to a concernViewOverrides-resolved name the same way", () => {
-		expect(concernViewNameForProfile("Liver Panel", "Maru")).toBe("Liver Panel — Maru");
+		it("wins over the configured default when it matches a real profile", () => {
+			expect(resolveDefaultProfile(profiles, "bob", "carol")?.person).toBe("carol");
+		});
+
+		it("falls through to the configured default when it no longer matches any profile", () => {
+			expect(resolveDefaultProfile(profiles, "bob", "dave")?.person).toBe("bob");
+		});
+
+		it("falls through to the first profile when both the request and the default are stale", () => {
+			expect(resolveDefaultProfile(profiles, "dave", "erin")?.person).toBe("alice");
+		});
+
+		it("is ignored when absent", () => {
+			expect(resolveDefaultProfile(profiles, "bob", undefined)?.person).toBe("bob");
+		});
 	});
 });
 
@@ -657,26 +666,101 @@ describe("computeDashboardModel — concern groups", () => {
 	});
 });
 
-describe("computeDashboardModel — curated selection", () => {
-	it("includes a curated marker even when good", () => {
-		const m = marker({ id: "curated-good", curated: true, ranges: [{ sex: "any", low: 0, high: 10 }] });
+describe("computeDashboardModel — rows", () => {
+	const range = [{ sex: "any" as const, low: 0, high: 10 }];
+	const bp = (sbp: number, dbp: number, overrides: { sbp?: Partial<MarkerNote>; dbp?: Partial<MarkerNote> } = {}) =>
+		computeDashboardModel(
+			[
+				marker({ id: "sbp", name: "Systolic", pair: "bp", order: 0, concern: ["vitals"], ranges: range, ...overrides.sbp }),
+				marker({ id: "dbp", name: "Diastolic", pair: "bp", order: 1, concern: ["vitals"], ranges: range, ...overrides.dbp }),
+			],
+			[visit("2025-01-01", { sbp, dbp })],
+			profile(),
+			settings,
+		);
+
+	it("curates a curated marker even when good", () => {
+		const m = marker({ id: "curated-good", curated: true, concern: ["c"], ranges: range });
 		const model = computeDashboardModel([m], [visit("2025-01-01", { "curated-good": 5 })], profile(), settings);
 
-		expect(model.curated).toContain("curated-good");
+		expect(model.concernGroups[0].rows[0].curated).toBe(true);
 	});
 
-	it("includes a flagged marker even when not curated", () => {
-		const m = marker({ id: "flagged-uncurated", curated: false, ranges: [{ sex: "any", low: 0, high: 10 }] });
+	it("curates a flagged marker even when not curated", () => {
+		const m = marker({ id: "flagged-uncurated", concern: ["c"], ranges: range });
 		const model = computeDashboardModel([m], [visit("2025-01-01", { "flagged-uncurated": 99 })], profile(), settings);
 
-		expect(model.curated).toContain("flagged-uncurated");
+		expect(model.concernGroups[0].rows[0].curated).toBe(true);
 	});
 
-	it("excludes a good, non-curated marker", () => {
-		const m = marker({ id: "plain-good", curated: false, ranges: [{ sex: "any", low: 0, high: 10 }] });
+	it("does not curate a good, non-curated marker", () => {
+		const m = marker({ id: "plain-good", concern: ["c"], ranges: range });
 		const model = computeDashboardModel([m], [visit("2025-01-01", { "plain-good": 5 })], profile(), settings);
 
-		expect(model.curated).not.toContain("plain-good");
+		expect(model.concernGroups[0].rows[0].curated).toBe(false);
+	});
+
+	it("pairs twins into one row with the worst status of the pair", () => {
+		const model = bp(5, 99);
+		const rows = model.concernGroups[0].rows;
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0].primary.marker.id).toBe("sbp");
+		expect(rows[0].secondary?.marker.id).toBe("dbp");
+		expect(rows[0].status).toBe("high");
+	});
+
+	// Regression: Curated view looked only at the primary, so a pair flagged only through its
+	// secondary was hidden (and under-weighted in lane packing) while the attention bar listed it.
+	it("curates a pair when only the secondary twin is flagged", () => {
+		const model = bp(5, 99);
+
+		expect(model.concernGroups[0].rows[0].curated).toBe(true);
+		expect(model.flagged).toEqual([model.concernGroups[0].rows[0]]);
+	});
+
+	it("ignores the secondary's own curated flag: the primary's flag is the pair's", () => {
+		const model = bp(5, 5, { dbp: { curated: true } });
+
+		expect(model.concernGroups[0].rows[0].curated).toBe(false);
+	});
+
+	it("lists a flagged pair once in flagged, not once per twin", () => {
+		const model = bp(99, 99);
+
+		expect(model.flagged).toHaveLength(1);
+	});
+
+	it("excludes good rows from flagged and orders the rest by attention", () => {
+		const bad = marker({ id: "bad", concern: ["c"], ranges: range });
+		const worse = marker({ id: "worse", concern: ["c"], ranges: range });
+		const ok = marker({ id: "ok", concern: ["c"], ranges: range });
+		const model = computeDashboardModel(
+			[ok, bad, worse],
+			[visit("2025-01-01", { ok: 5, bad: 11, worse: 99 })],
+			profile(),
+			settings,
+		);
+
+		expect(model.flagged.map((r) => r.primary.marker.id)).toEqual(["worse", "bad"]);
+	});
+
+	it("sorts a group's rows by order: then name, unset order last", () => {
+		const unsetA = marker({ id: "a", name: "Alpha", concern: ["c"], ranges: range });
+		const unsetB = marker({ id: "b", name: "Beta", concern: ["c"], ranges: range });
+		const pinned = marker({ id: "z", name: "Zeta", order: 1, concern: ["c"], ranges: range });
+		const model = computeDashboardModel(
+			[unsetB, pinned, unsetA],
+			[visit("2025-01-01", { a: 5, b: 5, z: 5 })],
+			profile(),
+			settings,
+		);
+
+		expect(model.concernGroups[0].rows.map((r) => r.primary.marker.id)).toEqual(["z", "a", "b"]);
+	});
+
+	it("lists a pair in a group once even when both twins belong to it", () => {
+		expect(bp(5, 5).concernGroups[0].rows).toHaveLength(1);
 	});
 });
 

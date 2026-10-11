@@ -26,6 +26,12 @@ _Avoid_: category, tag (for marker.concern)
 The grouping axis that mirrors the physical lab report's sections, driving the entry form's layout.
 Distinct from concern — same marker, two independent groupings for two different surfaces.
 
+**Row**:
+One line on the dashboard: a single marker, or a BP-style pair (primary + secondary) shown together.
+The domain core derives its status (worst of the pair), whether it shows by default in Curated view
+(primary's `curated:` flag, or either member flagged), and its position within a concern group.
+_Avoid_: entry (that is the visit form's vocabulary)
+
 **Domain core**:
 The pure, Obsidian-free derivation layer (`computeDashboardModel` and its helpers) that turns
 markers, visits, and a profile into statuses, arrows, and concern groups. The single seam this
@@ -38,6 +44,7 @@ visit editor view, the registered Bases view, the widget mount point. Intentiona
 correctness comes from keeping logic out of adapters and in the domain core.
 
 **Concern registry**:
-The static, Obsidian-free config mapping each known concern to its default icon and dashboard
-column. The one inventory of known concerns — column placement is a deliberately-stable editorial
-pin, not derived from health data, so it lives beside the icon lookup rather than in the domain core.
+The static, Obsidian-free config mapping each known concern to its label, default icon and dashboard
+column (`src/core/concern-registry.ts`). The one inventory of known concerns. It lives in the core
+because the core needs its labels (Base view names) and render needs the rest; column placement is
+still a deliberately-stable editorial pin, not derived from health data.

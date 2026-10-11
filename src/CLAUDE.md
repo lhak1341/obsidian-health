@@ -52,3 +52,5 @@
   Others: `open-health-planner`, `add-lab-visit`.
 - `IconSuggest` (`render/icon-suggest.ts`, ported from linear-calendar) already exists for
   Lucide-icon text fields. Reuse it.
+- Dashboard, planner and visit editor share ONE tab: `findHealthLeaf` reuses whichever is open, so `openVisitEditor`/`openPlanner` replace the dashboard in place. A live-check script that detaches that leaf closes the user's
+  dashboard — switch back with the `open-health-dashboard` command instead.

@@ -26,6 +26,6 @@ export function renderBasesMarkers(container: HTMLElement, model: DashboardModel
 function buildRow(info: MarkerStatusInfo): HTMLElement {
 	const el = createDiv();
 	el.className = "hlth-widget-row";
-	fillMarkerRowContent(el, info, undefined, { showSparkline: true });
+	fillMarkerRowContent(el, info, undefined, { status: info.status, showSparkline: true });
 	return el;
 }

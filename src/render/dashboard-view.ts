@@ -1,13 +1,15 @@
 import { Menu } from "obsidian";
 import { isToggleable, toDisplay } from "../core/dashboard";
-import type { ConcernGroup, DashboardModel, DisplayReading, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
+import type { ConcernGroup, DashboardModel, DashboardRow, DisplayReading, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
+import { isNormalValue } from "../core/marker";
 import type { MarkerKind, MarkerNote, ProfileNote } from "../core/types";
 import { buildHistoryChart, buildSparkline } from "./charts";
-import { labelForConcern } from "./concern-registry";
+import { labelForConcern } from "../core/concern-registry";
 import { formatFullDate, formatRangeText, formatRawValue, formatTargetText, formatYear, statusColor } from "./format";
 import { iconFor, iconForConcern } from "./icons";
-import { buildArrowCell, collectGroupRows, countVisibleRows, flaggedRows, formatRowValue, indexPairs, rowOrder, type RowEntry } from "./rows";
+import { buildArrowCell, formatRowValue } from "./rows";
 import { renderInlineMarkdown } from "./rich-text";
+import { createRowOpenController, type RowOpenController } from "./row-open";
 import { groupRank, MEDIUM_LANES, NARROW_LANES, packLanes, resolveLane, WIDE_LANES } from "./tier-lanes";
 import { hideTooltip, showTooltip } from "./tooltip";
 
@@ -46,77 +48,10 @@ export interface DashboardRenderOptions {
 	concernIcons: Record<string, string>;
 	viewState: DashboardViewState;
 	/** Fired after a `viewState` mutation that needs a full repaint (showAll, unit toggle, profile
-	 *  switch). Deliberately NOT fired for row open/close -- `createRowOpenController` below already
+	 *  switch). Deliberately NOT fired for row open/close -- `createRowOpenController` (row-open.ts) already
 	 *  self-handles that via CSS class toggles on already-built DOM, no repaint needed at all. */
 	onViewStateChange: () => void;
 }
-
-interface RowInstance {
-	header: HTMLElement;
-	detail: HTMLElement;
-}
-
-/** Each marker's row is rendered once per responsive tier (wide/medium/narrow -- see buildGroups),
- *  so "open" has to act on every instance at once, not just the one under the cursor, or resizing
- *  to a different tier would silently show it collapsed again. Also enforces the accordion (only
- *  one row open at a time): opening a new marker closes whichever was open before it.
- *
- *  `initialOpenId`/`onChange` let the caller (HealthView) persist which marker is open across a
- *  `renderDashboard` re-render -- this controller itself is rebuilt from scratch on every call, so
- *  without that round-trip an in-render state change (e.g. a unit toggle, which triggers a refresh
- *  same as showAll/profile-switch do) would silently re-fold whatever the user had open. */
-function createRowOpenController(initialOpenId: string | undefined, onChange: (markerId: string | undefined) => void) {
-	const instances = new Map<string, RowInstance[]>();
-	let openId: string | undefined = initialOpenId;
-
-	const setInstancesOpen = (markerId: string, open: boolean) => {
-		for (const inst of instances.get(markerId) ?? []) {
-			inst.header.classList.toggle("hlth-open", open);
-			inst.detail.classList.toggle("hlth-open", open);
-		}
-	};
-
-	return {
-		register(markerId: string, instance: RowInstance): void {
-			const list = instances.get(markerId) ?? [];
-			list.push(instance);
-			instances.set(markerId, list);
-			if (markerId === openId) {
-				instance.header.classList.add("hlth-open");
-				instance.detail.classList.add("hlth-open");
-			}
-		},
-		/** Opens `markerId`, closing whatever was previously open; closes it instead if it's already open. */
-		toggle(markerId: string): void {
-			if (openId === markerId) {
-				setInstancesOpen(markerId, false);
-				openId = undefined;
-				onChange(undefined);
-				return;
-			}
-			if (openId) setInstancesOpen(openId, false);
-			setInstancesOpen(markerId, true);
-			openId = markerId;
-			onChange(markerId);
-		},
-		/** Opens `markerId` (closing whatever was open); a no-op if it's already the open one. */
-		open(markerId: string): void {
-			if (openId === markerId) return;
-			if (openId) setInstancesOpen(openId, false);
-			setInstancesOpen(markerId, true);
-			openId = markerId;
-			onChange(markerId);
-		},
-		/** Only one tier's instance has layout at a time (the other two are `display:none`) --
-		 *  `offsetParent` is null for anything not currently rendered, so this finds the real one. */
-		scrollIntoView(markerId: string): void {
-			const visible = (instances.get(markerId) ?? []).find((inst) => inst.header.offsetParent !== null);
-			visible?.header.scrollIntoView({ block: "center", behavior: "smooth" });
-		},
-	};
-}
-
-type RowOpenController = ReturnType<typeof createRowOpenController>;
 
 export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: DashboardRenderOptions): void {
 	root.textContent = "";
@@ -134,12 +69,11 @@ export function renderDashboard(root: HTMLElement, model: DashboardModel, opts: 
 		return;
 	}
 
-	const rowByMarkerId = indexPairs(model.markers);
 	const rowOpen = createRowOpenController(opts.viewState.openMarkerId, (markerId) => {
 		opts.viewState.openMarkerId = markerId;
 	});
 
-	const groups = buildGroups(model, opts, rowByMarkerId, rowOpen);
+	const groups = buildGroups(model, opts, rowOpen);
 	dash.appendChild(buildAttentionBar(model, rowOpen));
 	dash.appendChild(groups);
 }
@@ -272,7 +206,7 @@ function attentionReason(status: Status, markerType: MarkerKind): string {
 }
 
 function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): HTMLElement {
-	const flagged = flaggedRows(model);
+	const flagged = model.flagged;
 
 	const bar = createDiv();
 	bar.className = "hlth-attn";
@@ -309,7 +243,7 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 
 		const dot = createSpan();
 		dot.className = "hlth-dot";
-		dot.style.background = statusColor(primary.status);
+		dot.style.background = statusColor(row.status);
 		item.appendChild(dot);
 
 		const name = createSpan();
@@ -319,7 +253,7 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 
 		const value = createSpan();
 		value.className = "hlth-attn-value";
-		value.style.color = statusColor(primary.status);
+		value.style.color = statusColor(row.status);
 		value.textContent = formatRowValue(primary.latest?.value, secondary);
 		item.appendChild(value);
 
@@ -330,7 +264,7 @@ function buildAttentionBar(model: DashboardModel, rowOpen: RowOpenController): H
 
 		const why = createSpan();
 		why.className = "hlth-attn-why";
-		why.textContent = attentionReason(primary.status, primary.marker.type);
+		why.textContent = attentionReason(row.status, primary.marker.type);
 		item.appendChild(why);
 
 		item.addEventListener("click", () => {
@@ -369,14 +303,13 @@ function buildTier(className: string, laneGroups: ConcernGroup[][], build: (grou
 	return tier;
 }
 
-function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
+function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowOpen: RowOpenController): HTMLElement {
 	const container = createDiv();
 	container.className = "hlth-groups";
 
 	const rankIndex = new Map(model.attentionOrder.map((id, i) => [id, i]));
-	const curated = new Set(model.curated);
 	const sorted = [...model.concernGroups].sort((a, b) => groupRank(a, rankIndex) - groupRank(b, rankIndex));
-	const build = (group: ConcernGroup) => buildGroup(group, opts, curated, rowByMarkerId, rowOpen);
+	const build = (group: ConcernGroup) => buildGroup(group, opts, rowOpen);
 
 	if (opts.viewState.showAll) {
 		// Show all keeps the pinned-column system: each tier's lane table is a fixed list of
@@ -386,7 +319,7 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 		container.appendChild(buildTier("hlth-tier-narrow", NARROW_LANES.map((segments) => resolveLane(sorted, segments)), build));
 	} else {
 		// Curated view replaces the pinned-column system with a weight-based packer (docs/adr/0003).
-		const visibleRows = countVisibleRows(sorted, rowByMarkerId, curated);
+		const visibleRows = new Map(sorted.map((group) => [group.concern, group.rows.filter((row) => row.curated).length]));
 		container.appendChild(buildTier("hlth-tier-wide", packLanes(sorted, visibleRows, 3, "vitals"), build));
 		container.appendChild(buildTier("hlth-tier-medium", packLanes(sorted, visibleRows, 2, "vitals"), build));
 		container.appendChild(buildTier("hlth-tier-narrow", packLanes(sorted, visibleRows, 1, "vitals"), build));
@@ -395,14 +328,8 @@ function buildGroups(model: DashboardModel, opts: DashboardRenderOptions, rowByM
 	return container;
 }
 
-function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: Set<string>, rowByMarkerId: Map<string, RowEntry>, rowOpen: RowOpenController): HTMLElement {
-	const rows = collectGroupRows(group, rowByMarkerId);
-	// Vault scan order is otherwise arbitrary (filesystem/cache enumeration, not alphabetical) --
-	// `order:` frontmatter lets a marker note pin its row position; unset markers fall back to
-	// alphabetical by name so the layout is still deterministic without it.
-	rows.sort((a, b) => rowOrder(a) - rowOrder(b) || a.primary.marker.name.localeCompare(b.primary.marker.name));
-
-	const hiddenCount = rows.filter((row) => !curated.has(row.primary.marker.id)).length;
+function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, rowOpen: RowOpenController): HTMLElement {
+	const hiddenCount = group.rows.filter((row) => !row.curated).length;
 
 	const wrap = createDiv();
 	wrap.className = "hlth-grp";
@@ -414,8 +341,8 @@ function buildGroup(group: ConcernGroup, opts: DashboardRenderOptions, curated: 
 	});
 	wrap.appendChild(head);
 
-	for (const row of rows) {
-		const hidden = !opts.viewState.showAll && !curated.has(row.primary.marker.id);
+	for (const row of group.rows) {
+		const hidden = !opts.viewState.showAll && !row.curated;
 		const { header, detail } = buildRow(row, hidden, rowOpen, opts);
 		wrap.appendChild(header);
 		wrap.appendChild(detail);
@@ -458,7 +385,7 @@ function buildGroupHeader(group: ConcernGroup, hiddenCount: number, showAll: boo
 	return head;
 }
 
-function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, opts: DashboardRenderOptions): { header: HTMLElement; detail: HTMLElement } {
+function buildRow(row: DashboardRow, hidden: boolean, rowOpen: RowOpenController, opts: DashboardRenderOptions): { header: HTMLElement; detail: HTMLElement } {
 	const { primary, secondary } = row;
 	const toggled = opts.viewState.unitToggles.has(primary.marker.id);
 	// Computed once per row and threaded down -- the row and its detail panel read the same
@@ -471,7 +398,7 @@ function buildRow(row: RowEntry, hidden: boolean, rowOpen: RowOpenController, op
 
 	header.appendChild(buildNameCell(primary, display));
 
-	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(primary.status), secondary?.series));
+	header.appendChild(buildSparkline(primary.series, primary.band, statusColor(row.status), secondary?.series));
 
 	// Arrow/value/unit each get their own fixed-width grid column so the sparkline, arrow,
 	// value, and unit all line up into consistent vertical tracks across every row. Trade-off
@@ -544,8 +471,8 @@ function buildNameCell(info: MarkerStatusInfo, display: DisplayReading): HTMLEle
 	return cell;
 }
 
-function buildValueOnlyCell(row: RowEntry, display: DisplayReading): HTMLElement {
-	const { primary, secondary } = row;
+function buildValueOnlyCell(row: DashboardRow, display: DisplayReading): HTMLElement {
+	const { secondary } = row;
 	const value = createSpan();
 	value.className = "hlth-value";
 	// Off the actual displayed value's type, not `marker.type` -- a numeric marker can still show a
@@ -553,7 +480,7 @@ function buildValueOnlyCell(row: RowEntry, display: DisplayReading): HTMLElement
 	// which needs the same compact text sizing a genuinely qualitative marker's value gets, not the
 	// bigger digit-sized default meant for numbers.
 	if (typeof display.value !== "number") value.classList.add("hlth-value-qual");
-	value.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
+	value.style.color = row.status === "good" ? "var(--text-normal)" : statusColor(row.status);
 	value.textContent = formatRowValue(display.value, secondary);
 	return value;
 }
@@ -576,7 +503,7 @@ function buildUnitCell(marker: MarkerNote, display: DisplayReading, onToggle: (m
 	return unit;
 }
 
-function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement {
+function buildDetailContent(row: DashboardRow, display: DisplayReading): HTMLElement {
 	const { primary, secondary } = row;
 	const marker = primary.marker;
 	const wrap = createDiv();
@@ -591,7 +518,7 @@ function buildDetailContent(row: RowEntry, display: DisplayReading): HTMLElement
 
 	const now = createSpan();
 	now.className = "hlth-detail-now";
-	now.style.color = primary.status === "good" ? "var(--text-normal)" : statusColor(primary.status);
+	now.style.color = row.status === "good" ? "var(--text-normal)" : statusColor(row.status);
 	now.textContent = formatRowValue(display.value, secondary);
 	if (display.unit) {
 		const unit = createSpan();
@@ -628,10 +555,9 @@ function buildQualitativeChips(marker: MarkerNote, series: SeriesPoint[]): HTMLE
 	const list = createDiv();
 	list.className = "hlth-qhist";
 
-	const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
 	for (const point of series) {
 		const chip = createSpan();
-		const good = normal.includes(String(point.value));
+		const good = isNormalValue(marker, point.value);
 		chip.className = `hlth-qchip ${good ? "hlth-qchip-good" : "hlth-qchip-bad"}`;
 
 		const year = createEl("b");

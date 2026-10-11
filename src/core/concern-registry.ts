@@ -25,7 +25,7 @@ const DEFAULT_ICON = "activity";
 const DEFAULT_COLUMN: 0 | 1 | 2 = 2;
 const DEFAULT_ORDER = Number.POSITIVE_INFINITY;
 
-/** Keyed by normalizeConcernKey's output (core/dashboard.ts) -- every accessor here expects an
+/** Keyed by normalizeConcernKey's output (core/concern.ts) -- every accessor here expects an
  *  already-normalized key, not raw frontmatter text. */
 export const CONCERN_CONFIG: Record<string, ConcernConfig> = {
 	vitals: { icon: "heart-pulse", column: 0, label: "Vitals", order: 0, mediumLaneGroup: 0 },

@@ -1,7 +1,7 @@
 import type { App, TFile } from "obsidian";
 import { describe, expect, it } from "vitest";
 import { createFakeApp } from "./fixtures/fake-app";
-import type { MarkerNote, ProfileNote } from "../core/types";
+import type { MarkerNote } from "../core/types";
 import { DEFAULT_SETTINGS, type HealthPluginSettings } from "../settings";
 import {
 	findMarkerFile,
@@ -203,7 +203,7 @@ describe("saveNewMarkerNote", () => {
 	it("creates a marker note with the given fields", async () => {
 		const app = createFakeApp([]);
 
-		await saveNewMarkerNote(app, paths, { id: "alt", name: "ALT", type: "numeric", unit: "U/L", panel: "liver", concern: ["liver"], curated: true });
+		await saveNewMarkerNote(app, paths, { id: "alt", name: "ALT", aliases: [], type: "numeric", unit: "U/L", panel: "liver", concern: ["liver"], curated: true, blurb: "" });
 
 		const f = file(app, "markers/alt.md");
 		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({
@@ -219,7 +219,7 @@ describe("saveNewMarkerNote", () => {
 	it("omits unit when not provided", async () => {
 		const app = createFakeApp([]);
 
-		await saveNewMarkerNote(app, paths, { id: "qual", name: "Qual Marker", type: "qualitative", panel: "urine", concern: [], curated: false });
+		await saveNewMarkerNote(app, paths, { id: "qual", name: "Qual Marker", aliases: [], type: "qualitative", panel: "urine", concern: [], curated: false, blurb: "" });
 
 		const f = file(app, "markers/qual.md");
 		expect(app.metadataCache.getFileCache(f)?.frontmatter?.unit).toBeUndefined();
@@ -410,22 +410,17 @@ describe("saveProfileNote", () => {
 });
 
 describe("saveMarkerTarget", () => {
-	function aliceProfile(overrides: Partial<ProfileNote> = {}): ProfileNote {
-		return { person: "alice", sex: "f", ...overrides };
-	}
+	const fmOf = (app: App) => app.metadataCache.getFileCache(file(app, "profiles/alice.md"))?.frontmatter;
 
 	it("adds a target override for a marker, preserving other profile fields and other overrides", async () => {
 		const app = createFakeApp([
 			{ path: "profiles/alice.md", frontmatter: { sex: "f", blood_type: "A+", targets: { waist: { low: 60, high: 80 } } } },
 		]);
-		const profile = aliceProfile({ bloodType: "A+", targets: { waist: { low: 60, high: 80 } } });
 
-		await saveMarkerTarget(app, paths, profile, "weight", { low: 55, high: 65 });
+		await saveMarkerTarget(app, paths, "alice", "weight", { low: 55, high: 65 });
 
-		const f = file(app, "profiles/alice.md");
-		const fm = app.metadataCache.getFileCache(f)?.frontmatter;
-		expect(fm?.blood_type).toBe("A+");
-		expect(fm?.targets).toEqual({
+		expect(fmOf(app)?.blood_type).toBe("A+");
+		expect(fmOf(app)?.targets).toEqual({
 			waist: { low: 60, high: 80 },
 			weight: { low: 55, high: 65 },
 		});
@@ -433,24 +428,57 @@ describe("saveMarkerTarget", () => {
 
 	it("supports a partial override (one bound absent, not inherited from the global value)", async () => {
 		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f" } }]);
-		const profile = aliceProfile();
 
-		await saveMarkerTarget(app, paths, profile, "weight", { low: 55, high: undefined });
+		await saveMarkerTarget(app, paths, "alice", "weight", { low: 55, high: undefined });
 
-		const f = file(app, "profiles/alice.md");
-		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toEqual({ weight: { low: 55 } });
+		expect(fmOf(app)?.targets).toEqual({ weight: { low: 55 } });
 	});
 
 	it("removes a target override for a marker when both bounds are undefined, leaving other overrides intact", async () => {
 		const app = createFakeApp([
 			{ path: "profiles/alice.md", frontmatter: { sex: "f", targets: { waist: { low: 60, high: 80 }, weight: { low: 55, high: 65 } } } },
 		]);
-		const profile = aliceProfile({ targets: { waist: { low: 60, high: 80 }, weight: { low: 55, high: 65 } } });
 
-		await saveMarkerTarget(app, paths, profile, "weight", { low: undefined, high: undefined });
+		await saveMarkerTarget(app, paths, "alice", "weight", { low: undefined, high: undefined });
 
-		const f = file(app, "profiles/alice.md");
-		expect(app.metadataCache.getFileCache(f)?.frontmatter?.targets).toEqual({ waist: { low: 60, high: 80 } });
+		expect(fmOf(app)?.targets).toEqual({ waist: { low: 60, high: 80 } });
+	});
+
+	it("deletes the targets key when the last override is cleared", async () => {
+		const app = createFakeApp([{ path: "profiles/alice.md", frontmatter: { sex: "f", targets: { weight: { low: 55, high: 65 } } } }]);
+
+		await saveMarkerTarget(app, paths, "alice", "weight", { low: undefined, high: undefined });
+
+		expect(fmOf(app)).not.toHaveProperty("targets");
+	});
+
+	// A patch edits the live frontmatter only: whatever else is on the note -- a key the reader
+	// doesn't model, an empty `allergies: []`, another marker's malformed entry -- survives byte-for-byte
+	// instead of being parsed and re-serialised away.
+	it("leaves every other key and other markers' entries untouched, even malformed ones", async () => {
+		const app = createFakeApp([
+			{
+				path: "profiles/alice.md",
+				frontmatter: { sex: "f", allergies: [], custom_note: "keep me", order: 3, targets: { waist: { low: "abc" } } },
+			},
+		]);
+
+		await saveMarkerTarget(app, paths, "alice", "weight", { low: 55, high: 65 });
+
+		expect(fmOf(app)).toEqual({
+			sex: "f",
+			allergies: [],
+			custom_note: "keep me",
+			order: 3,
+			targets: { waist: { low: "abc" }, weight: { low: 55, high: 65 } },
+		});
+	});
+
+	it("is a no-op when the profile note doesn't exist", async () => {
+		const app = createFakeApp([]);
+
+		await expect(saveMarkerTarget(app, paths, "missing", "weight", { low: 55 })).resolves.toBeUndefined();
+		expect(app.vault.getAbstractFileByPath("profiles/missing.md")).toBeNull();
 	});
 });
 

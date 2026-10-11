@@ -1,5 +1,5 @@
 import { getIcon } from "obsidian";
-import { iconNameForConcern } from "./concern-registry";
+import { iconNameForConcern } from "../core/concern-registry";
 
 /** Obsidian's bundled Lucide set (`getIcon` from "obsidian") -- keeps stroke weight/theming consistent with the rest of the app's chrome instead of hand-copied SVG paths. */
 export function iconFor(name: string): SVGSVGElement {

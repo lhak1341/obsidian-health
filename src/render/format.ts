@@ -1,4 +1,5 @@
 import type { Arrow, ArrowDirection, ArrowTone, ResolvedRange, Status } from "../core/model";
+import { normalValues } from "../core/marker";
 import type { MarkerNote } from "../core/types";
 
 // Fallbacks matter beyond the live app's own broken-theme case: these strings also end up as raw
@@ -53,9 +54,7 @@ export function formatRawValue(value: number | string): string {
 
 export function formatRangeText(band: ResolvedRange, marker: MarkerNote, unitOverride?: string): string {
 	if (marker.type === "qualitative") {
-		const normal = marker.normal;
-		if (Array.isArray(normal)) return normal.join(" / ");
-		return normal ?? "—";
+		return normalValues(marker).join(" / ") || "—";
 	}
 
 	const displayUnit = unitOverride ?? marker.unit;

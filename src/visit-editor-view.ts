@@ -1,8 +1,8 @@
 import { ItemView, Modal, Notice, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
-import { buildPreSaveSummary, buildVisitValues, checkDuplicateMarkerId, evaluateVisitFields, formatVisitError } from "./core/entry";
+import { buildNewMarker, buildPreSaveSummary, buildVisitValues, evaluateVisitFields, formatVisitError, localDateISO, type NewMarkerDraft } from "./core/entry";
 import type { MarkerNote } from "./core/types";
 import type HealthPlugin from "./main";
-import { renderVisitEditor, reprefill, type EditorFormState, type NewMarkerDraft, type VisitEditorOptions } from "./render/visit-editor-view";
+import { renderVisitEditor, reprefill, type EditorFormState, type VisitEditorOptions } from "./render/visit-editor-view";
 import type { VaultSnapshot } from "./vault/reader";
 import { saveNewMarkerNote, saveVisitNote } from "./vault/writer";
 
@@ -92,7 +92,7 @@ export class HealthVisitEditorView extends ItemView {
 		const s = state as Partial<VisitEditorState> | undefined;
 		if (s?.person) {
 			this.state.person = s.person;
-			this.state.date = s.initialDate ?? new Date().toISOString().slice(0, 10);
+			this.state.date = s.initialDate ?? localDateISO();
 			this.state.mode = s.mode ?? "add";
 			this.state.errors = [];
 			await this.refresh();
@@ -129,18 +129,14 @@ export class HealthVisitEditorView extends ItemView {
 	}
 
 	private async addMarker(draft: NewMarkerDraft): Promise<void> {
-		if (!draft.id || !draft.name) {
-			new Notice("A new marker needs both a name and an ID.");
-			return;
-		}
-		if (checkDuplicateMarkerId(draft.id, this.state.markers.map((m) => m.id))) {
-			new Notice(`Marker "${draft.id}" already exists.`);
+		const result = buildNewMarker(draft, this.state.markers.map((m) => m.id));
+		if ("error" in result) {
+			new Notice(result.error);
 			return;
 		}
 
-		const newMarker = { id: draft.id, name: draft.name, type: draft.type, unit: draft.unit || undefined, panel: draft.panel || "misc", concern: [] as string[], curated: false };
-		await saveNewMarkerNote(this.app, this.plugin.settings, newMarker);
-		this.state.markers.push({ ...newMarker, aliases: [], blurb: "" });
+		await saveNewMarkerNote(this.app, this.plugin.settings, result.marker);
+		this.state.markers.push(result.marker);
 
 		this.paint();
 	}

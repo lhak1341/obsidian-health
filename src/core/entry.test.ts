@@ -1,15 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	buildPreSaveSummary,
 	buildVisitFrontmatter,
 	buildVisitValues,
-	checkDuplicateMarkerId,
+	DEFAULT_NEW_MARKER_PANEL,
+	buildNewMarker,
 	evaluateBoundField,
 	evaluateNumericField,
 	evaluateQualitativeField,
 	evaluateVisitFields,
 	findVisit,
 	groupMarkersByPanel,
+	localDateISO,
 	pairMarkerNotes,
 	parseAllergies,
 	prefillFields,
@@ -17,6 +19,7 @@ import {
 	validateDate,
 	validateProfileInput,
 	type FieldState,
+	visitDatesFor,
 } from "./entry";
 import type { MarkerNote, ProfileNote, VisitNote } from "./types";
 
@@ -156,13 +159,60 @@ describe("validateDate", () => {
 	});
 });
 
-describe("checkDuplicateMarkerId", () => {
-	it("flags an id that already exists", () => {
-		expect(checkDuplicateMarkerId("alt", ["alt", "ast"])).toBe(true);
+describe("buildNewMarker", () => {
+	const draft = { id: "alt", name: "ALT", type: "numeric" as const, unit: "U/L", panel: "liver" };
+
+	it("builds a complete marker from the draft", () => {
+		const result = buildNewMarker(draft, []);
+
+		expect(result).toEqual({
+			marker: { id: "alt", name: "ALT", type: "numeric", unit: "U/L", panel: "liver", concern: [], curated: false, aliases: [], blurb: "" },
+		});
 	});
 
-	it("allows an id that doesn't exist yet", () => {
-		expect(checkDuplicateMarkerId("new-marker", ["alt", "ast"])).toBe(false);
+	it("defaults the panel when blank and leaves a blank unit unset", () => {
+		const result = buildNewMarker({ ...draft, panel: "", unit: "" }, []);
+
+		expect(result).toMatchObject({ marker: { panel: DEFAULT_NEW_MARKER_PANEL, unit: undefined } });
+		expect(DEFAULT_NEW_MARKER_PANEL).toBe("misc");
+	});
+
+	it("rejects a blank id or name", () => {
+		expect(buildNewMarker({ ...draft, id: "" }, [])).toEqual({ error: "A new marker needs both a name and an ID." });
+		expect(buildNewMarker({ ...draft, name: "" }, [])).toEqual({ error: "A new marker needs both a name and an ID." });
+	});
+
+	it("rejects an id that already exists", () => {
+		expect(buildNewMarker(draft, ["alt", "ast"])).toEqual({ error: 'Marker "alt" already exists.' });
+	});
+
+	it("rejects an id that differs from an existing one only by case (the vault is case-insensitive)", () => {
+		expect(buildNewMarker({ ...draft, id: "ALT" }, ["alt"])).toEqual({ error: 'Marker "ALT" already exists.' });
+	});
+
+	it.each(["a/b", "a\\b", "a:b", "a*b", "a?b", 'a"b', "a<b", "a>b", "a|b", ".hidden"])("rejects the filename-unsafe id %s", (id) => {
+		expect(buildNewMarker({ ...draft, id }, [])).toHaveProperty("error");
+	});
+
+	it("accepts an id with a dash, underscore or digit", () => {
+		expect(buildNewMarker({ ...draft, id: "vit_b12-total" }, [])).toHaveProperty("marker");
+	});
+});
+
+describe("localDateISO", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	// 00:30 on 11 Oct in UTC+7 is still 10 Oct in UTC -- `toISOString().slice(0, 10)` gets this wrong.
+	it("formats the local calendar date, not the UTC one", () => {
+		vi.stubEnv("TZ", "Asia/Ho_Chi_Minh");
+
+		expect(localDateISO(new Date(2026, 9, 11, 0, 30))).toBe("2026-10-11");
+	});
+
+	it("zero-pads month and day", () => {
+		expect(localDateISO(new Date(2026, 0, 5, 12))).toBe("2026-01-05");
 	});
 });
 
@@ -393,5 +443,23 @@ describe("unitOptions", () => {
 			{ value: "mmol/L", label: "mmol/L" },
 			{ value: "mg/dL", label: "mg/dL" },
 		]);
+	});
+});
+
+describe("visitDatesFor", () => {
+	it("lists one person's visit dates, newest first", () => {
+		const visits = [visit("2025-01-01", {}), visit("2025-03-01", {}), visit("2025-02-01", {})];
+
+		expect(visitDatesFor(visits, "self")).toEqual(["2025-03-01", "2025-02-01", "2025-01-01"]);
+	});
+
+	it("excludes other people's visits", () => {
+		const visits = [visit("2025-01-01", {}), visit("2025-05-01", {}, "other")];
+
+		expect(visitDatesFor(visits, "self")).toEqual(["2025-01-01"]);
+	});
+
+	it("returns an empty list when the person has no visits", () => {
+		expect(visitDatesFor([], "self")).toEqual([]);
 	});
 });

@@ -1,10 +1,13 @@
-import { labelForConcern } from "../render/concern-registry";
+import { groupByConcern, normalizeConcernKey } from "./concern";
+import { isNormalValue, markerAppliesToSex } from "./marker";
+import { pairByPartner } from "./pairing";
 import type { MarkerNote, MarkerRange, ProfileNote, VisitNote } from "./types";
 import type {
 	Arrow,
 	ArrowDirection,
 	ConcernGroup,
 	DashboardModel,
+	DashboardRow,
 	DashboardSettings,
 	DisplayReading,
 	MarkerStatusInfo,
@@ -27,7 +30,7 @@ export function computeDashboardModel(
 	// object identity instead of re-deriving it a second time per marker during the sort.
 	const magnitudeByInfo = new Map<MarkerStatusInfo, number>();
 	for (const marker of markers) {
-		if (marker.sex && marker.sex !== profile.sex) continue;
+		if (!markerAppliesToSex(marker, profile.sex)) continue;
 		const series = buildSeries(marker, sortedVisits);
 		if (series.length === 0) continue;
 
@@ -51,79 +54,80 @@ export function computeDashboardModel(
 		)
 		.map((info) => info.marker.id);
 
-	const concernGroups = buildConcernGroups(markerInfos);
+	const rowByMarkerId = indexRows(markerInfos);
+	const concernGroups = buildConcernGroups(markerInfos, rowByMarkerId);
 
-	// Flagged markers are always visible regardless of the curated flag -- "curated"
-	// only decides which *additional*, otherwise-good markers show by default.
-	const curated = markerInfos.filter((info) => info.marker.curated || info.status !== "good").map((info) => info.marker.id);
+	const flagged: DashboardRow[] = [];
+	const seen = new Set<DashboardRow>();
+	for (const id of attentionOrder) {
+		const row = rowByMarkerId.get(id)!;
+		if (row.status === "good" || seen.has(row)) continue;
+		seen.add(row);
+		flagged.push(row);
+	}
 
 	return {
 		markers: markerInfos,
 		attentionOrder,
 		concernGroups,
-		curated,
+		flagged,
 	};
 }
 
-/** Resolves which profile a stateless view should default to: `settings.defaultProfile` if it
- *  still matches a real profile, else the first one, else `undefined` when there are none. Every
- *  caller here is stateless (recomputed fresh each time) -- a caller that needs to remember a
- *  user's in-session pick across repaints (`HealthView`) layers that on top of this, it doesn't
- *  belong in this function. Guards against a stale `defaultProfile` (pointing at a renamed/deleted
+function worstStatus(a: Status, b: Status): Status {
+	return statusTier(b) < statusTier(a) ? b : a;
+}
+
+/** Pairs markers into rows and indexes each row under both twins' ids. Flagged rows are always
+ *  curated -- "curated" only decides which *additional*, otherwise-good rows show by default. */
+function indexRows(markerInfos: MarkerStatusInfo[]): Map<string, DashboardRow> {
+	const pairs = pairByPartner(
+		markerInfos,
+		(info) => info.marker.id,
+		(info) => info.marker.pair,
+		(info) => info.marker.order,
+	);
+	const index = new Map<string, DashboardRow>();
+	for (const { primary, secondary } of pairs) {
+		const status = secondary ? worstStatus(primary.status, secondary.status) : primary.status;
+		const row: DashboardRow = { primary, secondary, status, curated: primary.marker.curated || status !== "good" };
+		index.set(primary.marker.id, row);
+		if (secondary) index.set(secondary.marker.id, row);
+	}
+	return index;
+}
+
+/** Resolves which profile a view should show: `requestedPerson` (a caller's in-session pick, or an
+ *  explicit request) if it still matches a real profile, else `settings.defaultProfile` if it
+ *  does, else the first profile, else `undefined` when there are none. The session state itself
+ *  (`HealthView`'s `activePerson`) stays with the caller -- this only resolves it against the
+ *  current profiles. Guards against a stale `defaultProfile` (pointing at a renamed/deleted
  *  person) explicitly: a naive `defaultProfile ?? profiles[0]` would keep the stale id forever
  *  instead of falling back, since `??` only substitutes on `null`/`undefined`, not on "doesn't
  *  match anything". */
-export function resolveDefaultProfile(profiles: ProfileNote[], defaultPerson: string | undefined): ProfileNote | undefined {
-	return (defaultPerson && profiles.find((p) => p.person === defaultPerson)) || profiles[0];
+export function resolveDefaultProfile(profiles: ProfileNote[], defaultPerson: string | undefined, requestedPerson?: string): ProfileNote | undefined {
+	const named = (person: string | undefined) => (person ? profiles.find((p) => p.person === person) : undefined);
+	return named(requestedPerson) ?? named(defaultPerson) ?? profiles[0];
 }
 
-/** Composes a concern header's already-resolved Base view name (label, or a `concernViewOverrides`
- *  entry) with the active profile, so a concern click opens a per-profile view instead of the
- *  single shared one. */
-export function concernViewNameForProfile(viewName: string, person: string): string {
-	return `${viewName} — ${person}`;
-}
-
-/** Resolves a normalized concern key to its unsuffixed Base view name -- a `concernViewOverrides`
- *  entry when set, else the concern's display label. The one place this override-or-label logic
- *  lives; both `openConcernBase` (dashboard-view.ts, click-time lookup) and the Base-view generator
- *  (`base-views.ts`, write-time generation) call this so the two can never independently drift. */
-export function resolveConcernViewName(key: string, overrides: Record<string, string>): string {
-	return overrides[key]?.trim() || labelForConcern(key);
-}
-
-/** Folds a raw frontmatter concern string to its identity key -- the single definition of "same
- *  concern" regardless of authored casing/whitespace. Display text is a presentation concern
- *  (render/concern-registry.ts's labelForConcern), kept separate so this stays Obsidian-free. */
-export function normalizeConcernKey(raw: string): string {
-	return raw.trim().toLowerCase();
-}
-
-/** Groups items by every concern id they carry (multi-membership: an item with 2 concerns lands
- *  in 2 groups) -- shared by the domain core's concern grouping and the settings tab's row-order UI. */
-export function groupByConcern<T>(items: T[], getConcern: (item: T) => string[]): Map<string, T[]> {
-	const byConcern = new Map<string, T[]>();
-	for (const item of items) {
-		for (const concern of getConcern(item)) {
-			const group = byConcern.get(concern) ?? [];
-			group.push(item);
-			byConcern.set(concern, group);
-		}
-	}
-	return byConcern;
-}
-
-function buildConcernGroups(markerInfos: MarkerStatusInfo[]): ConcernGroup[] {
+function buildConcernGroups(markerInfos: MarkerStatusInfo[], rowByMarkerId: Map<string, DashboardRow>): ConcernGroup[] {
 	const byConcern = groupByConcern(markerInfos, (info) => info.marker.concern.map(normalizeConcernKey));
 
 	return [...byConcern.entries()].map(([concern, members]) => ({
 		concern,
-		status: members.reduce<Status>(
-			(worst, member) => (statusTier(member.status) < statusTier(worst) ? member.status : worst),
-			"good",
-		),
+		status: members.reduce<Status>((worst, member) => worstStatus(worst, member.status), "good"),
 		markers: members,
+		rows: groupRows(members, rowByMarkerId),
 	}));
+}
+
+/** A pair shares one row under both twins' ids -- dedupe on the row so it isn't collected twice. */
+function groupRows(members: MarkerStatusInfo[], rowByMarkerId: Map<string, DashboardRow>): DashboardRow[] {
+	const rows = [...new Set(members.map((info) => rowByMarkerId.get(info.marker.id)!))];
+	// Vault scan order is otherwise arbitrary (filesystem/cache enumeration, not alphabetical) --
+	// `order:` frontmatter pins a row position; unset sorts last, then alphabetically by name.
+	const orderOf = (row: DashboardRow) => row.primary.marker.order ?? Number.POSITIVE_INFINITY;
+	return rows.sort((a, b) => orderOf(a) - orderOf(b) || a.primary.marker.name.localeCompare(b.primary.marker.name));
 }
 
 function trendWeight(info: MarkerStatusInfo): number {
@@ -182,8 +186,7 @@ function deriveStatus(
 	latest: SeriesPoint,
 ): { status: Status; excess: number } {
 	if (marker.type === "qualitative") {
-		const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
-		const status: Status = normal.includes(String(latest.value)) ? "good" : "high";
+		const status: Status = isNormalValue(marker, latest.value) ? "good" : "high";
 		return { status, excess: 0 };
 	}
 

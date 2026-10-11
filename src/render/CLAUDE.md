@@ -4,9 +4,11 @@
   import `icons.ts`, which value-imports `obsidian` (unresolvable outside the app). Pure logic
   that needs test coverage from inside one of these views goes in its own Obsidian-free
   sibling file — check for an existing domain-shaped one first (`rows.ts` for
-  `RowEntry`-scoped logic, `tier-lanes.ts` for concern-group ordering) before adding a new
+  row-display logic, `tier-lanes.ts` for concern-group ordering) before adding a new
   bucket file. `rows.ts` is itself hybrid: untested DOM-builders (`buildArrowCell`,
-  `fillMarkerRowContent`) sit beside its tested pure exports.
+  `fillMarkerRowContent`) sit beside its tested pure exports. `row-open.ts` (the row accordion)
+  is tested with hand-rolled fakes — the test env has no DOM, and its instance type is narrowed
+  to the few element members it touches so a fake can satisfy it.
 - Curated view and Show all use two independent lane-layout systems, not one: Show all keeps
   the pinned-column system (`WIDE_LANES`/`MEDIUM_LANES`/`NARROW_LANES` in `tier-lanes.ts`);
   Curated view uses a dynamic weight-based packer (`packLanes`, same file — see

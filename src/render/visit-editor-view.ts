@@ -1,18 +1,11 @@
 import { convert, convertTo } from "../core/dashboard";
-import { findVisit, groupMarkersByPanel, pairMarkerNotes, prefillFields, resolveBandForEntry, unitOptions, type FieldState } from "../core/entry";
+import { markerAppliesToSex, normalValues } from "../core/marker";
+import { findVisit, groupMarkersByPanel, pairMarkerNotes, prefillFields, resolveBandForEntry, unitOptions, visitDatesFor, type FieldState, type NewMarkerDraft } from "../core/entry";
 import type { MarkerKind, MarkerNote, ProfileNote, VisitNote } from "../core/types";
 import { iconFor } from "./icons";
 import { columnForPanel, orderForPanel } from "./panel-registry";
 
 const OTHER_OPTION = "__other__";
-
-export interface NewMarkerDraft {
-	id: string;
-	name: string;
-	type: MarkerKind;
-	unit: string;
-	panel: string;
-}
 
 /** Everything the editor needs to render, owned by the adapter and passed by reference: `fields`,
  *  `facility`, and `dirty` are mutated in place by input handlers below without a full re-render
@@ -111,11 +104,7 @@ function buildPersonDateRow(root: HTMLElement, state: EditorFormState, opts: Vis
 		rerender();
 	});
 
-	const pastDates = state.visits
-		.filter((v) => v.person === state.person)
-		.map((v) => v.date)
-		.sort()
-		.reverse();
+	const pastDates = visitDatesFor(state.visits, state.person);
 
 	// Edit mode picks among existing visits only -- a free-date input makes no sense there.
 	// Falls back to the date input if the person has no recorded visits to pick from.
@@ -196,7 +185,7 @@ function applySearchFilter(panels: HTMLElement, query: string): void {
 
 function buildFields(root: HTMLElement, state: EditorFormState): void {
 	const profile = currentProfile(state);
-	const groups = groupMarkersByPanel(state.markers.filter((m) => m.type !== "derived" && (!m.sex || m.sex === profile?.sex)));
+	const groups = groupMarkersByPanel(state.markers.filter((m) => m.type !== "derived" && markerAppliesToSex(m, profile?.sex)));
 
 	const columns: (typeof groups)[number][][] = [[], [], []];
 	for (const group of groups) columns[columnForPanel(group.panel)].push(group);
@@ -340,7 +329,7 @@ function buildPairRow(root: HTMLElement, primary: MarkerNote, secondary: MarkerN
 
 function buildQualitativeRow(root: HTMLElement, marker: MarkerNote, state: EditorFormState): void {
 	const fs = fieldState(state, marker.id, "");
-	const normal = marker.normal === undefined ? [] : ([] as string[]).concat(marker.normal);
+	const normal = normalValues(marker);
 	// "" (blank) and any listed normal value are known options; anything else (a prior free-text
 	// entry, e.g. a graded "2+" result) means Other was picked and its text lives in fs.raw itself.
 	const isKnownValue = fs.raw === "" || normal.includes(fs.raw);

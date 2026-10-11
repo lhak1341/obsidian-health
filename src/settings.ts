@@ -1,5 +1,5 @@
-import { normalizeConcernKey } from "./core/dashboard";
-import { labelForConcern } from "./render/concern-registry";
+import { normalizeConcernKey } from "./core/concern";
+import { labelForConcern } from "./core/concern-registry";
 import { DEFAULT_VAULT_PATHS, type VaultPaths } from "./vault/reader";
 
 export type WidgetTier = "chip" | "list";
@@ -25,7 +25,7 @@ export interface HealthPluginSettings extends VaultPaths {
 	 *  concern's display label (dashboard-view.ts falls back to the label when no override is set). */
 	concernViewOverrides: Record<string, string>;
 	/** Icon override per concern id, for concerns not in the hardcoded CONCERN_CONFIG map
-	 *  (render/concern-registry.ts) -- e.g. after renaming a concern, or a wholly new one.
+	 *  (core/concern-registry.ts) -- e.g. after renaming a concern, or a wholly new one.
 	 *  Purely cosmetic, no vault write. */
 	concernIcons: Record<string, string>;
 	defaultProfile?: string;
