@@ -1,7 +1,8 @@
-import { convert, convertTo } from "../core/dashboard";
-import { markerAppliesToSex, normalValues } from "../core/marker";
-import { findVisit, groupMarkersByPanel, pairMarkerNotes, prefillFields, resolveBandForEntry, unitOptions, visitDatesFor, type FieldState, type NewMarkerDraft } from "../core/entry";
+import { normalValues } from "../core/marker";
+import { findVisit, groupMarkersByPanel, pairMarkerNotes, prefillFields, resolveBandForEntry, visitDatesFor, type FieldState, type NewMarkerDraft } from "../core/entry";
 import type { MarkerKind, MarkerNote, ProfileNote, VisitNote } from "../core/types";
+import { bandInUnit, switchUnit, unitChoices } from "../core/units";
+import { isVisitFormMarker } from "../core/visit-save";
 import { iconFor } from "./icons";
 import { columnForPanel, orderForPanel } from "./panel-registry";
 
@@ -185,7 +186,7 @@ function applySearchFilter(panels: HTMLElement, query: string): void {
 
 function buildFields(root: HTMLElement, state: EditorFormState): void {
 	const profile = currentProfile(state);
-	const groups = groupMarkersByPanel(state.markers.filter((m) => m.type !== "derived" && markerAppliesToSex(m, profile?.sex)));
+	const groups = groupMarkersByPanel(state.markers.filter((m) => isVisitFormMarker(m, profile)));
 
 	const columns: (typeof groups)[number][][] = [[], [], []];
 	for (const group of groups) columns[columnForPanel(group.panel)].push(group);
@@ -235,12 +236,10 @@ function buildPanelCard(col: HTMLElement, group: { panel: string; markers: Marke
  *  `resolveBandForEntry` returns the band in the marker's canonical unit, so a non-canonical
  *  `unit` (the alt-unit toggle) needs the band converted before display, not just the raw value. */
 function rangePlaceholder(marker: MarkerNote, profile: ProfileNote | undefined, state: EditorFormState, unit: string): string {
-	const band = profile ? resolveBandForEntry(marker, profile, state.date) : {};
-	const toUnit = (value: number) => (marker.unit && unit !== marker.unit ? convertTo(value, unit, marker) : value);
-	const round = (value: number) => Math.round(value * 1000) / 1000;
-	if (band.low !== undefined && band.high !== undefined) return `${round(toUnit(band.low))}–${round(toUnit(band.high))}`;
-	if (band.low !== undefined) return `≥${round(toUnit(band.low))}`;
-	if (band.high !== undefined) return `≤${round(toUnit(band.high))}`;
+	const band = bandInUnit(profile ? resolveBandForEntry(marker, profile, state.date) : {}, unit, marker);
+	if (band.low !== undefined && band.high !== undefined) return `${band.low}–${band.high}`;
+	if (band.low !== undefined) return `≥${band.low}`;
+	if (band.high !== undefined) return `≤${band.high}`;
 	return unit || "value";
 }
 
@@ -251,8 +250,8 @@ function searchTextFor(marker: MarkerNote): string {
 }
 
 function buildNumericRow(root: HTMLElement, marker: MarkerNote, profile: ProfileNote | undefined, state: EditorFormState): void {
-	const options = unitOptions(marker);
-	const fs = fieldState(state, marker.id, options[0]?.value ?? "");
+	const units = unitChoices(marker);
+	const fs = fieldState(state, marker.id, units[0] ?? "");
 
 	const row = root.createDiv({ cls: "hlth-editor-row" });
 	row.dataset.search = searchTextFor(marker);
@@ -266,30 +265,23 @@ function buildNumericRow(root: HTMLElement, marker: MarkerNote, profile: Profile
 		state.dirty = true;
 	});
 
-	if (options.length > 1) {
+	if (units.length > 1) {
 		// Only ever two options (canonical + alt), so a click-to-toggle label reads faster than a
 		// dropdown that always has exactly one alternative to pick -- mirrors the dashboard's
 		// buildUnitCell instead of forcing an open/select/close dropdown interaction for one choice.
 		const unitLabel = controls.createSpan({ cls: "hlth-editor-unit hlth-unit-toggle" });
-		const otherOption = () => options.find((option) => option.value !== fs.unit) ?? options[0];
+		const otherUnit = () => units.find((unit) => unit !== fs.unit) ?? units[0];
 		const paintUnit = () => {
 			unitLabel.textContent = fs.unit;
-			unitLabel.title = `Click to show in ${otherOption().label}`;
+			unitLabel.title = `Click to show in ${otherUnit()}`;
 		};
 		paintUnit();
 		unitLabel.addEventListener("click", () => {
-			const target = otherOption();
-			// Convert the already-typed number along with the unit switch, rather than leaving it
-			// as-is under the new unit label -- switching mg/dL -> µmol/L should reflect the same
-			// reading, not silently relabel the same digits.
-			const parsed = Number(fs.raw.trim());
-			if (fs.raw.trim() !== "" && Number.isFinite(parsed)) {
-				const canonical = convert(parsed, fs.unit, marker);
-				const converted = convertTo(canonical, target.value, marker);
-				fs.raw = String(Math.round(converted * 1000) / 1000);
-				input.value = fs.raw;
-			}
-			fs.unit = target.value;
+			const target = otherUnit();
+			// The typed number converts along with the label (see `switchUnit`).
+			fs.raw = switchUnit(fs.raw, fs.unit, target, marker);
+			input.value = fs.raw;
+			fs.unit = target;
 			input.placeholder = rangePlaceholder(marker, profile, state, fs.unit);
 			paintUnit();
 			state.dirty = true;

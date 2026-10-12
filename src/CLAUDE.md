@@ -32,7 +32,7 @@
   into a `Modal`'s `contentEl` (also outside that DOM subtree), cannot see them — use raw
   Obsidian vars/`Setting` there instead.
 - Font settings live in `settings.ts` (`FontChoice`, `fontHeading`/`fontBody`/`fontMono` +
-  `*Custom`), resolved by `fonts.ts`'s `resolveFontVar`. `HealthPlugin.applyFontVarsTo(el)`
+  `*Custom`), resolved by `fonts.ts`'s `resolveFontVars` and applied with its `setFontVar`. `HealthPlugin.applyFontVarsTo(el)`
   sets `--hlth-fh/fb/fm` as inline style on a view's `contentEl` — inline wins over the
   `.health-*-outer` class rule that declares the theme-following ("Health") default, so choosing
   that default is a no-op removeProperty, not an explicit override. `applyFonts()` re-applies to

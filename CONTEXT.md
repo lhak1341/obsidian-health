@@ -11,7 +11,8 @@ independent grouping axes: panel and concern.
 
 **Visit**:
 One lab report for one person on one date. Holds raw values only — arrows, flags, and status are
-never stored, always derived.
+never stored, always derived. The visit editor owns `type`/`person`/`date`/`facility` and the keys
+of the markers it shows (`<id>` and `<id>_unit`); a save never touches any other key in the note.
 
 **Profile**:
 A tracked person (sex, date of birth, blood type, allergies). Reference ranges resolve against the

@@ -1,7 +1,7 @@
 import { ItemView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { HEALTH_BASES_VIEW_TYPE, HealthBasesView } from "./bases-view";
 import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
-import { resolveFontVar } from "./fonts";
+import { resolveFontVars, setFontVar } from "./fonts";
 import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
 import { applyTooltipFonts } from "./render/tooltip";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
@@ -97,15 +97,10 @@ export default class HealthPlugin extends Plugin {
 	 *  the element itself always wins over the `.health-*-outer` class rule that declares the
 	 *  theme-following defaults, so this is a no-op visually until a non-default font is chosen. */
 	applyFontVarsTo(el: HTMLElement): void {
-		const { fontHeading, fontHeadingCustom, fontBody, fontBodyCustom, fontMono, fontMonoCustom } = this.settings;
-		const set = (prop: string, choice: HealthPluginSettings["fontHeading"], custom: string) => {
-			const v = resolveFontVar(choice, custom);
-			if (v) el.style.setProperty(prop, v);
-			else   el.style.removeProperty(prop);
-		};
-		set("--hlth-fh", fontHeading, fontHeadingCustom);
-		set("--hlth-fb", fontBody, fontBodyCustom);
-		set("--hlth-fm", fontMono, fontMonoCustom);
+		const { fh, fb, fm } = resolveFontVars(this.settings);
+		setFontVar(el.style, "--hlth-fh", fh);
+		setFontVar(el.style, "--hlth-fb", fb);
+		setFontVar(el.style, "--hlth-fm", fm);
 	}
 
 	/** Applies current font settings to every already-open Dashboard/Planner/Visit-editor leaf
@@ -118,7 +113,7 @@ export default class HealthPlugin extends Plugin {
 				if (leaf.view instanceof ItemView) this.applyFontVarsTo(leaf.view.contentEl);
 			}
 		}
-		applyTooltipFonts(resolveFontVar(this.settings.fontHeading, this.settings.fontHeadingCustom));
+		applyTooltipFonts(resolveFontVars(this.settings).fh);
 	}
 
 	scanVault(paths?: VaultPaths): Promise<VaultSnapshot> {

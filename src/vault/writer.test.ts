@@ -172,10 +172,10 @@ describe("findVisitFile", () => {
 });
 
 describe("saveVisitNote", () => {
-	it("creates a new visit note with the given values", async () => {
+	it("creates a new visit note with the patch's keys", async () => {
 		const app = createFakeApp([]);
 
-		await saveVisitNote(app, paths, "alice", "2024-03-01", { alt: 31.3, ast: "high" });
+		await saveVisitNote(app, paths, "alice", "2024-03-01", { set: { type: "lab-visit", person: "alice", date: "2024-03-01", alt: 31.3, ast: "high" }, remove: ["facility"] });
 
 		const f = file(app, "visits/alice/2024-03-01.md");
 		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({
@@ -187,15 +187,29 @@ describe("saveVisitNote", () => {
 		});
 	});
 
-	it("overwrites an existing visit note's frontmatter wholesale, not merging", async () => {
+	it("keeps keys the patch doesn't own -- tags, a value for a since-deleted marker", async () => {
 		const app = createFakeApp([
-			{ path: "visits/alice/2024-01-01.md", frontmatter: { type: "lab-visit", person: "alice", date: "2024-01-01", oldField: "stale" } },
+			{ path: "visits/alice/2024-01-01.md", frontmatter: { type: "lab-visit", person: "alice", date: "2024-01-01", tags: ["labs"], old_marker: 7, alt: 20 } },
 		]);
 
-		await saveVisitNote(app, paths, "alice", "2024-01-01", { alt: 31.3 });
+		await saveVisitNote(app, paths, "alice", "2024-01-01", { set: { type: "lab-visit", person: "alice", date: "2024-01-01", alt: 31.3 }, remove: [] });
 
 		const f = file(app, "visits/alice/2024-01-01.md");
-		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({ type: "lab-visit", person: "alice", date: "2024-01-01", alt: 31.3 });
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({ type: "lab-visit", person: "alice", date: "2024-01-01", tags: ["labs"], old_marker: 7, alt: 31.3 });
+	});
+
+	it("removes a cleared owned key and its _unit sibling", async () => {
+		const app = createFakeApp([
+			{ path: "visits/alice/2024-01-01.md", frontmatter: { type: "lab-visit", person: "alice", date: "2024-01-01", facility: "Lab", uric_acid: 6, uric_acid_unit: "mg/dL", alt: 20 } },
+		]);
+
+		await saveVisitNote(app, paths, "alice", "2024-01-01", {
+			set: { type: "lab-visit", person: "alice", date: "2024-01-01", alt: 20 },
+			remove: ["facility", "uric_acid", "uric_acid_unit"],
+		});
+
+		const f = file(app, "visits/alice/2024-01-01.md");
+		expect(app.metadataCache.getFileCache(f)?.frontmatter).toEqual({ type: "lab-visit", person: "alice", date: "2024-01-01", alt: 20 });
 	});
 });
 

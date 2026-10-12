@@ -1,5 +1,6 @@
 import { Menu } from "obsidian";
-import { isToggleable, toDisplay } from "../core/dashboard";
+import { toDisplay } from "../core/dashboard";
+import { isToggleable } from "../core/units";
 import type { ConcernGroup, DashboardModel, DashboardRow, DisplayReading, MarkerStatusInfo, SeriesPoint, Status } from "../core/model";
 import { isNormalValue } from "../core/marker";
 import type { MarkerKind, MarkerNote, ProfileNote } from "../core/types";

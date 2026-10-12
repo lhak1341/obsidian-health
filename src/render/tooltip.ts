@@ -1,3 +1,4 @@
+import { setFontVar } from "../fonts";
 import { renderInlineMarkdown } from "./rich-text";
 
 // Obsidian's own workspace chrome applies a CSS transform up the tree (pane/tab transitions),
@@ -13,8 +14,7 @@ let sharedTooltip: HTMLElement | undefined;
 let headingFontVar: string | null = null;
 
 function applyFontVarTo(el: HTMLElement): void {
-	if (headingFontVar) el.style.setProperty("--hlth-fh", headingFontVar);
-	else                el.style.removeProperty("--hlth-fh");
+	setFontVar(el.style, "--hlth-fh", headingFontVar);
 }
 
 /** Called from main.ts whenever the Heading font setting changes (and once at load) --

@@ -2,6 +2,7 @@ import { groupByConcern, normalizeConcernKey } from "./concern";
 import { isNormalValue, markerAppliesToSex } from "./marker";
 import { pairByPartner } from "./pairing";
 import type { MarkerNote, MarkerRange, ProfileNote, VisitNote } from "./types";
+import { convert, convertRange, convertTo, isToggleable } from "./units";
 import type {
 	Arrow,
 	ArrowDirection,
@@ -238,24 +239,6 @@ function rangeScore(range: MarkerRange, sex: ProfileNote["sex"]): number {
 	return (range.sex === sex ? 2 : 0) + (range.age ? 1 : 0);
 }
 
-export function convert(value: number, fromUnit: string, marker: MarkerNote): number {
-	if (fromUnit === marker.unit) return value;
-	if (fromUnit === marker.altUnit && marker.altFactor !== undefined) return value * marker.altFactor;
-	throw new Error(`Marker "${marker.id}" has no known unit "${fromUnit}"`);
-}
-
-/** Inverse of `convert`: canonical-unit value -> `toUnit` (the marker's unit or altUnit). */
-export function convertTo(value: number, toUnit: string, marker: MarkerNote): number {
-	if (toUnit === marker.unit) return value;
-	if (toUnit === marker.altUnit && marker.altFactor !== undefined) return value / marker.altFactor;
-	throw new Error(`Marker "${marker.id}" has no known unit "${toUnit}"`);
-}
-
-/** Whether `marker` has a defined alt unit to toggle into (Uric Acid mg/dL <-> µmol/L, etc). */
-export function isToggleable(marker: MarkerNote): boolean {
-	return marker.altUnit !== undefined && marker.altFactor !== undefined;
-}
-
 /** Bundles a marker's latest value, unit, series, band, and target into whichever unit is
  *  currently selected (canonical, or alt when `toggled` and `isToggleable`) -- the single place
  *  that decides which fields convert, so a row and its detail panel can never show one converted
@@ -277,13 +260,6 @@ export function toDisplay(info: MarkerStatusInfo, toggled: boolean): DisplayRead
 	const target = !canConvert ? info.target : convertRange(info.target, altUnit, marker);
 
 	return { value, unit: canConvert ? altUnit : marker.unit, series, band, target };
-}
-
-function convertRange(range: ResolvedRange, altUnit: string, marker: MarkerNote): ResolvedRange {
-	return {
-		low: range.low !== undefined ? convertTo(range.low, altUnit, marker) : undefined,
-		high: range.high !== undefined ? convertTo(range.high, altUnit, marker) : undefined,
-	};
 }
 
 export function isSoftWarn(value: number, band: ResolvedRange): boolean {

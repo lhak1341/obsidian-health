@@ -20,13 +20,13 @@
     "semantic_hash": ""
   },
   "src/core/dashboard.ts": {
-    "mtime": 1791683135.7416186,
-    "ast_hash": "1ec2fa37c8ef9e0027f36d37291117a6",
+    "mtime": 1791781219.8659995,
+    "ast_hash": "0af95c75ea7553f515c898bd604d7fa9",
     "semantic_hash": ""
   },
   "src/core/entry.ts": {
-    "mtime": 1791683416.2686284,
-    "ast_hash": "f29445bfb5f8c2d9b172810ee3358248",
+    "mtime": 1791781282.13316,
+    "ast_hash": "1fdc5aef94581dc3b1045a0d3ab93348",
     "semantic_hash": ""
   },
   "src/core/model.ts": {
@@ -45,8 +45,8 @@
     "semantic_hash": ""
   },
   "src/main.ts": {
-    "mtime": 1791682460.5617394,
-    "ast_hash": "3774703dbfad50713a3a1001532d318e",
+    "mtime": 1791785713.389947,
+    "ast_hash": "b1f772b967a87630e25823da68ac4348",
     "semantic_hash": ""
   },
   "src/planner-view.ts": {
@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/render/dashboard-view.ts": {
-    "mtime": 1791684184.2312543,
-    "ast_hash": "bce44c9e0cb4d318af9eff29eef9b091",
+    "mtime": 1791781375.7113953,
+    "ast_hash": "8e2cbdeff6801f954f0e9bb63f067682",
     "semantic_hash": ""
   },
   "src/render/drag-reorder.ts": {
@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   "src/render/tooltip.ts": {
-    "mtime": 1789483337.4230394,
-    "ast_hash": "ad899a41e5f8db2eee563d9eb026dfb3",
+    "mtime": 1791785713.3908253,
+    "ast_hash": "679d88134920f2beca84a8bbded77277",
     "semantic_hash": ""
   },
   "src/render/widget-view.ts": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "src/vault/writer.ts": {
-    "mtime": 1791683916.4306517,
-    "ast_hash": "195e06c215a26ed358b1c226eff6fe10",
+    "mtime": 1791781401.577579,
+    "ast_hash": "41b8a774e8e5ef5c29c115bb5f77908f",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -165,13 +165,13 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1788190511.3194604,
-    "ast_hash": "c886980ec2ea4bde016c30beb4dc16cf",
+    "mtime": 1791786189.9230547,
+    "ast_hash": "502cae548d93f61fdc602a5273619ba7",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791682903.2161224,
-    "ast_hash": "ce7323ff3d19620811020be8e7b92bf3",
+    "mtime": 1791781368.030614,
+    "ast_hash": "ff434e627e454b0cb3e3e154799a1b33",
     "semantic_hash": ""
   },
   "docs/PRD.md": {
@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "src/visit-editor-view.ts": {
-    "mtime": 1791683380.97894,
-    "ast_hash": "2d84e882f9572b4e3c070a9e36d2bf82",
+    "mtime": 1791781328.8801966,
+    "ast_hash": "a67be9d9608dccc31d7a828ee4a5aab5",
     "semantic_hash": ""
   },
   "src/render/panel-registry.ts": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "src/render/visit-editor-view.ts": {
-    "mtime": 1791683387.9142258,
-    "ast_hash": "b6329b85be9f51d476c158c88a618cab",
+    "mtime": 1791781271.9198177,
+    "ast_hash": "b8228d6ec2827ece8e3733db803828ae",
     "semantic_hash": ""
   },
   "src/render/tier-lanes.ts": {
@@ -265,8 +265,8 @@
     "semantic_hash": ""
   },
   "src/vault/base-view-sync.ts": {
-    "mtime": 1791683891.507192,
-    "ast_hash": "7744d947a3c4ad160b104f5913a41cd0",
+    "mtime": 1791785048.9767141,
+    "ast_hash": "a17adc0e0590b60fb32d1c3a66ae2c3f",
     "semantic_hash": ""
   },
   "docs/adr/0005-adapter-methods-split-in-file-until-a-second-caller.md": {
@@ -300,8 +300,8 @@
     "semantic_hash": ""
   },
   "src/fonts.ts": {
-    "mtime": 1789483528.045863,
-    "ast_hash": "41822be6a34dfb173cfbe30c1a9e6f39",
+    "mtime": 1791785738.0768738,
+    "ast_hash": "6ef87fa9dff531327c3f4e474029d004",
     "semantic_hash": ""
   },
   "src/render/row-open.ts": {
@@ -315,13 +315,13 @@
     "semantic_hash": ""
   },
   "src/CLAUDE.md": {
-    "mtime": 1791685264.1731362,
-    "ast_hash": "00e3ff22236e3031eb9d8dd080ac5f8d",
+    "mtime": 1791785713.3911474,
+    "ast_hash": "3a1717bbaf081662b9c5e5d674f9e3f6",
     "semantic_hash": ""
   },
   "src/core/CLAUDE.md": {
-    "mtime": 1791683421.4917424,
-    "ast_hash": "2eca564c928a1d4633f30c82f231eddc",
+    "mtime": 1791781368.0314586,
+    "ast_hash": "8ab426a46f9d3200550bfc3e71d05de9",
     "semantic_hash": ""
   },
   "src/render/CLAUDE.md": {
@@ -330,8 +330,23 @@
     "semantic_hash": ""
   },
   "src/vault/CLAUDE.md": {
-    "mtime": 1791685264.173675,
-    "ast_hash": "fde357a12e14fb191105e4b3de8d0ac6",
+    "mtime": 1791786193.928097,
+    "ast_hash": "3419c0099980ac78b3ae3a554ccd7fcb",
+    "semantic_hash": ""
+  },
+  "src/core/units.ts": {
+    "mtime": 1791781401.0171807,
+    "ast_hash": "a730e65aed6a3329ec4348745ebae6c8",
+    "semantic_hash": ""
+  },
+  "src/core/visit-save.ts": {
+    "mtime": 1791781402.7464972,
+    "ast_hash": "2de6afdefa1673c9fbe223108f7d1db3",
+    "semantic_hash": ""
+  },
+  "docs/adr/0007-marker-frontmatter-keys-stay-inline-in-the-reader.md": {
+    "mtime": 1791784670.8096542,
+    "ast_hash": "b787f9f3a9ca5e356bd5050afcf29092",
     "semantic_hash": ""
   }
 }

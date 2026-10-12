@@ -1,27 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	buildPreSaveSummary,
-	buildVisitFrontmatter,
-	buildVisitValues,
 	DEFAULT_NEW_MARKER_PANEL,
 	buildNewMarker,
 	evaluateBoundField,
 	evaluateNumericField,
 	evaluateQualitativeField,
-	evaluateVisitFields,
 	findVisit,
 	groupMarkersByPanel,
 	localDateISO,
 	pairMarkerNotes,
 	parseAllergies,
 	prefillFields,
-	unitOptions,
 	validateDate,
 	validateProfileInput,
-	type FieldState,
 	visitDatesFor,
 } from "./entry";
-import type { MarkerNote, ProfileNote, VisitNote } from "./types";
+import type { MarkerNote, VisitNote } from "./types";
 
 function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
 	return {
@@ -39,10 +33,6 @@ function marker(overrides: Partial<MarkerNote> = {}): MarkerNote {
 
 function visit(date: string, values: VisitNote["values"], person = "self"): VisitNote {
 	return { person, date, values };
-}
-
-function profile(overrides: Partial<ProfileNote> = {}): ProfileNote {
-	return { person: "self", sex: "m", ...overrides };
 }
 
 describe("groupMarkersByPanel", () => {
@@ -302,107 +292,6 @@ describe("evaluateQualitativeField", () => {
 	});
 });
 
-describe("evaluateVisitFields", () => {
-	function fields(entries: Record<string, FieldState>): Map<string, FieldState> {
-		return new Map(Object.entries(entries));
-	}
-
-	it("skips a derived marker even when a field is present for it", () => {
-		const derived = marker({ id: "bmi", type: "derived" });
-		const { entries, errors } = evaluateVisitFields([derived], fields({ bmi: { raw: "22", unit: "" } }), undefined, "2025-01-01");
-		expect(entries).toEqual([]);
-		expect(errors).toEqual([]);
-	});
-
-	it("skips a marker with no field state entered", () => {
-		const alt = marker({ id: "alt", unit: "U/L" });
-		const { entries } = evaluateVisitFields([alt], fields({}), undefined, "2025-01-01");
-		expect(entries).toEqual([]);
-	});
-
-	it("passes an empty band (no soft-warn) when no profile is resolved, but the profile's band when one is", () => {
-		const uric = marker({ id: "uric", unit: "umol/L", ranges: [{ sex: "any", low: 1, high: 2 }] });
-		const state = fields({ uric: { raw: "20", unit: "umol/L" } });
-
-		const withoutProfile = evaluateVisitFields([uric], state, undefined, "2025-01-01");
-		expect(withoutProfile.entries[0].outcome).toMatchObject({ kind: "ok", softWarn: false });
-
-		const withProfile = evaluateVisitFields([uric], state, profile(), "2025-01-01");
-		expect(withProfile.entries[0].outcome).toMatchObject({ kind: "ok", softWarn: true });
-	});
-
-	it("carries the marker's id and reason on a blocked field, alongside the date's own validation", () => {
-		const alt = marker({ id: "alt", name: "ALT", unit: "U/L" });
-		const { entries, errors } = evaluateVisitFields([alt], fields({ alt: { raw: "not-a-number", unit: "U/L" } }), undefined, "");
-
-		expect(errors).toEqual([
-			{ markerId: "", reason: "Date is required." },
-			{ markerId: "alt", reason: '"not-a-number" is not a number.' },
-		]);
-		expect(entries[0].outcome).toEqual({ kind: "blocked", reason: '"not-a-number" is not a number.' });
-	});
-});
-
-describe("buildVisitValues", () => {
-	it("keeps only ok entries, dropping omitted and blocked ones", () => {
-		const values = buildVisitValues(
-			[
-				{ markerId: "alt", outcome: { kind: "ok", value: 20, softWarn: false } },
-				{ markerId: "ast", outcome: { kind: "omitted" } },
-				{ markerId: "bad", outcome: { kind: "blocked", reason: "nope" } },
-			],
-			new Map(),
-		);
-
-		expect(values).toEqual({ alt: 20 });
-	});
-
-	it("writes a `<id>_unit` sibling key when the entered unit differs from the marker's canonical unit", () => {
-		const uric = marker({ id: "uric_acid", unit: "umol/L", altUnit: "mg/dL", altFactor: 59.48 });
-		const values = buildVisitValues(
-			[{ markerId: "uric_acid", outcome: { kind: "ok", value: 345.2, softWarn: false }, unit: "mg/dL" }],
-			new Map([["uric_acid", uric]]),
-		);
-
-		expect(values).toEqual({ uric_acid: 345.2, uric_acid_unit: "mg/dL" });
-	});
-
-	it("omits the `<id>_unit` sibling key when the entered unit matches the canonical unit", () => {
-		const uric = marker({ id: "uric_acid", unit: "umol/L", altUnit: "mg/dL", altFactor: 59.48 });
-		const values = buildVisitValues(
-			[{ markerId: "uric_acid", outcome: { kind: "ok", value: 345.2, softWarn: false }, unit: "umol/L" }],
-			new Map([["uric_acid", uric]]),
-		);
-
-		expect(values).toEqual({ uric_acid: 345.2 });
-	});
-});
-
-describe("buildVisitFrontmatter", () => {
-	it("shapes the frontmatter with type, person, date, and flat values", () => {
-		expect(buildVisitFrontmatter("self", "2025-07-23", { alt: 20 })).toEqual({
-			type: "lab-visit",
-			person: "self",
-			date: "2025-07-23",
-			alt: 20,
-		});
-	});
-});
-
-describe("buildPreSaveSummary", () => {
-	it("lists only fields that will be written, with raw text and parsed value", () => {
-		const alt = marker({ id: "alt", name: "ALT", unit: "U/L" });
-		const markersById = new Map([["alt", alt]]);
-
-		const summary = buildPreSaveSummary(markersById, [
-			{ markerId: "alt", raw: "20", outcome: { kind: "ok", value: 20, softWarn: false }, unit: "U/L" },
-			{ markerId: "ast", raw: "", outcome: { kind: "omitted" } },
-		]);
-
-		expect(summary).toEqual([{ markerId: "alt", label: "ALT", raw: "20", value: 20, unit: "U/L", softWarn: false }]);
-	});
-});
-
 describe("validateProfileInput", () => {
 	it("hard-blocks a missing person id", () => {
 		expect(validateProfileInput("", "m")).toBeDefined();
@@ -428,21 +317,6 @@ describe("parseAllergies", () => {
 
 	it("returns an empty array for a blank string", () => {
 		expect(parseAllergies("")).toEqual([]);
-	});
-});
-
-describe("unitOptions", () => {
-	it("offers only the canonical unit for a single-unit marker", () => {
-		const m = marker({ unit: "U/L" });
-		expect(unitOptions(m)).toEqual([{ value: "U/L", label: "U/L" }]);
-	});
-
-	it("offers both units for a dual-unit marker", () => {
-		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
-		expect(unitOptions(m)).toEqual([
-			{ value: "mmol/L", label: "mmol/L" },
-			{ value: "mg/dL", label: "mg/dL" },
-		]);
 	});
 });
 

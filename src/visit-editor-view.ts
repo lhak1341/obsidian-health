@@ -1,6 +1,6 @@
 import { ItemView, Modal, Notice, WorkspaceLeaf, type App, type ViewStateResult } from "obsidian";
-import { buildNewMarker, buildPreSaveSummary, buildVisitValues, evaluateVisitFields, formatVisitError, localDateISO, type NewMarkerDraft } from "./core/entry";
-import type { MarkerNote } from "./core/types";
+import { buildNewMarker, localDateISO, type NewMarkerDraft } from "./core/entry";
+import { planVisitSave } from "./core/visit-save";
 import type HealthPlugin from "./main";
 import { renderVisitEditor, reprefill, type EditorFormState, type VisitEditorOptions } from "./render/visit-editor-view";
 import type { VaultSnapshot } from "./vault/reader";
@@ -124,10 +124,6 @@ export class HealthVisitEditorView extends ItemView {
 		new DiscardChangesModal(this.app, () => void this.plugin.activateView(this.state.person)).open();
 	}
 
-	private markersById(): Map<string, MarkerNote> {
-		return new Map(this.state.markers.map((m) => [m.id, m]));
-	}
-
 	private async addMarker(draft: NewMarkerDraft): Promise<void> {
 		const result = buildNewMarker(draft, this.state.markers.map((m) => m.id));
 		if ("error" in result) {
@@ -143,22 +139,16 @@ export class HealthVisitEditorView extends ItemView {
 
 	private async save(): Promise<void> {
 		const profile = this.state.profiles.find((p) => p.person === this.state.person);
-		const { entries, errors } = evaluateVisitFields(this.state.markers, this.state.fields, profile, this.state.date);
-		if (errors.length > 0) {
-			this.state.errors = errors.map((e) => formatVisitError(e, this.markersById()));
+		const plan = planVisitSave(this.state, this.state.markers, profile);
+		if (!plan.ok) {
+			this.state.errors = plan.errors;
 			this.paint();
 			return;
 		}
 
-		const markersById = this.markersById();
-		const softWarnLabels = buildPreSaveSummary(markersById, entries)
-			.filter((line) => line.softWarn)
-			.map((line) => line.label);
+		await saveVisitNote(this.app, this.plugin.settings, this.state.person, this.state.date, plan.patch);
 
-		const values = buildVisitValues(entries, markersById);
-		await saveVisitNote(this.app, this.plugin.settings, this.state.person, this.state.date, values, this.state.facility.trim() || undefined);
-
-		const warnSuffix = softWarnLabels.length > 0 ? ` Double-check: ${softWarnLabels.join(", ")}.` : "";
+		const warnSuffix = plan.softWarnLabels.length > 0 ? ` Double-check: ${plan.softWarnLabels.join(", ")}.` : "";
 		new Notice(`Saved lab visit for ${this.state.person} on ${this.state.date}.${warnSuffix}`);
 		this.plugin.refreshOpenViews();
 		await this.refresh();

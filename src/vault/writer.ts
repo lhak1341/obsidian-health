@@ -1,7 +1,7 @@
 import type { App, TFile } from "obsidian";
 import { normalizeConcernKey } from "../core/concern";
-import { buildVisitFrontmatter } from "../core/entry";
 import type { MarkerNote, PersonSex } from "../core/types";
+import type { VisitPatch } from "../core/visit-save";
 import { renameConcernInSettings, type HealthPluginSettings } from "../settings";
 import { filesUnder, type VaultPaths } from "./reader";
 
@@ -67,14 +67,15 @@ export function findVisitFile(app: App, paths: VaultPaths, person: string, date:
 	return null;
 }
 
-/** Writes (creates or overwrites) a visit note's frontmatter values via Obsidian's own YAML writer. */
-export async function saveVisitNote(app: App, paths: VaultPaths, person: string, date: string, values: Record<string, number | string>, facility?: string): Promise<void> {
-	const target = buildVisitFrontmatter(person, date, values, facility);
+/** Applies a visit save (`planVisitSave` in core/visit-save.ts) to the person+date's note, creating
+ *  it if missing: deletes `patch.remove`, then writes `patch.set`. Keys in neither -- `tags`, a value
+ *  for a since-deleted marker -- are left untouched. */
+export async function saveVisitNote(app: App, paths: VaultPaths, person: string, date: string, patch: VisitPatch): Promise<void> {
 	const file = await getOrCreateFile(app, personVisitsFolder(paths, person), `${date}.md`, findVisitFile(app, paths, person, date));
 
 	await writeFrontmatter(app, file, (frontmatter) => {
-		for (const key of Object.keys(frontmatter)) delete frontmatter[key];
-		Object.assign(frontmatter, target);
+		for (const key of patch.remove) delete frontmatter[key];
+		Object.assign(frontmatter, patch.set);
 	});
 }
 

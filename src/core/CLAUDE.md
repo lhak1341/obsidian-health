@@ -9,8 +9,8 @@
   priority (`uric_acid` first), not the lab-report column sequence (`creatinine` first).
   Don't collapse them.
 - `MarkerNote.sex` (`m`/`f`, optional — unset means everyone) restricts whether a marker shows
-  at all, via `markerAppliesToSex` (`marker.ts`), used by `computeDashboardModel` and the visit
-  editor's `buildFields`. `MarkerNote.normal` is `string | string[]`: read it only through
+  at all, via `markerAppliesToSex` (`marker.ts`), used by `computeDashboardModel` and, via `isVisitFormMarker` (`visit-save.ts`), the visit
+  editor's `buildFields` and the save's key ownership. `MarkerNote.normal` is `string | string[]`: read it only through
   `normalValues`/`isNormalValue` (`marker.ts`), never re-normalise it by hand. Separate
   axis from `ranges[].sex`, which only picks which reference band resolves for a marker every
   profile still sees.

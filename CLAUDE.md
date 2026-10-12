@@ -9,7 +9,8 @@ specificity, `metadataCache` write-lag, live debugging. Only repo-specific facts
 Real vault data lives under `09 about-me/{markers,profiles,health/labs/<person>}`. Before
 editing it directly (not through the app), read the `obsidian-plugin-dev` skill's
 `references/debugging.md` for the vault path first — do not `find`/guess; decoy copies of the
-vault exist on disk.
+vault exist on disk. It is health PII: the auto-mode classifier blocks reading it, so get the
+user's OK first and print key names/counts, never values.
 
 A new marker needs a marker note and a value in the visit note. Its `03 base/Health.base` view
 `order:` list is derived, not hand-maintained — `vault/base-view-sync.ts` computes the desired

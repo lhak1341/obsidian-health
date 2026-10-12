@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
 	computeDashboardModel,
-	convert,
-	convertTo,
 	isSoftWarn,
-	isToggleable,
 	resolve,
 	resolveDefaultProfile,
 	resolveTarget,
 	toDisplay,
 } from "./dashboard";
+import { convert, convertTo } from "./units";
 import { realVaultFixture } from "./fixtures/real-vault";
 import type { DashboardSettings, MarkerStatusInfo } from "./model";
 import type { MarkerNote, ProfileNote, VisitNote } from "./types";
@@ -116,47 +114,6 @@ describe("resolveTarget", () => {
 	});
 });
 
-describe("convert", () => {
-	it("passes the value through unchanged when already in the canonical unit", () => {
-		const m = marker({ unit: "U/L" });
-
-		expect(convert(10, "U/L", m)).toBe(10);
-	});
-
-	it("converts an alt-unit value to canonical via alt_factor", () => {
-		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
-
-		expect(convert(100, "mg/dL", m)).toBeCloseTo(5.55);
-	});
-
-	it("throws for a unit the marker doesn't know", () => {
-		const m = marker({ unit: "mmol/L" });
-
-		expect(() => convert(100, "furlongs", m)).toThrow();
-	});
-});
-
-describe("convertTo", () => {
-	it("passes the value through unchanged when targeting the canonical unit", () => {
-		const m = marker({ unit: "U/L" });
-
-		expect(convertTo(10, "U/L", m)).toBe(10);
-	});
-
-	it("converts a canonical value to the alt unit -- inverse of convert", () => {
-		const m = marker({ unit: "mmol/L", altUnit: "mg/dL", altFactor: 0.0555 });
-
-		expect(convertTo(5.55, "mg/dL", m)).toBeCloseTo(100);
-		expect(convertTo(convert(100, "mg/dL", m), "mg/dL", m)).toBeCloseTo(100);
-	});
-
-	it("throws for a unit the marker doesn't know", () => {
-		const m = marker({ unit: "mmol/L" });
-
-		expect(() => convertTo(100, "furlongs", m)).toThrow();
-	});
-});
-
 describe("isSoftWarn", () => {
 	it("flags a converted value more than 5x the ceiling", () => {
 		expect(isSoftWarn(300, { low: 10, high: 50 })).toBe(true);
@@ -222,17 +179,6 @@ describe("resolveDefaultProfile", () => {
 		it("is ignored when absent", () => {
 			expect(resolveDefaultProfile(profiles, "bob", undefined)?.person).toBe("bob");
 		});
-	});
-});
-
-describe("isToggleable", () => {
-	it("is true when both alt_unit and alt_factor are set", () => {
-		expect(isToggleable(marker({ altUnit: "mg/dL", altFactor: 0.0555 }))).toBe(true);
-	});
-
-	it("is false when either is missing", () => {
-		expect(isToggleable(marker())).toBe(false);
-		expect(isToggleable(marker({ altUnit: "mg/dL" }))).toBe(false);
 	});
 });
 

@@ -10,11 +10,14 @@
   wrong and the field silently parses as `undefined`, no error. Stayed prose (mechanize sweep
   2026-08-31): the typo happens in hand-authored vault notes, outside the repo, so no build-time
   gate can see it. Reversed by a read-time validator in `reader.ts` that warns on an unknown
-  camelCase key — a product change, not a gate.
+  camelCase key — a product change, not a gate. A field table for these keys was rejected
+  (`docs/adr/0007`).
+- Writer functions aren't reachable from `obsidian eval` (module-private in the bundle), but every frontmatter write goes
+  through `app.fileManager.processFrontMatter`: to live-check a save without writing, stub it to run the real mutator on a clone of the cached frontmatter, restore in `finally`.
 - `fixtures/fake-app.ts` — minimal in-memory `App` fake (the `vault` / `metadataCache` /
   `fileManager` subset `reader.ts` and `writer.ts` use). Supports injecting a mid-batch write
   failure via `failOn`, and simulating re-index lag via `deferIndexing` +
   `flushMetadataCache(path)`. Also has `vault.read`/`vault.modify` for raw (non-frontmatter)
   file content, e.g. a `.base` file. Reuse it rather than rebuilding.
-- Patch, don't round-trip: a writer that changes one field mutates only that key inside the live `writeFrontmatter` callback (`saveMarkerOrder`, `saveMarkerTarget`). Rebuilding the note from a parsed
+- Patch, don't round-trip: a writer that changes one field mutates only that key inside the live `writeFrontmatter` callback (`saveMarkerOrder`, `saveMarkerTarget`). `saveVisitNote` applies a `VisitPatch` (`set` + `remove`) from `core/visit-save.ts`'s `planVisitSave`, so keys the editor doesn't own survive an edit. Rebuilding the note from a parsed
   `ProfileNote`/`MarkerNote` writes a stale snapshot over newer edits and drops keys the reader doesn't model. Full-form saves (`saveProfileNote`) are the exception.
