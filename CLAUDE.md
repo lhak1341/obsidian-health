@@ -37,3 +37,10 @@ Local issue tracker under `.scratch/<feature-slug>/` (`MAP.md` + `tickets/`) —
 `docs/agents/issue-tracker.md`.
 
 Domain docs (`CONTEXT.md` + `docs/adr/`) — see `docs/agents/domain.md`.
+
+## @lhak/style
+
+The look comes from `@lhak/style`, vendored at `vendor/lhak-style/` (committed, so a clone builds
+with no token). To update it, run `node scripts/vendor.mjs <this repo>` from lhak-style-guide, then
+`bun install` here. `styles.css` is generated from `styles.src.css`; edit the source. Conventions
+are in `src/CLAUDE.md`.

@@ -1,28 +1,34 @@
-/* ── Token layer (scoped to view root) ──────────────────────────────────── */
+@import '@lhak/style/obsidian.css';
+
+/* ── Token layer ─────────────────────────────────────────────────────────────
+   Colours, fonts and the rest come from the @lhak/style alias layer above, which maps every --lk-
+   role onto the active theme's variables under `.lk-root`. Each view root carries `.lk-root`: the
+   three ItemViews' contentEl (`.health-*-outer`, below), the Bases view's container and the shared
+   tooltip (`render/tooltip.ts`, mounted on document.body). The lhak-dashboard widget has none of its
+   own: it reads the roles from its host's root, so the host's font settings reach it.
+
+   Font roles: heading is --lk-font-label, body is --lk-font-interface, mono is --lk-font-code. The
+   alias layer gives them Obsidian's interface, text and monospace fonts; the Appearance settings
+   override them inline on each root (applyFontRoles, @lhak/style), and the default choice removes
+   the override.
+
+   No dot grid of HLTH's own: the theme draws the page's dots, and they show through the views and
+   cards here (lhak-style-adoption 04).
+
+   Font sizes are rem, never px (the @lhak/style stylelint check, run by `bun run lint`). Obsidian
+   sets the root font size to the Text size setting, so 1rem was 19px when the px sizes were
+   converted (12px = 0.6316rem), and the text now scales with that setting.
+
+   The settings tab, its icon picker and the drag-reorder list sit outside any `.lk-root`, in
+   Obsidian's own UI, so those rules keep reading Obsidian's variables. */
 .health-dashboard-outer,
 .health-planner-outer,
 .health-visit-editor-outer {
-	--hlth-bg: var(--background-primary, #ffffff);
-	--hlth-bg2: var(--background-secondary, #f6f6f6);
-	--hlth-bg3: var(--background-secondary-alt, #ececec);
-	--hlth-fg1: var(--text-normal, #1f1f1f);
-	--hlth-fg2: var(--text-muted, #4a4a4a);
-	--hlth-fg3: var(--text-faint, #8a8a8a);
-	--hlth-fg4: color-mix(in oklch, var(--text-faint, #8a8a8a), var(--background-primary, #ffffff) 45%);
-	--hlth-border: var(--background-modifier-border, rgba(0, 0, 0, 0.08));
-	--hlth-dot: rgba(127, 127, 127, 0.07);
-	/* Overridable per-instance via inline style (see HealthPlugin.applyFontVarsTo) -- the Setting
-	   tab's default "Health" choice leaves these unset there, falling through to these theme
-	   fonts. */
-	--hlth-fh: var(--font-interface);
-	--hlth-fb: var(--font-text);
-	--hlth-fm: var(--font-monospace);
-
 	height: 100%;
 	width: 100% !important;
 	max-width: none !important;
 	overflow: hidden;
-	background-color: var(--hlth-bg);
+	background-color: var(--lk-surface);
 	position: relative;
 }
 
@@ -31,10 +37,8 @@
 	overflow-y: auto;
 	box-sizing: border-box;
 	padding: 22px 28px 20px;
-	color: var(--hlth-fg1);
-	font-family: var(--hlth-fb);
-	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
-	background-size: 14px 14px;
+	color: var(--lk-text);
+	font-family: var(--lk-font-interface);
 	container-type: inline-size;
 }
 
@@ -54,29 +58,31 @@ svg.hlth-ic {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 17px;
+	font-size: 0.8947rem;
 	color: var(--text-muted);
 	margin-right: 8px;
 }
 
-.hlth-icon-suggest-item {
+/* The shared icon picker (@lhak/style IconSuggest) draws these classes in Obsidian's suggestion
+   popover, outside any .lk-root; the package ships no rule for them. */
+.lk-icon-suggest-item {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 }
 
-.hlth-icon-suggest-icon {
+.lk-icon-suggest-icon {
 	display: inline-flex;
 	align-items: center;
 }
 
 .hlth-lbl {
-	font-family: var(--hlth-fh);
-	font-size: 11px;
+	font-family: var(--lk-font-label);
+	font-size: 0.5789rem;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
-	color: var(--hlth-fg3);
+	color: var(--lk-text-faint);
 }
 
 .hlth-dot {
@@ -88,11 +94,11 @@ svg.hlth-ic {
 }
 
 .hlth-title {
-	font-family: var(--hlth-fh);
-	font-size: 18px;
+	font-family: var(--lk-font-label);
+	font-size: 0.9474rem;
 	font-weight: 700;
 	letter-spacing: -0.01em;
-	color: var(--hlth-fg1);
+	color: var(--lk-text);
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
@@ -125,13 +131,13 @@ svg.hlth-ic {
 .hlth-dash .hlth-pill,
 .hlth-planner .hlth-pill,
 .hlth-visit-editor .hlth-pill {
-	font-family: var(--hlth-fh);
-	font-size: 12px;
+	font-family: var(--lk-font-label);
+	font-size: 0.6316rem;
 	font-weight: 600;
-	color: var(--hlth-fg3);
+	color: var(--lk-text-faint);
 	padding: 4px 12px;
 	border-radius: 999px;
-	border: 1px solid var(--hlth-border);
+	border: 1px solid var(--lk-border);
 	cursor: pointer;
 	background: transparent;
 	box-shadow: none;
@@ -140,22 +146,22 @@ svg.hlth-ic {
 .hlth-dash .hlth-pill:hover,
 .hlth-planner .hlth-pill:hover,
 .hlth-visit-editor .hlth-pill:hover {
-	background: var(--hlth-bg2);
-	color: var(--hlth-fg1);
+	background: var(--lk-surface-chrome);
+	color: var(--lk-text);
 }
 
 .hlth-dash .hlth-pill-active,
 .hlth-planner .hlth-pill-active,
 .hlth-visit-editor .hlth-pill-active {
-	background: var(--interactive-accent, var(--hlth-fg1));
-	color: var(--text-on-accent, var(--hlth-bg));
+	background: var(--lk-accent);
+	color: var(--lk-text-on-accent);
 	border-color: transparent;
 }
 
 .hlth-profile-info {
-	font-family: var(--hlth-fm);
-	font-size: 11px;
-	color: var(--hlth-fg3);
+	font-family: var(--lk-font-code);
+	font-size: 0.5789rem;
+	color: var(--lk-text-faint);
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -166,7 +172,7 @@ svg.hlth-ic {
 }
 
 .hlth-profile-info svg.hlth-ic {
-	color: var(--color-red);
+	color: var(--lk-red);
 	flex: none;
 }
 
@@ -183,13 +189,13 @@ svg.hlth-ic {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	font-family: var(--hlth-fh);
+	font-family: var(--lk-font-label);
 	font-weight: 600;
-	font-size: 13px;
-	color: var(--hlth-fg2);
+	font-size: 0.6842rem;
+	color: var(--lk-text-muted);
 	background: transparent;
 	box-shadow: none;
-	border: 1px solid var(--hlth-border);
+	border: 1px solid var(--lk-border);
 	border-radius: 8px;
 	padding: 6px 12px;
 	cursor: pointer;
@@ -198,22 +204,22 @@ svg.hlth-ic {
 .hlth-dash .hlth-showall-btn:hover,
 .hlth-planner .hlth-showall-btn:hover,
 .hlth-visit-editor .hlth-showall-btn:hover {
-	background: var(--hlth-bg2);
-	color: var(--hlth-fg1);
+	background: var(--lk-surface-chrome);
+	color: var(--lk-text);
 }
 
 .hlth-dash .hlth-showall-btn:focus-visible,
 .hlth-planner .hlth-showall-btn:focus-visible,
 .hlth-visit-editor .hlth-showall-btn:focus-visible {
-	outline: 2px solid var(--interactive-accent);
+	outline: 2px solid var(--lk-accent);
 	outline-offset: 2px;
 }
 
 .hlth-dash .hlth-showall-btn.hlth-btn-on,
 .hlth-planner .hlth-showall-btn.hlth-btn-on,
 .hlth-visit-editor .hlth-showall-btn.hlth-btn-on {
-	color: var(--interactive-accent);
-	border-color: color-mix(in srgb, var(--interactive-accent) 45%, var(--hlth-border));
+	color: var(--lk-accent);
+	border-color: color-mix(in srgb, var(--lk-accent) 45%, var(--lk-border));
 }
 
 /* ── Attention hero ──────────────────────────────────────────────────────── */
@@ -222,8 +228,8 @@ svg.hlth-ic {
 	flex-direction: column;
 	gap: 10px;
 	padding: 12px 4px 14px;
-	border-top: 1px solid var(--hlth-border);
-	border-bottom: 1px solid var(--hlth-border);
+	border-top: 1px solid var(--lk-border);
+	border-bottom: 1px solid var(--lk-border);
 }
 
 .hlth-attn-lead {
@@ -233,9 +239,9 @@ svg.hlth-ic {
 }
 
 .hlth-attn-count {
-	font-family: var(--hlth-fm);
-	font-size: 11px;
-	color: var(--hlth-fg3);
+	font-family: var(--lk-font-code);
+	font-size: 0.5789rem;
+	color: var(--lk-text-faint);
 }
 
 .hlth-attn-items {
@@ -257,34 +263,34 @@ svg.hlth-ic {
 }
 
 .hlth-attn-item:hover {
-	background: var(--hlth-bg2);
+	background: var(--lk-surface-chrome);
 }
 
 .hlth-attn-name {
-	font-family: var(--hlth-fb);
-	font-size: 14px;
-	color: var(--hlth-fg1);
+	font-family: var(--lk-font-interface);
+	font-size: 0.7368rem;
+	color: var(--lk-text);
 }
 
 .hlth-attn-value {
-	font-family: var(--hlth-fh);
+	font-family: var(--lk-font-label);
 	font-weight: 700;
-	font-size: 15px;
+	font-size: 0.7895rem;
 	font-variant-numeric: tabular-nums;
 }
 
 .hlth-attn-why {
-	font-family: var(--hlth-fm);
-	font-size: 10px;
-	color: var(--hlth-fg3);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-text-faint);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
 
 .hlth-attn-empty {
-	font-family: var(--hlth-fb);
-	font-size: 13px;
-	color: var(--color-green);
+	font-family: var(--lk-font-interface);
+	font-size: 0.6842rem;
+	color: var(--lk-success);
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -318,7 +324,7 @@ svg.hlth-ic {
 }
 
 .hlth-lane + .hlth-lane {
-	border-left: 1px solid var(--hlth-border);
+	border-left: 1px solid var(--lk-border);
 	margin-left: 10px;
 	padding-left: 10px;
 }
@@ -366,16 +372,16 @@ svg.hlth-ic {
 }
 
 .hlth-grp-head:hover {
-	background: var(--hlth-bg2);
+	background: var(--lk-surface-chrome);
 }
 
 .hlth-grp-icon {
-	color: var(--hlth-fg3);
-	font-size: 13px;
+	color: var(--lk-text-faint);
+	font-size: 0.6842rem;
 }
 
 .hlth-grp-head:hover .hlth-grp-label {
-	color: var(--hlth-fg1);
+	color: var(--lk-text);
 }
 
 .hlth-grp-label {
@@ -386,9 +392,9 @@ svg.hlth-ic {
 	display: flex;
 	align-items: center;
 	gap: 3px;
-	font-family: var(--hlth-fm);
-	font-size: 10px;
-	color: var(--color-cyan);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-cyan);
 	opacity: 0;
 	transition: opacity 0.12s;
 	flex: none;
@@ -400,9 +406,9 @@ svg.hlth-ic {
 }
 
 .hlth-grp-tag {
-	font-family: var(--hlth-fm);
-	font-size: 10px;
-	color: var(--hlth-fg4);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-text-disabled);
 	margin-left: auto;
 }
 
@@ -426,12 +432,12 @@ svg.hlth-ic {
 	   edge; the matching padding increase keeps the actual row CONTENT exactly where it was. */
 	margin: 0 -4px;
 	padding: 7px 6px;
-	border-top: 1px solid var(--hlth-border);
+	border-top: 1px solid var(--lk-border);
 	cursor: pointer;
 }
 
 .hlth-row:hover {
-	background: var(--hlth-bg2);
+	background: var(--lk-surface-chrome);
 }
 
 .hlth-row.hlth-hidden {
@@ -451,9 +457,9 @@ svg.hlth-ic {
 }
 
 .hlth-name-text {
-	font-family: var(--hlth-fb);
-	font-size: 14px;
-	color: var(--hlth-fg1);
+	font-family: var(--lk-font-interface);
+	font-size: 0.7368rem;
+	color: var(--lk-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -461,23 +467,20 @@ svg.hlth-ic {
 	min-width: 0;
 }
 
-/* Appended directly to `document.body` (see dashboard-view.ts `getSharedTooltip`) so it escapes
-   both `.hlth-dash`'s scroll clip and any transformed ancestor in Obsidian's own workspace chrome.
-   That also puts it OUTSIDE `.health-dashboard-outer`'s scope, where the `--hlth-*` tokens are
-   declared as a CSS rule -- color/background still use raw Obsidian vars directly for that reason
-   (see CLAUDE.md's "widget/embed mounting" gotcha). Font is the one exception: `--hlth-fh` here
-   is pushed in via inline style from `HealthPlugin.applyFonts()`/`render/tooltip.ts`'s
-   `applyTooltipFonts`, not inherited from the outer scope -- the `var(--hlth-fh, ...)` fallback
-   below covers the default (nothing pushed yet, or the "Health" default choice). Both the
-   meaning (name) and range (secondary) lines use the heading font -- no body/mono split here. */
+/* Appended directly to `document.body` (see `render/tooltip.ts`) so it escapes both `.hlth-dash`'s
+   scroll clip and any transformed ancestor in Obsidian's own workspace chrome. That also puts it
+   outside every view root, so the tooltip carries `.lk-root` itself, and the font settings reach
+   it inline from `HealthPlugin.applyFonts()` (`applyTooltipFonts`), not by inheritance. Both the
+   meaning (name) and range (secondary) lines use the heading font -- no body/mono split here.
+   The shadow is the theme's large shadow: a raw rgba() fails the adoption check. */
 .hlth-tip {
 	position: fixed;
 	width: 220px;
-	background: var(--background-secondary, #eee);
-	color: var(--text-normal, #1f1f1f);
-	border: 1px solid var(--background-modifier-border, transparent);
-	font-family: var(--hlth-fh, var(--font-interface));
-	font-size: 12px;
+	background: var(--lk-surface-chrome);
+	color: var(--lk-text);
+	border: 1px solid var(--lk-border);
+	font-family: var(--lk-font-label);
+	font-size: 0.6316rem;
 	line-height: 1.5;
 	padding: 9px 11px;
 	border-radius: 8px;
@@ -485,19 +488,17 @@ svg.hlth-ic {
 	pointer-events: none;
 	transition: opacity 0.14s;
 	z-index: 200;
-	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+	box-shadow: var(--lk-shadow-l);
 }
 
 .hlth-tip-meaning {
 	display: block;
 }
 
-/* Outside `.health-dashboard-outer`'s scope like the rest of `.hlth-tip` (see comment above) --
-   raw Obsidian vars, not `--hlth-*` aliases. */
 .hlth-tip-meaning code {
-	font-family: var(--font-monospace, "SF Mono", Menlo, monospace);
-	font-size: 11px;
-	background: var(--background-primary, rgba(0, 0, 0, 0.08));
+	font-family: var(--lk-font-code);
+	font-size: 0.5789rem;
+	background: var(--lk-surface);
 	border-radius: 3px;
 	padding: 1px 4px;
 }
@@ -505,7 +506,7 @@ svg.hlth-ic {
 .hlth-tip-range {
 	display: block;
 	margin-top: 6px;
-	font-size: 11px;
+	font-size: 0.5789rem;
 	opacity: 0.82;
 }
 
@@ -513,14 +514,37 @@ svg.hlth-ic {
 	opacity: 1;
 }
 
+/* The sparkline is a single-quantity chart, so magnitude is lightness, never a hue. The ramp is
+   neutral, not the accent (user decision, lhak-style-adoption 04, departing from wayfinder 013):
+   Capritarius's accent is green, which beside a status dot read as "good" on every row. The line
+   is the muted text colour, the earlier series and the no-reading dash sit lower on the ramp, and
+   the reference band is its faintest step. Only the last reading's dot takes its status colour
+   (charts.ts), which the row's arrow and value also carry. Set here, not as SVG attributes:
+   html-to-image bakes computed styles into its export. */
 svg.hlth-spk {
 	width: 52px;
 	height: 20px;
 	flex: none;
 }
 
+svg.hlth-spk .hlth-spk-line {
+	stroke: var(--lk-text-muted);
+}
+
+svg.hlth-spk .hlth-spk-secondary {
+	stroke: color-mix(in oklab, var(--lk-text) 40%, var(--lk-surface));
+}
+
+svg.hlth-spk .hlth-spk-empty {
+	stroke: color-mix(in oklab, var(--lk-text) 25%, var(--lk-surface));
+}
+
+svg.hlth-spk .hlth-spk-band {
+	fill: color-mix(in oklab, var(--lk-text) 10%, var(--lk-surface));
+}
+
 .hlth-arrow {
-	font-size: 11px;
+	font-size: 0.5789rem;
 	width: 12px;
 	text-align: center;
 	display: flex;
@@ -529,11 +553,11 @@ svg.hlth-spk {
 }
 
 .hlth-value {
-	font-family: var(--hlth-fh);
+	font-family: var(--lk-font-label);
 	font-weight: 700;
-	font-size: 15px;
+	font-size: 0.7895rem;
 	font-variant-numeric: tabular-nums;
-	color: var(--hlth-fg1);
+	color: var(--lk-text);
 }
 
 .hlth-row > .hlth-value {
@@ -545,15 +569,15 @@ svg.hlth-spk {
 }
 
 .hlth-value-qual {
-	font-size: 12px;
+	font-size: 0.6316rem;
 	font-weight: 600;
 	letter-spacing: 0.02em;
 }
 
 .hlth-unit {
-	font-family: var(--hlth-fm);
-	font-size: 10.5px;
-	color: var(--hlth-fg4);
+	font-family: var(--lk-font-code);
+	font-size: 0.5526rem;
+	color: var(--lk-text-disabled);
 }
 
 .hlth-row > .hlth-unit {
@@ -570,7 +594,7 @@ svg.hlth-spk {
 }
 
 .hlth-unit-toggle:hover {
-	color: var(--hlth-fg2);
+	color: var(--lk-text-muted);
 }
 
 /* ── Accordion detail ────────────────────────────────────────────────────── */
@@ -582,7 +606,7 @@ svg.hlth-spk {
 
 .hlth-detail.hlth-open {
 	max-height: 340px;
-	border-top: 1px dashed var(--hlth-border);
+	border-top: 1px dashed var(--lk-border);
 }
 
 .hlth-detail-in {
@@ -598,25 +622,25 @@ svg.hlth-spk {
 }
 
 .hlth-detail-meaning {
-	font-family: var(--hlth-fb);
-	font-size: 12px;
-	color: var(--hlth-fg2);
+	font-family: var(--lk-font-interface);
+	font-size: 0.6316rem;
+	color: var(--lk-text-muted);
 	line-height: 1.45;
 	max-width: 72%;
 }
 
 .hlth-detail-meaning code {
-	font-family: var(--font-monospace, "SF Mono", Menlo, monospace);
-	font-size: 11px;
-	background: var(--hlth-bg2, rgba(0, 0, 0, 0.08));
+	font-family: var(--lk-font-code);
+	font-size: 0.5789rem;
+	background: var(--lk-surface-chrome);
 	border-radius: 3px;
 	padding: 1px 4px;
 }
 
 .hlth-detail-now {
-	font-family: var(--hlth-fh);
+	font-family: var(--lk-font-label);
 	font-weight: 700;
-	font-size: 19px;
+	font-size: 1rem;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
@@ -639,33 +663,33 @@ svg.hlth-chart {
 	flex-direction: column;
 	gap: 2px;
 	align-items: center;
-	font-family: var(--hlth-fm);
-	font-size: 12px;
+	font-family: var(--lk-font-code);
+	font-size: 0.6316rem;
 	padding: 6px 10px;
-	border: 1px solid var(--hlth-border);
+	border: 1px solid var(--lk-border);
 	border-radius: 4px;
 	min-width: 52px;
 }
 
 .hlth-qchip b {
-	color: var(--hlth-fg4);
+	color: var(--lk-text-disabled);
 	font-weight: 400;
-	font-size: 10px;
+	font-size: 0.5263rem;
 }
 
 .hlth-qchip-bad {
-	border-color: color-mix(in srgb, var(--color-orange) 55%, var(--hlth-border));
-	color: var(--color-orange);
+	border-color: color-mix(in srgb, var(--lk-orange) 55%, var(--lk-border));
+	color: var(--lk-orange);
 }
 
 .hlth-qchip-good {
-	color: var(--hlth-fg1);
+	color: var(--lk-text);
 }
 
 .hlth-empty {
-	font-family: var(--hlth-fb);
-	font-size: 14px;
-	color: var(--hlth-fg3);
+	font-family: var(--lk-font-interface);
+	font-size: 0.7368rem;
+	color: var(--lk-text-faint);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -682,10 +706,8 @@ svg.hlth-chart {
 	overflow-y: auto;
 	box-sizing: border-box;
 	padding: 22px 28px 20px;
-	color: var(--hlth-fg1);
-	font-family: var(--hlth-fb);
-	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
-	background-size: 14px 14px;
+	color: var(--lk-text);
+	font-family: var(--lk-font-interface);
 }
 
 /* Person/date (or, in edit mode, person/visit) picker row. */
@@ -696,7 +718,7 @@ svg.hlth-chart {
 	justify-content: space-between;
 	gap: 20px;
 	padding: 10px 0 16px;
-	border-bottom: 1px solid var(--hlth-border);
+	border-bottom: 1px solid var(--lk-border);
 	margin-bottom: 16px;
 }
 
@@ -718,11 +740,11 @@ svg.hlth-chart {
 }
 
 .hlth-editor-select {
-	font-family: var(--hlth-fm);
-	font-size: 12.5px;
-	color: var(--hlth-fg1);
-	background: var(--hlth-bg2);
-	border: 1px solid var(--hlth-border);
+	font-family: var(--lk-font-code);
+	font-size: 0.6579rem;
+	color: var(--lk-text);
+	background: var(--lk-surface-chrome);
+	border: 1px solid var(--lk-border);
 	border-radius: 4px;
 	padding: 5px 8px;
 	box-shadow: none;
@@ -735,10 +757,10 @@ svg.hlth-chart {
 	gap: 7px;
 	margin-bottom: 14px;
 	padding: 5px 8px;
-	border: 1px solid var(--hlth-border);
+	border: 1px solid var(--lk-border);
 	border-radius: 4px;
-	background: var(--hlth-bg2);
-	color: var(--hlth-fg3);
+	background: var(--lk-surface-chrome);
+	color: var(--lk-text-faint);
 }
 
 .hlth-editor-search svg.hlth-ic {
@@ -750,9 +772,9 @@ svg.hlth-chart {
 .hlth-editor-search-input {
 	flex: 1 1 auto;
 	min-width: 0;
-	font-family: var(--hlth-fb);
-	font-size: 12.5px;
-	color: var(--hlth-fg1);
+	font-family: var(--lk-font-interface);
+	font-size: 0.6579rem;
+	color: var(--lk-text);
 	background: transparent;
 	border: none;
 	box-shadow: none;
@@ -760,7 +782,7 @@ svg.hlth-chart {
 }
 
 .hlth-editor-search-input::placeholder {
-	color: var(--hlth-fg4);
+	color: var(--lk-text-disabled);
 }
 
 /* One card per panel -- the physical lab report's own grouping (CLAUDE.md: panel is the
@@ -789,7 +811,7 @@ svg.hlth-chart {
 
 .hlth-editor-panel {
 	min-width: 0;
-	border: 1px solid var(--hlth-border);
+	border: 1px solid var(--lk-border);
 	border-radius: 4px;
 	padding: 2px 10px 6px;
 }
@@ -806,12 +828,12 @@ svg.hlth-chart {
 }
 
 .hlth-editor-panel-head:hover {
-	background: var(--hlth-bg2);
+	background: var(--lk-surface-chrome);
 }
 
 .hlth-editor-panel-head svg.hlth-ic {
-	color: var(--hlth-fg3);
-	font-size: 13px;
+	color: var(--lk-text-faint);
+	font-size: 0.6842rem;
 }
 
 .hlth-editor-row {
@@ -822,7 +844,7 @@ svg.hlth-chart {
 	margin: 0 -4px;
 	padding-left: 4px;
 	padding-right: 4px;
-	border-top: 1px solid var(--hlth-border);
+	border-top: 1px solid var(--lk-border);
 	border-radius: 4px;
 }
 
@@ -831,15 +853,15 @@ svg.hlth-chart {
 }
 
 .hlth-editor-row:hover {
-	background: var(--hlth-bg2);
+	background: var(--lk-surface-chrome);
 }
 
 .hlth-editor-name {
 	flex: 1 1 auto;
 	min-width: 0;
-	font-family: var(--hlth-fb);
-	font-size: 12.5px;
-	color: var(--hlth-fg1);
+	font-family: var(--lk-font-interface);
+	font-size: 0.6579rem;
+	color: var(--lk-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -854,26 +876,26 @@ svg.hlth-chart {
 
 .hlth-editor-value {
 	width: 62px;
-	font-family: var(--hlth-fm);
-	font-size: 12.5px;
+	font-family: var(--lk-font-code);
+	font-size: 0.6579rem;
 	text-align: right;
-	color: var(--hlth-fg1);
+	color: var(--lk-text);
 	background: transparent;
 	border: none;
-	border-bottom: 1px solid var(--hlth-border);
+	border-bottom: 1px solid var(--lk-border);
 	border-radius: 0;
 	padding: 2px 1px;
 	box-shadow: none;
 }
 
 .hlth-editor-value:focus {
-	border-bottom-color: var(--interactive-accent);
+	border-bottom-color: var(--lk-accent);
 	outline: none;
 	box-shadow: none;
 }
 
 .hlth-editor-value::placeholder {
-	color: var(--hlth-fg4);
+	color: var(--lk-text-disabled);
 }
 
 .hlth-editor-value-pair {
@@ -886,22 +908,22 @@ svg.hlth-chart {
 }
 
 .hlth-editor-sep {
-	font-family: var(--hlth-fm);
-	font-size: 12px;
-	color: var(--hlth-fg4);
+	font-family: var(--lk-font-code);
+	font-size: 0.6316rem;
+	color: var(--lk-text-disabled);
 }
 
 .hlth-editor-unit {
 	min-width: 30px;
-	font-family: var(--hlth-fm);
-	font-size: 10px;
-	color: var(--hlth-fg3);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-text-faint);
 }
 
 .hlth-editor-unit-select {
-	font-family: var(--hlth-fm);
-	font-size: 10.5px;
-	color: var(--hlth-fg2);
+	font-family: var(--lk-font-code);
+	font-size: 0.5526rem;
+	color: var(--lk-text-muted);
 	background: transparent;
 	border: none;
 	box-shadow: none;
@@ -910,10 +932,10 @@ svg.hlth-chart {
 }
 
 .hlth-editor-qualitative {
-	font-size: 12.5px;
-	color: var(--hlth-fg1);
-	background: var(--hlth-bg2);
-	border: 1px solid var(--hlth-border);
+	font-size: 0.6579rem;
+	color: var(--lk-text);
+	background: var(--lk-surface-chrome);
+	border: 1px solid var(--lk-border);
 	border-radius: 4px;
 	padding: 2px 5px;
 	max-width: 120px;
@@ -921,8 +943,8 @@ svg.hlth-chart {
 
 /* Review/errors/add-marker blocks, shared with the compact panel rows above. */
 .hlth-modal-errors {
-	color: var(--color-red);
-	font-size: 12.5px;
+	color: var(--lk-danger);
+	font-size: 0.6579rem;
 	margin: 8px 0;
 	display: flex;
 	flex-direction: column;
@@ -931,14 +953,14 @@ svg.hlth-chart {
 
 .hlth-modal-addmarker {
 	margin-top: 14px;
-	border-top: 1px solid var(--hlth-border);
+	border-top: 1px solid var(--lk-border);
 	padding-top: 10px;
 }
 
 .hlth-modal-addmarker summary {
 	cursor: pointer;
-	color: var(--hlth-fg2);
-	font-size: 12.5px;
+	color: var(--lk-text-muted);
+	font-size: 0.6579rem;
 }
 
 .hlth-modal-summary {
@@ -949,7 +971,7 @@ svg.hlth-chart {
 }
 
 .hlth-modal-summary-warn {
-	color: var(--color-orange);
+	color: var(--lk-orange);
 }
 
 .hlth-modal-footer {
@@ -1007,34 +1029,34 @@ svg.hlth-chart {
 
 .hlth-order-handle {
 	color: var(--text-faint);
-	font-size: 14px;
+	font-size: 0.7368rem;
 	line-height: 1;
 	flex: none;
 }
 
 .hlth-order-name {
-	font-size: 13px;
+	font-size: 0.6842rem;
 	color: var(--text-normal);
 }
 
 /* ── lhak-dashboard widget ────────────────────────────────────────────────────────────────
-   Matches `.scratch/health-dashboard/prototypes/widget-mockup.html`'s "size ladder" card --
-   mounted outside `.health-dashboard-outer` (see CLAUDE.md's "widget/embed mounting" gotcha),
-   so every rule here uses raw Obsidian vars, never `var(--hlth-*)`. */
+   Matches `.scratch/health-dashboard/prototypes/widget-mockup.html`'s "size ladder" card, without
+   its dot grid: a plain card, so the host's page dots stay the only ones. Mounted into the host's
+   view (lhak-dashboard), whose root carries `.lk-root`, so the roles and the host's font settings
+   reach it; the Bases view's container carries `.lk-root` itself. Labels, values and chip counts
+   read the heading role, row names the body role, counts and "more" the mono role -- HLTH owns
+   these rules, the host sets nothing on the widget's internals (lhak-style-adoption 04). */
 .hlth-widget {
 	width: fit-content;
 	max-width: 280px;
 	zoom: 0.9;
-	background: var(--background-primary);
-	border: 1px solid var(--background-modifier-border);
+	background: var(--lk-surface);
+	border: 1px solid var(--lk-border);
 	border-radius: 8px;
 	padding: 11px 12px 5px;
-	background-image: radial-gradient(color-mix(in srgb, var(--text-faint) 14%, transparent) 1px, transparent 1px);
-	background-size: 14px 14px;
-	background-position: -1px -1px;
-	font-family: var(--font-interface);
-	font-size: 12.5px;
-	color: var(--text-normal);
+	font-family: var(--lk-font-label);
+	font-size: 0.6579rem;
+	color: var(--lk-text);
 	box-sizing: border-box;
 }
 
@@ -1063,26 +1085,26 @@ svg.hlth-chart {
 	width: 15px;
 	height: 15px;
 	flex: none;
-	color: var(--color-red);
+	color: var(--lk-danger);
 }
 
 .hlth-widget-heart.hlth-widget-heart-ok {
-	color: var(--color-green);
+	color: var(--lk-success);
 }
 
 .hlth-widget-lbl {
-	font-family: var(--font-interface);
+	font-family: var(--lk-font-label);
 	font-weight: 700;
-	font-size: 11px;
+	font-size: 0.5789rem;
 	text-transform: uppercase;
 	letter-spacing: 0.12em;
-	color: var(--text-muted);
+	color: var(--lk-text-muted);
 }
 
 .hlth-widget-count {
-	font-family: var(--font-monospace);
-	font-size: 10px;
-	color: var(--text-faint);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-text-faint);
 	margin-left: auto;
 }
 
@@ -1102,11 +1124,11 @@ svg.hlth-widget-chip-unit-flag {
 	width: 13px;
 	height: 13px;
 	flex: none;
-	color: var(--text-faint);
+	color: var(--lk-text-faint);
 }
 
 .hlth-widget-header:hover .hlth-widget-lbl {
-	color: var(--text-normal);
+	color: var(--lk-text);
 }
 
 .hlth-widget-empty,
@@ -1114,7 +1136,7 @@ svg.hlth-widget-chip-unit-flag {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	color: var(--text-muted);
+	color: var(--lk-text-muted);
 }
 
 .hlth-widget-chip-root {
@@ -1131,29 +1153,29 @@ svg.hlth-widget-chip-unit-flag {
 	min-height: 0;
 	padding: 0 12px;
 	margin: 0;
-	background: var(--background-primary);
-	border: 1px solid var(--background-modifier-border);
+	background: var(--lk-surface);
+	border: 1px solid var(--lk-border);
 	box-shadow: none;
 	border-radius: 999px;
-	color: var(--text-normal);
+	color: var(--lk-text);
 	font-family: inherit;
 	cursor: pointer;
 }
 
 .hlth-widget-chip-count {
-	font-family: var(--font-interface);
+	font-family: var(--lk-font-label);
 	font-weight: 700;
-	font-size: 13px;
+	font-size: 0.6842rem;
 }
 
 .hlth-widget-chip-count-ok {
-	color: var(--color-green);
+	color: var(--lk-success);
 }
 
 .hlth-widget-chip-unit {
-	font-family: var(--font-monospace);
-	font-size: 10px;
-	color: var(--text-faint);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-text-faint);
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
 }
@@ -1185,11 +1207,11 @@ svg.hlth-widget-chip-unit-flag {
 	background: transparent;
 	border: none;
 	box-shadow: none;
-	border-top: 1px solid var(--background-modifier-border);
+	border-top: 1px solid var(--lk-border);
 	padding: 4px 3px;
 	margin: 0;
 	font-family: inherit;
-	font-size: 13px;
+	font-size: 0.6842rem;
 	line-height: 1.3;
 	color: inherit;
 	text-align: left;
@@ -1198,7 +1220,7 @@ svg.hlth-widget-chip-unit-flag {
 }
 
 .hlth-widget .hlth-widget-row:hover {
-	background: var(--background-modifier-hover);
+	background: var(--lk-surface-hover);
 }
 
 .hlth-widget-row .hlth-dot {
@@ -1211,6 +1233,7 @@ svg.hlth-widget-chip-unit-flag {
 }
 
 .hlth-widget-row-name {
+	font-family: var(--lk-font-interface);
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -1218,7 +1241,7 @@ svg.hlth-widget-chip-unit-flag {
 }
 
 .hlth-widget-row-value {
-	font-family: var(--font-monospace);
+	font-family: var(--lk-font-label);
 	font-weight: 700;
 	justify-self: end;
 }
@@ -1230,19 +1253,19 @@ svg.hlth-widget-chip-unit-flag {
 	background: transparent;
 	border: none;
 	box-shadow: none;
-	border-top: 1px solid var(--background-modifier-border);
+	border-top: 1px solid var(--lk-border);
 	padding: 5px 3px 3px;
 	margin: 0;
 	line-height: 1.3;
-	font-family: var(--font-monospace);
-	font-size: 10px;
-	color: var(--text-faint);
+	font-family: var(--lk-font-code);
+	font-size: 0.5263rem;
+	color: var(--lk-text-faint);
 	cursor: pointer;
 	text-align: left;
 }
 
 .hlth-widget .hlth-widget-more:hover {
-	color: var(--text-normal);
+	color: var(--lk-text);
 }
 
 /* ── Planner surface ─────────────────────────────────────────────────────── */
@@ -1251,13 +1274,11 @@ svg.hlth-widget-chip-unit-flag {
 	overflow-y: auto;
 	box-sizing: border-box;
 	padding: 22px 28px 20px;
-	color: var(--hlth-fg1);
-	font-family: var(--hlth-fb);
+	color: var(--lk-text);
+	font-family: var(--lk-font-interface);
 	display: flex;
 	flex-direction: column;
 	gap: 22px;
-	background-image: radial-gradient(var(--hlth-dot) 1px, transparent 1px);
-	background-size: 14px 14px;
 }
 
 .hlth-planner-plan,
@@ -1268,28 +1289,28 @@ svg.hlth-widget-chip-unit-flag {
 }
 
 .hlth-planner-plan-empty {
-	color: var(--hlth-fg3);
-	font-size: 13px;
+	color: var(--lk-text-faint);
+	font-size: 0.6842rem;
 }
 
 .hlth-planner-plan-row {
 	display: flex;
 	align-items: baseline;
 	gap: 12px;
-	border-top: 1px solid var(--hlth-border);
+	border-top: 1px solid var(--lk-border);
 	padding-top: 10px;
 }
 
 .hlth-planner-plan-year {
-	font-family: var(--hlth-fm);
+	font-family: var(--lk-font-code);
 	font-weight: 700;
-	color: var(--hlth-fg2);
+	color: var(--lk-text-muted);
 	flex: none;
 }
 
 .hlth-planner-plan-preview {
 	flex: 1 1 auto;
-	color: var(--hlth-fg2);
+	color: var(--lk-text-muted);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -1310,44 +1331,44 @@ svg.hlth-widget-chip-unit-flag {
 	gap: 10px;
 	padding: 8px 4px;
 	margin: 0 -4px;
-	border-top: 1px solid var(--hlth-border);
+	border-top: 1px solid var(--lk-border);
 	border-radius: 4px;
-	font-size: 13px;
+	font-size: 0.6842rem;
 }
 
 .hlth-planner-row:hover {
-	background: var(--hlth-bg2);
+	background: var(--lk-surface-chrome);
 }
 
 .hlth-planner-name {
-	color: var(--hlth-fg1);
+	color: var(--lk-text);
 }
 
 .hlth-planner-priority {
-	font-family: var(--hlth-fh);
-	font-size: 10.5px;
+	font-family: var(--lk-font-label);
+	font-size: 0.5526rem;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
-	color: var(--hlth-fg3);
+	color: var(--lk-text-faint);
 }
 
 .hlth-planner-priority-essential {
-	color: var(--color-red);
+	color: var(--lk-red);
 }
 
 .hlth-planner-priority-lifestyle {
-	color: var(--color-blue);
+	color: var(--lk-blue);
 }
 
 .hlth-planner-cost,
 .hlth-planner-year {
-	font-family: var(--hlth-fm);
-	color: var(--hlth-fg2);
+	font-family: var(--lk-font-code);
+	color: var(--lk-text-muted);
 	text-align: right;
 }
 
 .hlth-planner-link {
-	font-size: 12px;
-	color: var(--hlth-fg3);
+	font-size: 0.6316rem;
+	color: var(--lk-text-faint);
 }

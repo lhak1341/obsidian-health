@@ -37,6 +37,7 @@ export class HealthBasesView extends BasesView {
 			empty.className = "hlth-widget-empty";
 			empty.textContent = "No profile configured yet.";
 			this.containerEl.appendChild(empty);
+			this.plugin.applyViewRoot(this.containerEl);
 			return;
 		}
 
@@ -45,5 +46,7 @@ export class HealthBasesView extends BasesView {
 
 		const model = computeDashboardModel(markers, snapshot.visits, profile, { deadbandPct: this.plugin.settings.deadbandPct });
 		renderBasesMarkers(this.containerEl, model);
+		// After the render, which resets the container's classes.
+		this.plugin.applyViewRoot(this.containerEl);
 	}
 }

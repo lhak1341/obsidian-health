@@ -18,7 +18,9 @@
   `var(--foo)` needs an explicit fallback (`var(--foo, #hexvalue)`) — `html-to-image`
   (screenshot export) only bakes computed `style` properties into its clone, so an
   attribute-level `var()` with no fallback resolves to nothing in the isolated export and
-  silently renders black instead of the theme color. Every chart color in `charts.ts` and
+  silently renders black instead of the theme color. A class coloured from `styles.src.css`
+  avoids the problem (computed styles do reach the export): the sparkline's parts do this, on a
+  neutral lightness ramp. Every other chart color in `charts.ts` and
   every `statusColor()`/`arrowColor()` (`format.ts`) carries a hardcoded hex fallback for
   exactly this reason. `svg-var-fallback.test.ts` scans `src/**/*.ts` for a fallback-less
   `var()` on any line that is not a `.style`/`setProperty` assignment, so a new SVG color that

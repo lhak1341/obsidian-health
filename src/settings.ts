@@ -1,18 +1,13 @@
+import { DEFAULT_FONT_ROLE_SETTINGS, parseFontRoleSettings, type FontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
 import { normalizeConcernKey } from "./core/concern";
 import { labelForConcern } from "./core/concern-registry";
 import { DEFAULT_VAULT_PATHS, type VaultPaths } from "./vault/reader";
 
 export type WidgetTier = "chip" | "list";
 
-export type FontChoice = "health" | "obsidian-interface" | "obsidian-text" | "obsidian-monospace" | "custom";
-
-export interface HealthPluginSettings extends VaultPaths {
-	fontHeading: FontChoice;
-	fontHeadingCustom: string;
-	fontBody: FontChoice;
-	fontBodyCustom: string;
-	fontMono: FontChoice;
-	fontMonoCustom: string;
+/** The font keys (`fontHeading`, `fontHeadingCustom`, ...) are the shared @lhak/style font-role
+ *  setting's, saved under the same names HLTH always used. */
+export interface HealthPluginSettings extends VaultPaths, FontRoleSettings {
 	deadbandPct: number;
 	widgetTier: WidgetTier;
 	widgetMaxRows: number;
@@ -60,12 +55,7 @@ export function renameConcernInSettings(settings: HealthPluginSettings, oldConce
 
 export const DEFAULT_SETTINGS: HealthPluginSettings = {
 	...DEFAULT_VAULT_PATHS,
-	fontHeading: "health",
-	fontHeadingCustom: "",
-	fontBody: "health",
-	fontBodyCustom: "",
-	fontMono: "health",
-	fontMonoCustom: "",
+	...DEFAULT_FONT_ROLE_SETTINGS,
 	deadbandPct: 0.03,
 	widgetTier: "list",
 	widgetMaxRows: 4,
@@ -77,3 +67,20 @@ export const DEFAULT_SETTINGS: HealthPluginSettings = {
 	defaultProfile: undefined,
 	managedBaseViews: [],
 };
+
+/** The settings `loadData()` returned, over the defaults. Font keys go through the shared
+ *  font-role reader, which keeps every saved choice and reads HLTH's old `"health"` default as
+ *  `"default"` (both mean "follow the theme"). Nested maps are copied, never shared with
+ *  DEFAULT_SETTINGS. */
+export function settingsFromSaved(data: unknown): HealthPluginSettings {
+	// Saved data predates the current types (an old font choice is `"health"`), so it is read as unknown.
+	const saved = (typeof data === "object" && data !== null ? data : {}) as Partial<HealthPluginSettings>;
+	return {
+		...DEFAULT_SETTINGS,
+		...saved,
+		...parseFontRoleSettings(saved),
+		concernViewOverrides: { ...DEFAULT_SETTINGS.concernViewOverrides, ...saved.concernViewOverrides },
+		concernIcons: { ...DEFAULT_SETTINGS.concernIcons, ...saved.concernIcons },
+		managedBaseViews: [...(saved.managedBaseViews ?? DEFAULT_SETTINGS.managedBaseViews)],
+	};
+}

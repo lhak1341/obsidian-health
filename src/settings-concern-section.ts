@@ -3,7 +3,7 @@ import { groupByConcern, normalizeConcernKey } from "./core/concern";
 import type { MarkerNote } from "./core/types";
 import { labelForConcern } from "./core/concern-registry";
 import { renderDragReorderList } from "./render/drag-reorder";
-import { IconSuggest } from "./render/icon-suggest";
+import { IconSuggest } from "@lhak/style/obsidian-helpers";
 import { iconForConcern } from "./render/icons";
 import { saveOrder, type SettingsSectionContext } from "./settings-context";
 import type { VaultSnapshot } from "./vault/reader";

@@ -34,11 +34,22 @@ export function scaleY(min: number, max: number, bottom: number, top: number): (
 // guarantees visible-but-subtle contrast against any background, in either theme.
 const BAND_FILL = "color-mix(in srgb, var(--text-faint, #8a8a8a) 16%, transparent)";
 
-function buildBandRect(band: ResolvedRange, y: (v: number) => number, width: number, top: number, bottom: number): SVGRectElement | undefined {
+/** How a chart part is coloured: the history chart sets SVG attributes, the sparkline a class that
+ *  styles.src.css colours from a neutral lightness ramp (single-quantity chart, lhak-style-adoption 04). */
+type Paint = Record<string, string>;
+
+const SPARK = {
+	band: { class: "hlth-spk-band" },
+	secondary: { class: "hlth-spk-secondary" },
+	line: { class: "hlth-spk-line" },
+	empty: { class: "hlth-spk-empty" },
+} satisfies Record<string, Paint>;
+
+function buildBandRect(band: ResolvedRange, y: (v: number) => number, width: number, top: number, bottom: number, paint: Paint): SVGRectElement | undefined {
 	if (band.low === undefined && band.high === undefined) return undefined;
 	const rectTop = band.high !== undefined ? y(band.high) : top;
 	const rectBottom = band.low !== undefined ? y(band.low) : bottom;
-	return svgEl("rect", { x: 0, y: rectTop.toFixed(1), width, height: Math.max(0, rectBottom - rectTop).toFixed(1), fill: BAND_FILL });
+	return svgEl("rect", { x: 0, y: rectTop.toFixed(1), width, height: Math.max(0, rectBottom - rectTop).toFixed(1), ...paint });
 }
 
 function buildSecondaryPath(
@@ -47,6 +58,7 @@ function buildSecondaryPath(
 	x: (i: number) => number,
 	y: (v: number) => number,
 	strokeWidth: number,
+	paint: Paint,
 ): SVGPathElement | undefined {
 	const segments = secondaryPoints
 		.map((point) => {
@@ -55,7 +67,7 @@ function buildSecondaryPath(
 		})
 		.filter((segment): segment is string => segment !== null);
 	if (segments.length < 2) return undefined;
-	return svgEl("path", { d: segments.join(" "), fill: "none", stroke: "var(--text-faint, #8a8a8a)", "stroke-width": strokeWidth, "stroke-dasharray": "3 2" });
+	return svgEl("path", { d: segments.join(" "), fill: "none", "stroke-width": strokeWidth, "stroke-dasharray": "3 2", ...paint });
 }
 
 export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotColor: string, secondary?: SeriesPoint[]): SVGSVGElement {
@@ -70,7 +82,7 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 		// visual weight without implying a trend that isn't there. Right-flush (ending at width-pad,
 		// same x as a real trend line's last point) so its end lines up with every other row's
 		// sparkline endpoint instead of stopping short in the middle.
-		svg.appendChild(svgEl("line", { x1: width - pad - 16, y1: height / 2, x2: width - pad, y2: height / 2, stroke: "var(--text-faint, #8a8a8a)", "stroke-width": 1.3, "stroke-linecap": "round", opacity: 0.5 }));
+		svg.appendChild(svgEl("line", { x1: width - pad - 16, y1: height / 2, x2: width - pad, y2: height / 2, "stroke-width": 1.3, "stroke-linecap": "round", ...SPARK.empty }));
 		return svg;
 	}
 
@@ -84,7 +96,7 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 		const [min, max] = paddedDomain(allValues, 0.18);
 		const y = scaleY(min, max, height - pad, pad);
 
-		const bandRect = buildBandRect(band, y, width, pad, height - pad);
+		const bandRect = buildBandRect(band, y, width, pad, height - pad, SPARK.band);
 		if (bandRect) svg.appendChild(bandRect);
 
 		svg.appendChild(svgEl("circle", { cx: width - pad, cy: y(only.value).toFixed(1), r: 2.4, fill: dotColor }));
@@ -100,14 +112,14 @@ export function buildSparkline(series: SeriesPoint[], band: ResolvedRange, dotCo
 	const x = scaleX(primary.length, pad, width - pad);
 	const y = scaleY(min, max, height - pad, pad);
 
-	const bandRect = buildBandRect(band, y, width, pad, height - pad);
+	const bandRect = buildBandRect(band, y, width, pad, height - pad, SPARK.band);
 	if (bandRect) svg.appendChild(bandRect);
 
-	const secondaryPath = buildSecondaryPath(primary, secondaryPoints, x, y, 1);
+	const secondaryPath = buildSecondaryPath(primary, secondaryPoints, x, y, 1, SPARK.secondary);
 	if (secondaryPath) svg.appendChild(secondaryPath);
 
 	const d = primary.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(" ");
-	svg.appendChild(svgEl("path", { d, fill: "none", stroke: "var(--text-muted, #4a4a4a)", "stroke-width": 1.3, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+	svg.appendChild(svgEl("path", { d, fill: "none", "stroke-width": 1.3, "stroke-linejoin": "round", "stroke-linecap": "round", ...SPARK.line }));
 
 	const last = primary[primary.length - 1];
 	svg.appendChild(svgEl("circle", { cx: x(primary.length - 1).toFixed(1), cy: y(last.value).toFixed(1), r: 2.4, fill: dotColor }));
@@ -146,7 +158,7 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 	const x = scaleX(primary.length, padL, width - padR);
 	const y = scaleY(min, max, height - padB, padT);
 
-	const bandRect = buildBandRect(band, y, width, padT, height - padB);
+	const bandRect = buildBandRect(band, y, width, padT, height - padB, { fill: BAND_FILL });
 	if (bandRect) svg.appendChild(bandRect);
 
 	// A two-bound target (both low and high set) draws a dashed line per bound so the chart
@@ -167,7 +179,7 @@ export function buildHistoryChart(series: SeriesPoint[], secondary: SeriesPoint[
 		svg.appendChild(label);
 	}
 
-	const secondaryPath = buildSecondaryPath(primary, secondaryPoints, x, y, 1.4);
+	const secondaryPath = buildSecondaryPath(primary, secondaryPoints, x, y, 1.4, { stroke: "var(--text-faint, #8a8a8a)" });
 	if (secondaryPath) svg.appendChild(secondaryPath);
 
 	const linePath = primary.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(" ");

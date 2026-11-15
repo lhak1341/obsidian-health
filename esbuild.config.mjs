@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from "module";
+import { stylesOptions } from "./scripts/styles.mjs";
 
 const production = process.argv[2] === "production";
 
@@ -32,9 +33,14 @@ const context = await esbuild.context({
 	minify: production,
 });
 
+// Second entry: styles.src.css -> styles.css, inlining the @lhak/style alias layer.
+const cssContext = await esbuild.context(stylesOptions);
+
 if (production) {
 	await context.rebuild();
+	await cssContext.rebuild();
 	process.exit(0);
 } else {
 	await context.watch();
+	await cssContext.watch();
 }

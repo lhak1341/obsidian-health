@@ -1,4 +1,4 @@
-import { setFontVar } from "../fonts";
+import { applyFontRoles, type FontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
 import { renderInlineMarkdown } from "./rich-text";
 
 // Obsidian's own workspace chrome applies a CSS transform up the tree (pane/tab transitions),
@@ -8,32 +8,32 @@ import { renderInlineMarkdown } from "./rich-text";
 // no clipping container.
 let sharedTooltip: HTMLElement | undefined;
 
-// The tooltip is appended to document.body (see above), outside the `.health-*-outer` scope
-// that declares --hlth-fh/fb/fm -- it has no ancestor carrying those tokens, so its font
-// choice is pushed in from main.ts's applyFonts() instead of being inherited.
-let headingFontVar: string | null = null;
+// The tooltip is appended to document.body (see above), outside every view root, so it is a
+// `.lk-root` of its own (the @lhak/style alias layer's scope) and its font choice is pushed in
+// from main.ts's applyFonts() instead of being inherited.
+let fontSettings: FontRoleSettings | undefined;
 
-function applyFontVarTo(el: HTMLElement): void {
-	setFontVar(el.style, "--hlth-fh", headingFontVar);
+function applyFontsTo(el: HTMLElement): void {
+	if (fontSettings) applyFontRoles(el, fontSettings);
 }
 
-/** Called from main.ts whenever the Heading font setting changes (and once at load) --
- *  updates the already-created tooltip, if any, and the value future ones are created with. */
-export function applyTooltipFonts(fh: string | null): void {
-	headingFontVar = fh;
-	if (sharedTooltip) applyFontVarTo(sharedTooltip);
+/** Called from main.ts whenever a font setting changes (and once at load) -- updates the
+ *  already-created tooltip, if any, and the settings future ones are created with. */
+export function applyTooltipFonts(settings: FontRoleSettings): void {
+	fontSettings = settings;
+	if (sharedTooltip) applyFontsTo(sharedTooltip);
 }
 
 function getSharedTooltip(): HTMLElement {
 	if (sharedTooltip?.isConnected) return sharedTooltip;
 	const tip = createDiv();
-	tip.className = "hlth-tip";
+	tip.className = "hlth-tip lk-root";
 	const meaning = createSpan();
 	meaning.className = "hlth-tip-meaning";
 	const range = createSpan();
 	range.className = "hlth-tip-range";
 	tip.append(meaning, range);
-	applyFontVarTo(tip);
+	applyFontsTo(tip);
 	document.body.appendChild(tip);
 	sharedTooltip = tip;
 	return tip;

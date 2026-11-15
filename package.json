@@ -10,7 +10,7 @@
 		"build": "tsc --noEmit && node esbuild.config.mjs production",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
-		"lint": "eslint . --max-warnings 0",
+		"lint": "eslint . --max-warnings 0 && stylelint styles.src.css",
 		"lint:fix": "eslint . --fix",
 		"deploy": "bun run build && bun run scripts/deploy.mjs"
 	},
@@ -20,12 +20,15 @@
 		"esbuild": "^0.28.2",
 		"eslint": "^10.8.1",
 		"eslint-plugin-obsidianmd": "0.4.1",
+		"happy-dom": "^20.14.5",
 		"obsidian": "^1.7.2",
+		"stylelint": "^18",
 		"typescript": "5.9.3",
 		"typescript-eslint": "^8.67.0",
 		"vitest": "^4.1.11"
 	},
 	"dependencies": {
+		"@lhak/style": "file:./vendor/lhak-style",
 		"html-to-image": "^1.11.13"
 	}
 }

@@ -5,5 +5,8 @@ main.js
 temp/
 .claude.local.md
 
+# Generated from styles.src.css by esbuild (scripts/styles.mjs)
+styles.css
+
 # Graphify: a local build output, rebuilt by the post-commit hook (graphify hook install)
 graphify-out/

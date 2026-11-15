@@ -26,22 +26,21 @@
   `visit-editor-view.ts`'s Person/Date/Facility row for the pattern). A `Modal` opened from
   any of them sits outside that view's own DOM tree, so `Setting` is the right choice there
   instead (see `EditTargetModal` in `dashboard-view.ts`).
-- The `--hlth-*` tokens in `styles.css` are scoped to `.health-dashboard-outer`,
-  `.health-planner-outer`, and `.health-visit-editor-outer` (one selector list — the three
-  ItemViews sharing the plugin's visual language). Anything mounted into a host plugin, or
-  into a `Modal`'s `contentEl` (also outside that DOM subtree), cannot see them — use raw
-  Obsidian vars/`Setting` there instead.
-- Font settings live in `settings.ts` (`FontChoice`, `fontHeading`/`fontBody`/`fontMono` +
-  `*Custom`), resolved by `fonts.ts`'s `resolveFontVars` and applied with its `setFontVar`. `HealthPlugin.applyFontVarsTo(el)`
-  sets `--hlth-fh/fb/fm` as inline style on a view's `contentEl` — inline wins over the
-  `.health-*-outer` class rule that declares the theme-following ("Health") default, so choosing
-  that default is a no-op removeProperty, not an explicit override. `applyFonts()` re-applies to
-  every open Dashboard/Planner/Visit-editor leaf on a settings change; each view's own render
-  entry point (`repaint`/`refresh`/`paint`) calls `applyFontVarsTo` too, for the "freshly opened"
-  case `applyFonts()`'s leaf loop can't reach. The shared tooltip (`render/tooltip.ts`) is the one
-  exception to the `.health-*-outer` scope rule above — `--hlth-fh` reaches it via
-  `applyTooltipFonts()`, not inheritance, since it mounts on `document.body`. It only takes the
-  heading font (name + secondary line both use it, no body/mono split there). Interactive-element classes (`.hlth-showall-btn`,
+- Styles are written in `styles.src.css`; `styles.css` is generated from it (esbuild, second
+  entry in `esbuild.config.mjs`, gitignored) with the `@lhak/style` alias layer inlined. Colours
+  and fonts are `--lk-` roles, which resolve only under an element carrying `lk-root`:
+  `HealthPlugin.applyViewRoot(el)` adds it and applies the font settings to the three ItemViews'
+  `contentEl` and the Bases view's container, and the shared tooltip (`render/tooltip.ts`, on
+  `document.body`) carries `lk-root` itself. The lhak-dashboard widget reads the roles from its
+  host's root. A `Modal` and the settings tab sit outside every root: use raw Obsidian vars or
+  `Setting` there. `bun run lint` runs the `@lhak/style` stylelint check (no raw colours, no px
+  font sizes, no `--hlth-`); `src/styles.test.ts` pins the built sheet.
+- Font settings are the shared `@lhak/style` font-role keys (`fontHeading`/`fontBody`/`fontMono`
+  + `*Custom`): heading sets `--lk-font-label`, body `--lk-font-interface`, mono
+  `--lk-font-code`. `settingsFromSaved` (`settings.ts`) reads saved data and maps the old
+  `"health"` choice to `"default"`; `applyFonts()` re-applies to every open ItemView and the
+  tooltip on a settings change; an open Bases view takes the change on its next render. Import from `@lhak/style/obsidian-helpers/font-roles` in code a
+  test loads (it never loads `obsidian`). Interactive-element classes (`.hlth-showall-btn`,
   `.hlth-pill`) carry their own parallel list, keyed on the inner `.hlth-dash`/`.hlth-planner`/
   `.hlth-visit-editor` containers rather than the outer roots; `styles-scope-parity.test.ts`
   fails if the two lists stop covering the same number of views.
@@ -50,7 +49,7 @@
   0.9 }` is intentional, not an oversight — Obsidian is Chromium-only.
 - Command ids are not slugs of display names: "Open dashboard" → `open-health-dashboard`.
   Others: `open-health-planner`, `add-lab-visit`.
-- `IconSuggest` (`render/icon-suggest.ts`, ported from linear-calendar) already exists for
-  Lucide-icon text fields. Reuse it.
+- Lucide-icon text fields use the shared `IconSuggest` (`@lhak/style/obsidian-helpers`). Its
+  rows carry `lk-icon-suggest-item`/`lk-icon-suggest-icon`, styled in `styles.src.css`.
 - Dashboard, planner and visit editor share ONE tab: `findHealthLeaf` reuses whichever is open, so `openVisitEditor`/`openPlanner` replace the dashboard in place. A live-check script that detaches that leaf closes the user's
   dashboard — switch back with the `open-health-dashboard` command instead.

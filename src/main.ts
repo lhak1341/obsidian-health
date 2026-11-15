@@ -1,12 +1,12 @@
 import { ItemView, Notice, Plugin, WorkspaceLeaf } from "obsidian";
 import { HEALTH_BASES_VIEW_TYPE, HealthBasesView } from "./bases-view";
 import { computeDashboardModel, resolveDefaultProfile } from "./core/dashboard";
-import { resolveFontVars, setFontVar } from "./fonts";
+import { applyFontRoles } from "@lhak/style/obsidian-helpers/font-roles";
 import { HEALTH_PLANNER_VIEW_TYPE, HealthPlannerView } from "./planner-view";
 import { applyTooltipFonts } from "./render/tooltip";
 import { renderHealthWidget, renderHealthWidgetEmpty } from "./render/widget-view";
 import { HealthSettingTab } from "./settings-tab";
-import { DEFAULT_SETTINGS, type HealthPluginSettings, type WidgetTier } from "./settings";
+import { DEFAULT_SETTINGS, settingsFromSaved, type HealthPluginSettings, type WidgetTier } from "./settings";
 import { HEALTH_VIEW_TYPE, HealthView } from "./dashboard-view";
 import { HEALTH_VISIT_EDITOR_VIEW_TYPE, HealthVisitEditorView } from "./visit-editor-view";
 import { scanVault, type VaultPaths, type VaultSnapshot } from "./vault/reader";
@@ -25,13 +25,7 @@ export default class HealthPlugin extends Plugin {
 	settings: HealthPluginSettings = DEFAULT_SETTINGS;
 
 	async onload(): Promise<void> {
-		const saved = (await this.loadData()) as Partial<HealthPluginSettings> | undefined;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-		// Object.assign only shallow-copies; nested-object fields (e.g. concernViewOverrides)
-		// would otherwise stay reference-shared with the DEFAULT_SETTINGS module constant.
-		this.settings.concernViewOverrides = { ...DEFAULT_SETTINGS.concernViewOverrides, ...saved?.concernViewOverrides };
-		this.settings.concernIcons = { ...DEFAULT_SETTINGS.concernIcons, ...saved?.concernIcons };
-		this.settings.managedBaseViews = [...(saved?.managedBaseViews ?? DEFAULT_SETTINGS.managedBaseViews)];
+		this.settings = settingsFromSaved(await this.loadData());
 		this.applyFonts();
 
 		this.registerView(HEALTH_VIEW_TYPE, (leaf) => new HealthView(leaf, this));
@@ -93,27 +87,25 @@ export default class HealthPlugin extends Plugin {
 		}
 	}
 
-	/** Sets --hlth-fh/fb/fm (from current settings) as inline style on `el` -- inline style on
-	 *  the element itself always wins over the `.health-*-outer` class rule that declares the
-	 *  theme-following defaults, so this is a no-op visually until a non-default font is chosen. */
-	applyFontVarsTo(el: HTMLElement): void {
-		const { fh, fb, fm } = resolveFontVars(this.settings);
-		setFontVar(el.style, "--hlth-fh", fh);
-		setFontVar(el.style, "--hlth-fb", fb);
-		setFontVar(el.style, "--hlth-fm", fm);
+	/** Makes `el` a view root: `.lk-root` scopes the @lhak/style alias layer to it, and the font
+	 *  settings go on it inline (`applyFontRoles`), which beats the alias layer's `.lk-root` rule.
+	 *  The default choice removes the property, so the theme's font shows through. */
+	applyViewRoot(el: HTMLElement): void {
+		el.addClass("lk-root");
+		applyFontRoles(el, this.settings);
 	}
 
 	/** Applies current font settings to every already-open Dashboard/Planner/Visit-editor leaf
 	 *  and the shared tooltip -- called after a font setting changes. Freshly-opened views apply
-	 *  their own fonts via `applyFontVarsTo` in their render entry point, so this only needs to
+	 *  their own fonts via `applyViewRoot` in their render entry point, so this only needs to
 	 *  cover the "already open while settings changed" case. */
 	applyFonts(): void {
 		for (const type of [HEALTH_VIEW_TYPE, HEALTH_PLANNER_VIEW_TYPE, HEALTH_VISIT_EDITOR_VIEW_TYPE]) {
 			for (const leaf of this.app.workspace.getLeavesOfType(type)) {
-				if (leaf.view instanceof ItemView) this.applyFontVarsTo(leaf.view.contentEl);
+				if (leaf.view instanceof ItemView) this.applyViewRoot(leaf.view.contentEl);
 			}
 		}
-		applyTooltipFonts(resolveFontVars(this.settings).fh);
+		applyTooltipFonts(this.settings);
 	}
 
 	scanVault(paths?: VaultPaths): Promise<VaultSnapshot> {
